@@ -2939,6 +2939,23 @@
       const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
       let ow = Math.round((dist(P[0], P[1]) + dist(P[3], P[2])) / 2), oh = Math.round((dist(P[0], P[3]) + dist(P[1], P[2])) / 2);
       if (ow < 100 || oh < 100) return src;
+      // Echtes Seitenverhältnis des Blatts aus der Perspektive schätzen (Kamera-Brennweite unbekannt)
+      try {
+        const u0 = src.width / 2, v0 = src.height / 2;
+        const m = [P[0], P[1], P[3], P[2]].map(q => [q[0] - u0, q[1] - v0, 1]);   // m1 TL, m2 TR, m3 BL, m4 BR
+        const cr = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+        const dt = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        const [m1, m2, m3, m4] = m;
+        const k2 = dt(cr(m1, m4), m3) / dt(cr(m2, m4), m3), k3 = dt(cr(m1, m4), m2) / dt(cr(m3, m4), m2);
+        const n2 = [k2 * m2[0] - m1[0], k2 * m2[1] - m1[1], k2 * m2[2] - m1[2]], n3 = [k3 * m3[0] - m1[0], k3 * m3[1] - m1[1], k3 * m3[2] - m1[2]];
+        const f2 = -(n2[0] * n3[0] + n2[1] * n3[1]) / (n2[2] * n3[2]);
+        if (isFinite(f2) && f2 > 0) {
+          const f = Math.sqrt(f2), nn = n => (n[0] / f) * (n[0] / f) + (n[1] / f) * (n[1] / f) + n[2] * n[2];
+          const asp = Math.sqrt(nn(n2) / nn(n3));                         // Breite / Höhe
+          const simple = ow / oh;
+          if (isFinite(asp) && asp > simple * 0.75 && asp < simple * 1.33) { if (asp >= 1) { ow = Math.round(oh * asp); } else { oh = Math.round(ow / asp); } }
+        }
+      } catch (e) {}
       const scale = Math.min(1, 2000 / Math.max(ow, oh)); ow = Math.round(ow * scale); oh = Math.round(oh * scale);
       const [x0, y0] = P[0], [x1, y1] = P[1], [x2, y2] = P[2], [x3, y3] = P[3];
       const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
@@ -4065,7 +4082,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.06';
+  const APP_VERSION = '1.07';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
