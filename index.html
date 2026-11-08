@@ -2854,8 +2854,8 @@
     } catch (e) { return src; }
   }
 
-  // Papier im Foto finden (hell gegen dunkleren Hintergrund) und gerade ausrichten.
-  // Gibt bei Unsicherheit das Original zurück.
+  // Papier im Foto finden (hell gegen dunkleren Hintergrund), ausschneiden und gerade ausrichten.
+  // Probiert mehrere Helligkeitsschwellen und nimmt die "rechteckigste" Fläche. Bei Unsicherheit: Original.
   function autoCropPaper(src) {
     try {
       const S = 360, k = S / Math.max(src.width, src.height);
@@ -2863,101 +2863,135 @@
       const sm = document.createElement('canvas'); sm.width = w; sm.height = h;
       const sctx = sm.getContext('2d'); sctx.drawImage(src, 0, 0, w, h);
       const px = sctx.getImageData(0, 0, w, h).data;
-      const gray = new Uint8Array(w * h), hist = new Uint32Array(256);
-      for (let i = 0; i < w * h; i++) { const g = (px[i * 4] * 0.3 + px[i * 4 + 1] * 0.59 + px[i * 4 + 2] * 0.11) | 0; gray[i] = g; hist[g]++; }
-      // Otsu
+      const gray = new Uint8Array(w * h), hist = new Uint32Array(256), tot = w * h;
+      for (let i = 0; i < tot; i++) { const g = (px[i * 4] * 0.3 + px[i * 4 + 1] * 0.59 + px[i * 4 + 2] * 0.11) | 0; gray[i] = g; hist[g]++; }
       let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
-      let sB = 0, wB = 0, best = 0, thr = 128; const tot = w * h;
+      let sB = 0, wB = 0, best = 0, otsu = 128;
       for (let t = 0; t < 256; t++) {
         wB += hist[t]; if (!wB) continue; const wF = tot - wB; if (!wF) break;
         sB += t * hist[t]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) * (mB - mF);
-        if (v > best) { best = v; thr = t; }
+        if (v > best) { best = v; otsu = t; }
       }
-      // grösstes helles Gebiet
-      const lab = new Int32Array(w * h), queue = new Int32Array(w * h);
-      let bestLab = 0, bestSize = 0, cur = 0;
-      for (let i = 0; i < w * h; i++) {
-        if (gray[i] <= thr || lab[i]) continue;
-        cur++; let qh = 0, qt = 0; queue[qt++] = i; lab[i] = cur;
-        while (qh < qt) {
-          const p = queue[qh++], x = p % w, y = (p / w) | 0;
-          if (x > 0 && !lab[p - 1] && gray[p - 1] > thr) { lab[p - 1] = cur; queue[qt++] = p - 1; }
-          if (x < w - 1 && !lab[p + 1] && gray[p + 1] > thr) { lab[p + 1] = cur; queue[qt++] = p + 1; }
-          if (y > 0 && !lab[p - w] && gray[p - w] > thr) { lab[p - w] = cur; queue[qt++] = p - w; }
-          if (y < h - 1 && !lab[p + w] && gray[p + w] > thr) { lab[p + w] = cur; queue[qt++] = p + w; }
-        }
-        if (qt > bestSize) { bestSize = qt; bestLab = cur; }
-      }
-      if (bestSize < tot * 0.12) return src;
-      // Gebiet leicht erodieren (Ausläufer von hellen Holzstellen entfernen), dann Hülle + kleinstes drehbares Rechteck
-      const inner = new Uint8Array(w * h);
-      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
-        const i = y * w + x;
-        if (lab[i] === bestLab && lab[i - 1] === bestLab && lab[i + 1] === bestLab && lab[i - w] === bestLab && lab[i + w] === bestLab) inner[i] = 1;
-      }
-      const pts = [];
-      for (let y = 0; y < h; y++) {
-        let x0 = -1, x1 = -1;
-        for (let x = 0; x < w; x++) if (inner[y * w + x]) { if (x0 < 0) x0 = x; x1 = x; }
-        if (x0 >= 0) { pts.push([x0, y]); if (x1 !== x0) pts.push([x1, y]); }
-      }
-      if (pts.length < 20) return src;
-      pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
       const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-      const lo = [], up = [];
-      for (const q of pts) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
-      for (let i = pts.length - 1; i >= 0; i--) { const q = pts[i]; while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
-      const hull = lo.slice(0, -1).concat(up.slice(0, -1));
-      let bestR = null, bestA = 1e18;
-      for (let i = 0; i < hull.length; i++) {
-        const A0 = hull[i], B0 = hull[(i + 1) % hull.length];
-        const ang = Math.atan2(B0[1] - A0[1], B0[0] - A0[0]), ca = Math.cos(ang), sa = Math.sin(ang);
-        let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
-        for (const q of hull) { const u = q[0] * ca + q[1] * sa, v = -q[0] * sa + q[1] * ca; if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v; }
-        const ar = (u1 - u0) * (v1 - v0);
-        if (ar < bestA) { bestA = ar; bestR = { ca, sa, u0, u1, v0, v1 }; }
+      const queue = new Int32Array(tot);
+      // eine Schwelle -> bestes Rechteck oder null
+      const tryThr = thr => {
+        const lab = new Int32Array(tot);
+        let bestLab = 0, bestSize = 0, cur = 0;
+        for (let i = 0; i < tot; i++) {
+          if (gray[i] <= thr || lab[i]) continue;
+          cur++; let qh = 0, qt = 0; queue[qt++] = i; lab[i] = cur;
+          while (qh < qt) {
+            const p = queue[qh++], x = p % w, y = (p / w) | 0;
+            if (x > 0 && !lab[p - 1] && gray[p - 1] > thr) { lab[p - 1] = cur; queue[qt++] = p - 1; }
+            if (x < w - 1 && !lab[p + 1] && gray[p + 1] > thr) { lab[p + 1] = cur; queue[qt++] = p + 1; }
+            if (y > 0 && !lab[p - w] && gray[p - w] > thr) { lab[p - w] = cur; queue[qt++] = p - w; }
+            if (y < h - 1 && !lab[p + w] && gray[p + w] > thr) { lab[p + w] = cur; queue[qt++] = p + w; }
+          }
+          if (qt > bestSize) { bestSize = qt; bestLab = cur; }
+        }
+        if (bestSize < tot * 0.08) return null;
+        const pts = [];
+        for (let y = 1; y < h - 1; y++) {
+          let x0 = -1, x1 = -1;
+          for (let x = 1; x < w - 1; x++) {
+            const i = y * w + x;
+            if (lab[i] === bestLab && lab[i - 1] === bestLab && lab[i + 1] === bestLab && lab[i - w] === bestLab && lab[i + w] === bestLab) { if (x0 < 0) x0 = x; x1 = x; }
+          }
+          if (x0 >= 0) { pts.push([x0, y]); if (x1 !== x0) pts.push([x1, y]); }
+        }
+        if (pts.length < 20) return null;
+        pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+        const lo = [], up = [];
+        for (const q of pts) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+        for (let i = pts.length - 1; i >= 0; i--) { const q = pts[i]; while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+        const hull = lo.slice(0, -1).concat(up.slice(0, -1));
+        let hullA = 0; for (let i = 0; i < hull.length; i++) { const p = hull[i], q = hull[(i + 1) % hull.length]; hullA += p[0] * q[1] - q[0] * p[1]; }
+        hullA = Math.abs(hullA) / 2;
+        let bestR = null, bestA = 1e18;
+        for (let i = 0; i < hull.length; i++) {
+          const A0 = hull[i], B0 = hull[(i + 1) % hull.length];
+          const ang = Math.atan2(B0[1] - A0[1], B0[0] - A0[0]), ca = Math.cos(ang), sa = Math.sin(ang);
+          let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
+          for (const q of hull) { const u = q[0] * ca + q[1] * sa, v = -q[0] * sa + q[1] * ca; if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v; }
+          const ar = (u1 - u0) * (v1 - v0);
+          if (ar < bestA) { bestA = ar; bestR = { ca, sa, u0, u1, v0, v1 }; }
+        }
+        if (!bestR || bestA < tot * 0.1 || bestA > tot * 0.97) return null;
+        return { r: bestR, score: hullA / bestA, area: bestA };
+      };
+      let pick = null;
+      for (const d of [0, 12, 24, 36, 48, 60]) {
+        const thr = otsu + d; if (thr > 235) break;
+        const c = tryThr(thr);
+        if (c && (!pick || c.score > pick.score + 0.01)) pick = c;
       }
-      const area = bestA;
-      if (area < tot * 0.15 || area > tot * 0.97) return src;           // kaum Rand oder unklar
-      const { ca, sa } = bestR, grow = 1.5;                             // Erosion wieder ausgleichen
+      if (!pick || pick.score < 0.8) return src;
+      const bestR = pick.r, { ca, sa } = bestR, grow = 1.5;
       const cn = (u, v) => [u * ca - v * sa, u * sa + v * ca];
       let cs = [cn(bestR.u0 - grow, bestR.v0 - grow), cn(bestR.u1 + grow, bestR.v0 - grow), cn(bestR.u1 + grow, bestR.v1 + grow), cn(bestR.u0 - grow, bestR.v1 + grow)];
       const cx0 = cs.reduce((t, q) => t + q[0], 0) / 4, cy0 = cs.reduce((t, q) => t + q[1], 0) / 4;
       cs.sort((p, q) => Math.atan2(p[1] - cy0, p[0] - cx0) - Math.atan2(q[1] - cy0, q[0] - cx0));
       let st = 0; cs.forEach((q, i) => { if (q[0] + q[1] < cs[st][0] + cs[st][1]) st = i; });
-      cs = cs.slice(st).concat(cs.slice(0, st));                        // TL, TR, BR, BL (im Uhrzeigersinn)
+      cs = cs.slice(st).concat(cs.slice(0, st));                        // TL, TR, BR, BL
       const P = cs.map(([x, y]) => [x / k, y / k]);
       const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
       let ow = Math.round((dist(P[0], P[1]) + dist(P[3], P[2])) / 2), oh = Math.round((dist(P[0], P[3]) + dist(P[1], P[2])) / 2);
       if (ow < 100 || oh < 100) return src;
       const scale = Math.min(1, 2000 / Math.max(ow, oh)); ow = Math.round(ow * scale); oh = Math.round(oh * scale);
-      // Perspektive: Einheitsquadrat -> Viereck
       const [x0, y0] = P[0], [x1, y1] = P[1], [x2, y2] = P[2], [x3, y3] = P[3];
       const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3, dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
       const den = dx1 * dy2 - dx2 * dy1;
       const g = den ? (dx3 * dy2 - dx2 * dy3) / den : 0, hh = den ? (dx1 * dy3 - dx3 * dy1) / den : 0;
       const A = x1 - x0 + g * x1, B = x3 - x0 + hh * x3, C = x0, D = y1 - y0 + g * y1, E = y3 - y0 + hh * y3, F = y0;
-      const sctx2 = src.getContext('2d'), sd = sctx2.getImageData(0, 0, src.width, src.height).data, sw = src.width, sh = src.height;
+      const sd = src.getContext('2d').getImageData(0, 0, src.width, src.height).data, sw = src.width, sh = src.height;
       const out = document.createElement('canvas'); out.width = ow; out.height = oh;
       const octx = out.getContext('2d'), od = octx.createImageData(ow, oh), o = od.data;
-      const m = 0.02;                                                   // kleiner Innenrand, damit kein Rand bleibt
       for (let y = 0; y < oh; y++) {
-        const v = m + (1 - 2 * m) * (y / (oh - 1));
+        const v = y / (oh - 1);
         for (let x = 0; x < ow; x++) {
-          const u = m + (1 - 2 * m) * (x / (ow - 1));
+          const u = x / (ow - 1);
           const dd = g * u + hh * v + 1, sx = (A * u + B * v + C) / dd, sy = (D * u + E * v + F) / dd;
           const ix = Math.max(0, Math.min(sw - 2, sx | 0)), iy = Math.max(0, Math.min(sh - 2, sy | 0));
           const fx = Math.max(0, Math.min(1, sx - ix)), fy = Math.max(0, Math.min(1, sy - iy));
           const i00 = (iy * sw + ix) * 4, i10 = i00 + 4, i01 = i00 + sw * 4, i11 = i01 + 4, oi = (y * ow + x) * 4;
-          for (let c = 0; c < 3; c++) {
-            o[oi + c] = sd[i00 + c] * (1 - fx) * (1 - fy) + sd[i10 + c] * fx * (1 - fy) + sd[i01 + c] * (1 - fx) * fy + sd[i11 + c] * fx * fy;
-          }
+          for (let c = 0; c < 3; c++) o[oi + c] = sd[i00 + c] * (1 - fx) * (1 - fy) + sd[i10 + c] * fx * (1 - fy) + sd[i01 + c] * (1 - fx) * fy + sd[i11 + c] * fx * fy;
           o[oi + 3] = 255;
         }
       }
       octx.putImageData(od, 0, 0);
-      return out;
+      return cleanEdges(out, pick ? otsu : 128);
     } catch (e) { return src; }
+  }
+
+  // Restliche Hintergrund-Keile an den vier Kanten wegschneiden (Zeilen/Spalten mit zu viel Dunkel am Rand)
+  function cleanEdges(cv, otsu) {
+    try {
+      const S = 400, k = Math.min(1, S / Math.max(cv.width, cv.height));
+      const w = Math.round(cv.width * k), h = Math.round(cv.height * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const cx = c.getContext('2d'); cx.drawImage(cv, 0, 0, w, h);
+      const d = cx.getImageData(0, 0, w, h).data, gr = new Uint8Array(w * h), hist = new Uint32Array(256);
+      for (let i = 0; i < w * h; i++) { const g = (d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11) | 0; gr[i] = g; hist[g]++; }
+      let acc = 0, paper = 200; for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc > w * h * 0.3) { paper = v; break; } }
+      const lim = Math.max(otsu, paper * 0.62);                         // dunkler als Papier -> Hintergrund
+      const rowDark = y => { let n = 0; for (let x = 0; x < w; x++) if (gr[y * w + x] < lim) n++; return n / w; };
+      const colDark = x => { let n = 0; for (let y = 0; y < h; y++) if (gr[y * w + x] < lim) n++; return n / h; };
+      const TH = 0.1, capH = Math.floor(h * 0.15), capW = Math.floor(w * 0.15);
+      let t = 0, b = 0, l = 0, r = 0;
+      while (t < capH && rowDark(t) > TH) t++;
+      while (b < capH && rowDark(h - 1 - b) > TH) b++;
+      while (l < capW && colDark(l) > TH) l++;
+      while (r < capW && colDark(w - 1 - r) > TH) r++;
+      if (!(t || b || l || r)) return cv;
+      const pad = 3, fx = cv.width / w, fy = cv.height / h;
+      const X = Math.round((l ? l + pad : 0) * fx), Y = Math.round((t ? t + pad : 0) * fy);
+      const W2 = Math.round(cv.width - X - (r ? (r + pad) * fx : 0)), H2 = Math.round(cv.height - Y - (b ? (b + pad) * fy : 0));
+      if (W2 < cv.width * 0.5 || H2 < cv.height * 0.5) return cv;
+      const out = document.createElement('canvas'); out.width = W2; out.height = H2;
+      out.getContext('2d').drawImage(cv, X, Y, W2, H2, 0, 0, W2, H2);
+      return out;
+    } catch (e) { return cv; }
   }
 
   // Foto verkleinern; bei scanLook: Papier ausschneiden, Graustufen mit mehr Kontrast, bis es unter das Limit passt
@@ -3019,7 +3053,7 @@
       const img = await pdf.embedJpg(dataUrlToBytes(jpg));
       // Ausgeschnittener Beleg, mittig auf weissem A4
       const W = 595.28, H = 841.89, M = 28;
-      const k = Math.min((W - 2 * M) / img.width, (H - 2 * M) / img.height);
+      const k = Math.min((W - 2 * M) / img.width, (H - 2 * M) / img.height) * 0.82;
       const w = img.width * k, h = img.height * k;
       const pg = pdf.addPage([W, H]);
       pg.drawImage(img, { x: (W - w) / 2, y: H - M - h, width: w, height: h });
@@ -4030,7 +4064,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.04';
+  const APP_VERSION = '1.05';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
