@@ -67,12 +67,13 @@ service cloud.firestore {
       allow update: if
         (canAssign()
           && resource.data.createdByKey == uname()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'assigneeKey', 'dueAt', 'note', 'points', 'done', 'doneAt']))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'assigneeKey', 'dueAt', 'note', 'points', 'done', 'doneAt', 'claimedAt']))
         || (canAssign()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt']))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'claimedAt', 'seenAt']))
         || (canTodo()
           && mail() == resource.data.assigneeKey + '@ecker.ch'
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'seenAt']));
+          && resource.data.done == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedAt', 'seenAt']));
       allow delete: if canAssign();
     }
 
