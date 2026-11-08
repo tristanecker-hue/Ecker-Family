@@ -1063,6 +1063,10 @@
       </details>
     </div>
     <div class="card">
+      <button class="save-btn" id="btnBackupAll" onclick="backupSpesenAll()">💾 Alles sichern (ZIP)</button>
+      <div class="set-note">Speichert alle Belege (verrechnet und noch nicht verrechnet), alle exportierten Abrechnungen als PDF und Excel sowie die Daten in einer Datei, z. B. in OneDrive.</div>
+    </div>
+    <div class="card">
       <details id="doneBox">
         <summary style="cursor:pointer;font-weight:700;">📁 Belege verrechnet (<span id="doneCount">0</span>)</summary>
         <div id="spesenDoneList" style="margin-top:8px;"></div>
@@ -3482,6 +3486,59 @@
           </div>`).join('');
   }
 
+  let jszipPromise = null;
+  function loadJsZip() {
+    if (window.JSZip) return Promise.resolve(window.JSZip);
+    if (!jszipPromise) jszipPromise = new Promise((resolve, reject) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      sc.onload = () => resolve(window.JSZip);
+      sc.onerror = () => { jszipPromise = null; reject(new Error('jszip')); };
+      document.head.appendChild(sc);
+    });
+    return jszipPromise;
+  }
+
+  async function backupSpesenAll() {
+    const btn = document.getElementById('btnBackupAll');
+    if (btn.disabled) return;
+    btn.disabled = true; const label = btn.textContent;
+    try {
+      btn.textContent = 'Wird gesammelt …';
+      const JSZip = await loadJsZip();
+      const zip = new JSZip();
+      const safe = t => String(t || '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 60);
+      let missing = 0, n = 0;
+      for (const x of spesen) {
+        if (!x.beleg) continue;
+        const bd = await getBelegData(x);
+        if (!bd || !bd.data) { missing++; continue; }
+        const mime = (bd.data.match(/^data:([^;]+);/) || [])[1] || 'application/pdf';
+        const ext = mime.includes('pdf') ? 'pdf' : mime.includes('png') ? 'png' : 'jpg';
+        const folder = x.verrechnet ? 'Belege verrechnet' : 'Belege noch nicht verrechnet';
+        zip.file(folder + '/' + x.date + ' ' + safe(x.stelle || 'Sonstiges') + ' ' + safe(x.text || 'Spese') + ' CHF ' + Number(x.amount).toFixed(2) + ' (' + x.id.slice(-4) + ').' + ext, dataUrlToBytes(bd.data));
+        n++; btn.textContent = 'Belege ' + n + ' …';
+      }
+      let k = 0;
+      for (const r of abrechnungen) {
+        k++; btn.textContent = 'Abrechnung ' + k + '/' + abrechnungen.length + ' …';
+        try {
+          const files = await buildAbrechnungFiles(r, true, true);
+          const base = 'Spesenabrechnung erledigt/' + abrFileBase(r.createdAt);
+          zip.file(base + '.xlsx', files.xlsx); zip.file(base + '.pdf', files.pdf);
+        } catch (e) { missing++; }
+      }
+      const data = { gesichert: new Date().toISOString(), spesen: spesen, abrechnungen: abrechnungen.map(r => ({ ...r })), stellen: typeof stellen !== 'undefined' ? stellen : null };
+      zip.file('Spesen-Daten.json', JSON.stringify(data, null, 2));
+      btn.textContent = 'ZIP wird erstellt …';
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const d = new Date();
+      downloadBlob(blob, d.getFullYear() + '_' + String(d.getMonth() + 1).padStart(2, '0') + '_' + String(d.getDate()).padStart(2, '0') + ' Spesen Sicherung.zip');
+      showToast(missing ? 'Gesichert – ' + missing + ' Datei(en) fehlten' : 'Gesichert');
+    } catch (e) { showToast('Sichern fehlgeschlagen (Internet nötig)'); }
+    btn.disabled = false; btn.textContent = label;
+  }
+
   async function deleteAbrechnung(id) {
     if (!window.confirm('Diese exportierte Spesenabrechnung wirklich löschen?')) return;
     try {
@@ -4094,7 +4151,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.09';
+  const APP_VERSION = '1.10';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
