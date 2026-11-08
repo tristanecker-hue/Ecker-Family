@@ -260,6 +260,98 @@
   .account-btn:active { transform: scale(0.97); }
   .no-punkte .punkte-field { display: none !important; }
 
+  /* Farbdesigns (Palette für den Doodle-Stil) */
+  body.doodle.th-ozean  { --k-zeit:#2BB3A3; --k-todo:#5B7FE0; --k-plan:#4DB5F0; --k-spiele:#7C9CF5; --k-punkte:#5CD0E6; --k-essen:#34B8D4; --btn:#9ADCF5; }
+  body.doodle.th-wald   { --k-zeit:#5FAE4B; --k-todo:#8AAE3E; --k-plan:#5FAF8C; --k-spiele:#A3C255; --k-punkte:#D4BE45; --k-essen:#C98B4A; --btn:#C5DE80; }
+  body.doodle.th-sonne  { --k-zeit:#F0903A; --k-todo:#E8604C; --k-plan:#F5B942; --k-spiele:#F0689A; --k-punkte:#F7C948; --k-essen:#F28B54; --btn:#FFC94D; }
+  body.doodle.th-beere  { --k-zeit:#B05CC9; --k-todo:#8E5CE0; --k-plan:#D660A8; --k-spiele:#F078B4; --k-punkte:#E39AD0; --k-essen:#C45A8A; --btn:#EBB0E0; }
+  body.doodle.th-grau   { --k-zeit:#4B5563; --k-todo:#4B5563; --k-plan:#4B5563; --k-spiele:#4B5563; --k-punkte:#4B5563; --k-essen:#4B5563; --btn:#E5E7EB; }
+  .theme-list { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .theme-opt { border:3px solid #262319; border-radius:18px 22px 17px 21px / 21px 17px 22px 18px; background:#fff; padding:10px 10px 8px; cursor:pointer; text-align:left; font:inherit; color:inherit; }
+  .theme-opt.on { box-shadow:3px 4px 0 #262319; background:#FFF8DC; }
+  .theme-opt .tn { font-family:'Permanent Marker','Patrick Hand',cursive; font-size:16px; display:block; margin-bottom:6px; }
+  .theme-opt .dots { display:flex; gap:4px; }
+  .theme-opt .dots i { width:20px; height:20px; border-radius:50%; border:2px solid #262319; display:block; }
+  /* ===== Doodle-Stil (Familien-Heft): Marker-Schrift, dicke bunte Rahmen, Papier ===== */
+  body.doodle {
+    --bg:#fff; --paper:#fff; --ink:#1d1b16; --ink-soft:#5d574a; --line:#262319;
+    --gold:#F0A53A; --gold-dark:#F0A53A; --radius:24px; --radius-sm:16px;
+    --k-zeit:#7CCB4A; --k-todo:#A27BE0; --k-plan:#4DB5F0; --k-spiele:#F58AB8; --k-punkte:#F2C230; --k-essen:#F0903A; --btn:#F5B942;
+    --cc:var(--k-plan); --cb:var(--k-plan-b); --hl:var(--k-plan-h);
+    font-family:'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive; font-size:18px;
+    background-color:#fff; background-image:radial-gradient(#e6e0d0 1.3px, transparent 1.4px); background-size:24px 24px; background-attachment:fixed;
+  }
+  body.doodle { --k-zeit-b:color-mix(in srgb, var(--k-zeit) 9%, #fff); --k-zeit-h:color-mix(in srgb, var(--k-zeit) 38%, #fff); }
+  body.doodle { --k-todo-b:color-mix(in srgb, var(--k-todo) 9%, #fff); --k-todo-h:color-mix(in srgb, var(--k-todo) 38%, #fff); }
+  body.doodle { --k-plan-b:color-mix(in srgb, var(--k-plan) 9%, #fff); --k-plan-h:color-mix(in srgb, var(--k-plan) 38%, #fff); }
+  body.doodle { --k-spiele-b:color-mix(in srgb, var(--k-spiele) 9%, #fff); --k-spiele-h:color-mix(in srgb, var(--k-spiele) 38%, #fff); }
+  body.doodle { --k-punkte-b:color-mix(in srgb, var(--k-punkte) 9%, #fff); --k-punkte-h:color-mix(in srgb, var(--k-punkte) 38%, #fff); }
+  body.doodle { --k-essen-b:color-mix(in srgb, var(--k-essen) 9%, #fff); --k-essen-h:color-mix(in srgb, var(--k-essen) 38%, #fff); }
+  body.doodle.login-bg { background-color:#fff; background-image:radial-gradient(#e6e0d0 1.3px, transparent 1.4px); background-size:24px 24px; }
+  body.doodle button, body.doodle input, body.doodle select, body.doodle textarea { font-family:'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive; }
+  body.doodle #hauswartScreen, body.doodle #mainScreen, body.doodle #summaryScreen { --cc:var(--k-zeit); --cb:var(--k-zeit-b); --hl:var(--k-zeit-h); }
+  body.doodle #todoScreen { --cc:var(--k-todo); --cb:var(--k-todo-b); --hl:var(--k-todo-h); }
+  body.doodle #spieleScreen { --cc:var(--k-spiele); --cb:var(--k-spiele-b); --hl:var(--k-spiele-h); }
+  body.doodle #essenScreen { --cc:var(--k-essen); --cb:var(--k-essen-b); --hl:var(--k-essen-h); }
+  body.doodle #punkteScreen { --cc:var(--k-punkte); --cb:var(--k-punkte-b); --hl:var(--k-punkte-h); }
+  body.doodle #spesenScreen, body.doodle #planScreen { --cc:var(--k-plan); --cb:var(--k-plan-b); --hl:var(--k-plan-h); }
+  body.doodle #settingsScreen { --cc:var(--k-zeit); --cb:var(--k-zeit-b); --hl:var(--k-zeit-h); }
+  body.doodle h1, body.doodle .account-name, body.doodle .card-title { font-family:'Permanent Marker','Patrick Hand',cursive; font-weight:400; letter-spacing:.2px; color:#1d1b16; }
+  body.doodle h1 { font-size:30px; line-height:1.15; display:inline-block; padding:0 12px 0 6px; border-radius:6px; background:linear-gradient(transparent 55%, var(--hl) 55%); }
+  body.doodle .account-screen h1 { font-size:38px; }
+  body.doodle .card-title { font-size:21px; display:inline-block; padding:0 8px 0 2px; background:linear-gradient(transparent 58%, var(--hl) 58%); border-radius:5px; }
+  body.doodle .sub, body.doodle .field label { font-family:'Patrick Hand',cursive; font-size:16px; color:var(--ink-soft); font-weight:400; }
+  body.doodle .sub { display:block; margin-top:4px; }
+  body.doodle .card { background:var(--cb); border:3px solid var(--cc); border-radius:24px 28px 22px 26px / 26px 22px 28px 24px; padding:18px 18px; }
+  body.doodle .card.private { background:var(--cb); }
+  body.doodle .field input[type="date"], body.doodle .field input[type="time"], body.doodle .field input[type="number"], body.doodle .field textarea,
+  body.doodle input[type="text"], body.doodle input[type="password"], body.doodle input[type="email"], body.doodle select {
+    border:2.5px solid #262319; border-radius:14px 16px 13px 17px / 16px 13px 17px 14px; background:#fff; font-size:18px; color:#1d1b16; }
+  body.doodle .field input:focus, body.doodle .field textarea:focus, body.doodle input:focus, body.doodle select:focus { outline:none; border-color:var(--cc); box-shadow:0 0 0 3px var(--hl); }
+  body.doodle .save-btn { background:var(--btn); color:#1d1b16; border:3px solid #262319; border-radius:16px 20px 15px 19px / 19px 15px 20px 16px; font-size:21px; font-weight:400; padding:14px; box-shadow:3px 4px 0 #262319; letter-spacing:.3px; }
+  body.doodle .save-btn:active { transform:translate(2px,3px); box-shadow:1px 1px 0 #262319; }
+  body.doodle .save-btn:disabled { background:#e9e4d6; box-shadow:none; }
+  body.doodle .switch-btn { font-size:17px; color:#1d1b16; }
+  body.doodle .nav-chip { border:2.5px solid #262319; background:#fff; font-size:17px; font-weight:400; padding:6px 15px; box-shadow:2px 3px 0 #262319; }
+  body.doodle .nav-chip.active { background:var(--btn); color:#1d1b16; border-color:#262319; }
+  body.doodle .back-btn, body.doodle .gear-btn { border:2.5px solid #262319; background:#fff; box-shadow:2px 3px 0 #262319; color:#1d1b16; }
+  body.doodle .type-btn { border:3px solid #262319; border-radius:18px 22px 17px 21px / 21px 17px 22px 18px; box-shadow:3px 4px 0 #262319; font-size:20px; font-weight:400; }
+  body.doodle .type-btn.allgemein { background:#EAF5FE; color:#1d1b16; } body.doodle .type-btn.garten { background:#EAF7DF; color:#1d1b16; }
+  /* Kacheln (Anmeldung + Startseite) */
+  body.doodle .account-btn { --tc:var(--k-plan); --tb:var(--k-plan-b); background:var(--tb); border:3px solid var(--tc); border-radius:26px 30px 24px 28px / 28px 24px 30px 26px; box-shadow:none; }
+  body.doodle .account-btn:hover { transform:rotate(-.6deg); }
+  body.doodle .account-btn:active { transform:scale(.97) rotate(.5deg); }
+  body.doodle .account-name { font-size:22px; }
+  body.doodle .account-hint { font-family:'Patrick Hand',cursive; font-size:16px; color:var(--ink-soft); }
+  body.doodle .account-avatar { border:3px solid #262319; }
+  body.doodle #tileZeit { --tc:var(--k-zeit); --tb:var(--k-zeit-b); } body.doodle #tileTodo { --tc:var(--k-todo); --tb:var(--k-todo-b); }
+  body.doodle #tilePlan { --tc:var(--k-plan); --tb:var(--k-plan-b); } body.doodle #tileSpiele { --tc:var(--k-spiele); --tb:var(--k-spiele-b); }
+  body.doodle #tilePunkte { --tc:var(--k-punkte); --tb:var(--k-punkte-b); } body.doodle #tileEssen { --tc:var(--k-essen); --tb:var(--k-essen-b); }
+  body.doodle #accountGrid .account-btn:nth-child(1) { --tc:var(--k-zeit); --tb:var(--k-zeit-b); } body.doodle #accountGrid .account-btn:nth-child(2) { --tc:var(--k-todo); --tb:var(--k-todo-b); }
+  body.doodle #accountGrid .account-btn:nth-child(3) { --tc:var(--k-spiele); --tb:var(--k-spiele-b); } body.doodle #accountGrid .account-btn:nth-child(4) { --tc:var(--k-plan); --tb:var(--k-plan-b); }
+  body.doodle .app-version { font-family:'Patrick Hand',cursive; }
+  body.doodle .game-tile { border:3px solid var(--cc); background:var(--cb); border-radius:24px 28px 22px 26px / 26px 22px 28px 24px; font-family:'Patrick Hand',cursive; }
+  body.doodle .game-tile .g-name { font-family:'Permanent Marker',cursive; font-weight:400; font-size:18px; }
+  body.doodle .lvl-btn, body.doodle .ttt-cell, body.doodle .math-answers button { border:3px solid #262319; box-shadow:2px 3px 0 #262319; font-family:'Patrick Hand',cursive; }
+  body.doodle .meal-card, body.doodle .meal-tile { border-color:var(--cc); }
+  body.doodle .meal-card { border-width:3px; background:var(--cb); border-radius:24px 28px 22px 26px / 26px 22px 28px 24px; }
+  body.doodle .meal-head .dn { font-family:'Permanent Marker',cursive; font-weight:400; }
+  body.doodle .wk-nav .wk-title { font-family:'Permanent Marker',cursive; font-weight:400; }
+  body.doodle .wk-nav .wk-arrow { border:2.5px solid #262319; box-shadow:2px 3px 0 #262319; }
+  body.doodle .todo-item, body.doodle .todo-text { font-family:'Patrick Hand',cursive; }
+  body.doodle .todo-text { font-size:20px; }
+  body.doodle .todo-check { border:3px solid #262319; border-radius:11px; }
+  body.doodle .todo-popup-card { border:3px solid var(--k-todo); border-radius:28px 32px 26px 30px / 30px 26px 32px 28px; }
+  body.doodle .meal-tile input, body.doodle .meal-tile.editable input { border:0; box-shadow:none; border-radius:0; background:transparent; font-size:18px; }
+  body.doodle .meal-tile.editable { border:2.5px solid #262319; background:#fff; border-radius:14px 16px 13px 17px / 16px 13px 17px 14px; }
+  body.doodle .meal-tile.editable:focus-within { border-color:var(--cc); box-shadow:0 0 0 3px var(--hl); }
+  body.doodle .meal-tile .ml { font-size:15px; } body.doodle .meal-tile .mv { font-size:18px; }
+  body.doodle .meal-hero .hm, body.doodle .meal-hero .hh { font-family:'Permanent Marker','Patrick Hand',cursive; font-weight:400; font-style:normal; }
+  body.doodle .meal-hero .hl, body.doodle .meal-hero .hm.none { font-family:'Patrick Hand',cursive; font-style:normal; font-size:16px; }
+  body.doodle .home-quote { font-family:'Patrick Hand',cursive; font-style:normal; font-size:20px; }
+  body.doodle .account-hint, body.doodle .app-version, body.doodle .sub { font-size:16px; }
+  body.doodle .tp-title { font-family:'Permanent Marker',cursive; font-weight:400; }
+
   /* Kinder-Darstellung der To-Dos (Familien-To-Do-Liste) */
   .kid-head { text-align:center; padding:4px 8px 14px; }
   .kid-head .kt { font-family:'Permanent Marker','Patrick Hand',cursive; font-size:30px; line-height:1.05; color:#262319; }
@@ -829,6 +921,10 @@
   .field input[type="text"]:focus, .field select:focus { outline: none; border-color: var(--gold); }
 
   /* ---------- Spruch ---------- */
+  .home-info { display:flex; flex-direction:column; gap:6px; margin:8px 0 12px; font-size:16px; }
+  .home-info:empty { display:none; }
+  .home-info .hi { padding:6px 10px; border-radius:10px; background:rgba(0,0,0,.05); }
+  .home-info .hi.warn { background:rgba(220,70,50,.13); }
   .home-quote {
     margin-top: 14px;
     padding: 10px 0 2px 14px;
@@ -987,6 +1083,9 @@
 </style>
 </head>
 <body class="login-bg">
+<script>
+  (function () { try { var t = localStorage.getItem('ef-theme-last') || 'bunt'; if (t !== 'klassisch') document.body.classList.add('doodle', 'th-' + t); } catch (e) { document.body.classList.add('doodle', 'th-bunt'); } })();
+</script>
 
 <div class="wrap">
 
@@ -1029,6 +1128,7 @@
     <div class="card">
       <div class="card-title">Hallo <span id="homeName"></span> 👋</div>
       <div class="sub" id="homeHint" style="font-size:14px;"></div>
+      <div class="home-info" id="homeInfo"></div>
       <div class="home-quote" id="homeQuote"></div>
     </div>
 
@@ -1282,6 +1382,11 @@
         <button class="switch-btn" onclick="logout()">Abmelden</button>
       </div>
       <div class="set-note">Mit ✎ änderst du dein Profilbild.</div>
+    </div>
+    <div class="card" id="themeCard">
+      <div class="card-title">Farbdesign</div>
+      <div class="set-note" style="margin-top:0;">Gilt für dich auf diesem Gerät.</div>
+      <div class="theme-list" id="themeList"></div>
     </div>
     <div id="settingsAdmin">
     <div id="settingsList"></div>
@@ -1922,6 +2027,7 @@
 
   async function selectAccount(name) {
     currentUser = name;
+    try { const t = localStorage.getItem(themeKey()); if (t) { applyTheme(t); localStorage.setItem('ef-theme-last', t); } } catch (e) {}
     setLoginBackground(false);
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
@@ -2470,10 +2576,40 @@
     document.getElementById('tilePunkte').classList.toggle('hidden', !hasFeature('punkte'));
     document.getElementById('tileEssen').classList.toggle('hidden', !hasFeature('essen'));
     if (hasFeature('essen')) loadEssenSub();
+    updateHomeInfo();
     const hint = document.getElementById('homeHint');
     hint.textContent = '';
     document.getElementById('tilePlanName').textContent = canEditPlan() ? 'Stundenplan Kinder' : 'Stundenplan';
     showSaying();
+  }
+
+
+  // ---------- Farbdesign ----------
+  const THEMES = [
+    { k: 'bunt', n: 'Bunt', c: ['#7CCB4A', '#A27BE0', '#4DB5F0', '#F58AB8', '#F2C230', '#F0903A'] },
+    { k: 'ozean', n: 'Ozean', c: ['#2BB3A3', '#5B7FE0', '#4DB5F0', '#7C9CF5', '#5CD0E6', '#34B8D4'] },
+    { k: 'wald', n: 'Wald', c: ['#5FAE4B', '#8AAE3E', '#5FAF8C', '#A3C255', '#D4BE45', '#C98B4A'] },
+    { k: 'sonne', n: 'Sonnenuntergang', c: ['#F0903A', '#E8604C', '#F5B942', '#F0689A', '#F7C948', '#F28B54'] },
+    { k: 'beere', n: 'Beere', c: ['#B05CC9', '#8E5CE0', '#D660A8', '#F078B4', '#E39AD0', '#C45A8A'] },
+    { k: 'grau', n: 'Schwarz-Weiss', c: ['#4B5563', '#6B7280', '#9CA3AF', '#4B5563', '#6B7280', '#9CA3AF'] },
+    { k: 'klassisch', n: 'Klassisch (alt)', c: ['#3D5A3A', '#B8873B', '#3E4A5C', '#A8352A', '#C9C1AE', '#E4DCC9'] }
+  ];
+  const themeKey = () => 'ef-theme-' + (currentUser ? userKey(currentUser) : 'x');
+  function getTheme() { try { return (currentUser && localStorage.getItem(themeKey())) || localStorage.getItem('ef-theme-last') || 'bunt'; } catch (e) { return 'bunt'; } }
+  function applyTheme(k) {
+    if (!THEMES.some(t => t.k === k)) k = 'bunt';
+    const cl = document.body.classList;
+    [...cl].filter(c => c === 'doodle' || c.startsWith('th-')).forEach(c => cl.remove(c));
+    if (k !== 'klassisch') cl.add('doodle', 'th-' + k);
+  }
+  function setTheme(k) {
+    try { localStorage.setItem(themeKey(), k); localStorage.setItem('ef-theme-last', k); } catch (e) {}
+    applyTheme(k); renderThemes();
+  }
+  function renderThemes() {
+    const el = document.getElementById('themeList'); if (!el) return;
+    const cur = getTheme();
+    el.innerHTML = THEMES.map(t => `<button class="theme-opt ${t.k === cur ? 'on' : ''}" onclick="setTheme('${t.k}')"><span class="tn">${t.k === cur ? '✓ ' : ''}${t.n}</span><span class="dots">${t.c.map(c => `<i style="background:${c}"></i>`).join('')}</span></button>`).join('');
   }
 
   function openSettings() {
@@ -2482,6 +2618,7 @@
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
+    renderThemes();
     if (isAdmin()) renderSettings();
     applyAvatars();
   }
@@ -2759,6 +2896,21 @@
     } catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); }
   }
 
+  let homeMeal = '', homeTodo = null;
+  function updateHomeInfo() { homeMeal = ''; homeTodo = null; renderHomeInfo(); if (hasFeature('todo')) updateTodoBadge(); }
+  function renderHomeInfo() {
+    const el = document.getElementById('homeInfo');
+    if (!el) return;
+    const r = [];
+    if (homeMeal && hasFeature('essen')) r.push(['', '🍽️ ' + homeMeal]);
+    if (homeTodo && hasFeature('todo')) {
+      if (homeTodo.mine) r.push(['', `✅ ${homeTodo.mine} offene Pendenz${homeTodo.mine > 1 ? 'en' : ''}`]);
+      if (homeTodo.late) r.push(['warn', `⚠ ${homeTodo.late} überfällig`]);
+      if (homeTodo.confirmN) r.push(['', `⏳ ${homeTodo.confirmN} zu bestätigen`]);
+    }
+    el.innerHTML = r.map(x => `<div class="hi ${x[0]}">${escapeHtml(x[1])}</div>`).join('');
+  }
+
   async function loadEssenSub() {
     const el = document.getElementById('essenSub');
     if (!el) return;
@@ -2777,6 +2929,7 @@
         else if (v.a && (i > 0 || h < 20)) txt = label + ' Abend: ' + v.a;
       }
       el.textContent = txt;
+      homeMeal = txt; renderHomeInfo();
     } catch (e) { el.textContent = ''; }
   }
 
@@ -4613,6 +4766,8 @@
     const mine = todos.filter(t => t.assigneeKey === me && !t.done && !t.claimedAt).length;
     const confirmN = canAssignTodos() ? todos.filter(t => KIDS.map(userKey).includes(t.assigneeKey) && t.claimedAt && !t.done).length : 0;
     const el = document.getElementById('todoBadge');
+    homeTodo = { mine, confirmN, late: todos.filter(t => t.assigneeKey === me && !t.done && t.dueAt && t.dueAt < todayStr()).length };
+    renderHomeInfo();
     if (el) el.textContent = [mine ? `${mine} offen` : '', confirmN ? `${confirmN} zu bestätigen` : ''].filter(Boolean).join(' · ');
   }
 
@@ -5198,7 +5353,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.37';
+  const APP_VERSION = '1.39';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
