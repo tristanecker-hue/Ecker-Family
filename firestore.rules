@@ -38,6 +38,19 @@ service cloud.firestore {
       allow read, write: if isTristan();
     }
 
+    // To-Do's: alle vier lesen. Claudia und Tristan legen an, ändern und löschen.
+    // Die zugeordnete Person darf nur "erledigt" ein- und ausschalten.
+    match /todos/{id} {
+      allow read: if isFamily();
+      allow create: if isTimeUser();
+      allow update: if isTimeUser() || (
+        isFamily()
+        && mail() == resource.data.assigneeKey + '@ecker.ch'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt'])
+      );
+      allow delete: if isTimeUser();
+    }
+
     // Profile (Name + Profilbild): alle vier lesen, jeder schreibt nur sein eigenes
     match /profiles/{userId} {
       allow read: if isFamily();

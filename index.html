@@ -652,6 +652,38 @@
 
   #avatarFileInput, #backupFileInput { display: none; }
 
+  .account-hint:empty { display: none; }
+  .field input[type="text"], .field select {
+    width: 100%;
+    padding: 14px 14px;
+    font-size: 17px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+  }
+  .field input[type="text"]:focus, .field select:focus { outline: none; border-color: var(--gold); }
+
+  /* ---------- To-Do's ---------- */
+  .todo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .todo-count { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  .todo-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 2px; border-top: 1px solid var(--line); }
+  .todo-check {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 2px solid var(--line); background: var(--bg);
+    flex-shrink: 0; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: white; font-family: 'Inter', sans-serif;
+  }
+  .todo-check.done { background: var(--garten); border-color: var(--garten); }
+  .todo-check:disabled { opacity: .45; cursor: default; }
+  .todo-body { flex: 1; min-width: 0; }
+  .todo-text { font-size: 15.5px; line-height: 1.35; word-wrap: break-word; }
+  .todo-item.done .todo-text { text-decoration: line-through; color: var(--ink-soft); }
+  .todo-meta { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .todo-empty { font-size: 13.5px; color: var(--ink-soft); padding: 6px 2px 2px; }
+
   /* ---------- Login form (Cloud-Modus) ---------- */
   body.cloud-mode .local-only { display: none !important; }
 
@@ -759,7 +791,7 @@
 
     <div class="card">
       <div class="card-title">Hallo <span id="homeName"></span> 👋</div>
-      <div class="sub" id="homeHint" style="font-size:14px;">Schön, dass du da bist. Hier kommen bald weitere Funktionen für dich dazu.</div>
+      <div class="sub" id="homeHint" style="font-size:14px;">Was möchtest du öffnen?</div>
     </div>
 
     <div class="account-grid" id="homeTiles">
@@ -767,7 +799,39 @@
         <div class="account-avatar" style="background:var(--gold-dark);">⏱</div>
         <div class="account-name">Zeiterfassung</div>
       </div>
+      <div class="account-btn" id="tileTodo" role="button" tabindex="0" onclick="openTodos()" onkeydown="if(event.key==='Enter'||event.key===' '){openTodos()}">
+        <div class="account-avatar" style="background:var(--garten);">✅</div>
+        <div class="account-name">To-Do's</div>
+        <div class="account-hint" id="todoBadge"></div>
+      </div>
     </div>
+  </div>
+
+  <!-- To-Do's -->
+  <div id="todoScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>To-Do's</h1>
+        <div class="sub">Aufgaben pro Person</div>
+      </div>
+      <button class="switch-btn" style="margin-left:auto;" onclick="refreshTodos()">↻ Aktualisieren</button>
+    </div>
+
+    <div class="card hidden" id="todoAddCard">
+      <div class="card-title">Neue Aufgabe</div>
+      <div class="field">
+        <label for="todoText">Aufgabe</label>
+        <input type="text" id="todoText" placeholder="z. B. Treppenhaus putzen" maxlength="200" onkeydown="if(event.key==='Enter'){addTodo()}">
+      </div>
+      <div class="field">
+        <label for="todoAssignee">Zuordnen an</label>
+        <select id="todoAssignee"></select>
+      </div>
+      <button class="save-btn" onclick="addTodo()">Aufgabe hinzufügen</button>
+    </div>
+
+    <div id="todoLists"></div>
   </div>
 
   <!-- Main app -->
@@ -1331,11 +1395,11 @@
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
     const hasTime = TIME_USERS.includes(name);
     document.getElementById('tileZeit').classList.toggle('hidden', !hasTime);
-    document.getElementById('homeHint').classList.toggle('hidden', hasTime);
     document.getElementById('switchName').textContent = name;
     document.getElementById('homeSwitchName').textContent = name;
     document.getElementById('homeName').textContent = name;
@@ -1344,12 +1408,14 @@
       await loadAvatars();
     }
     applyAvatars();
+    updateTodoBadge();
   }
 
   async function openTimeTracking() {
     if (!currentUser || !TIME_USERS.includes(currentUser)) return;
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
 
@@ -1365,8 +1431,10 @@
   function goHome() {
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
+    updateTodoBadge();
   }
 
   function logout() {
@@ -1387,8 +1455,10 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
+    todos = [];
     if (cloudEnabled) {
       entries = [];
       backToTiles();
@@ -1732,6 +1802,156 @@
     `).join('');
   }
 
+  // ---------- To-Do's ----------
+
+  const TODO_KEY = 'ef-todos';
+  let todos = [];
+
+  function userKey(name) {
+    return Object.keys(ACCOUNTS).find(k => ACCOUNTS[k] === name) || String(name).toLowerCase();
+  }
+  function canAssignTodos() { return TIME_USERS.includes(currentUser); }
+
+  async function loadTodos() {
+    if (cloudEnabled) {
+      try { todos = await withTimeout(cloudApi.listTodos()); }
+      catch (e) { showToast("To-Do's konnten nicht geladen werden"); }
+      return;
+    }
+    try { todos = JSON.parse(localStorage.getItem(TODO_KEY) || '[]'); } catch (e) { todos = []; }
+  }
+
+  function persistTodosLocal() {
+    try { localStorage.setItem(TODO_KEY, JSON.stringify(todos)); } catch (e) { showToast('Speichern fehlgeschlagen'); }
+  }
+
+  async function updateTodoBadge() {
+    if (!currentUser) return;
+    await loadTodos();
+    const mine = todos.filter(t => t.assigneeKey === userKey(currentUser) && !t.done).length;
+    const el = document.getElementById('todoBadge');
+    if (el) el.textContent = mine ? `${mine} offen` : '';
+  }
+
+  async function openTodos() {
+    if (!currentUser) return;
+    document.getElementById('homeScreen').classList.add('hidden');
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('summaryScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+
+    const addCard = document.getElementById('todoAddCard');
+    addCard.classList.toggle('hidden', !canAssignTodos());
+    const sel = document.getElementById('todoAssignee');
+    if (!sel.options.length) {
+      sel.innerHTML = USERS.map(n => `<option value="${escapeHtml(userKey(n))}">${escapeHtml(n)}</option>`).join('');
+    }
+    await refreshTodos();
+  }
+
+  async function refreshTodos() {
+    await loadTodos();
+    renderTodos();
+  }
+
+  function renderTodos() {
+    const wrap = document.getElementById('todoLists');
+    const me = userKey(currentUser);
+    const nameOf = key => ACCOUNTS[key] || key;
+
+    wrap.innerHTML = USERS.map(n => {
+      const key = userKey(n);
+      const mine = todos.filter(t => t.assigneeKey === key);
+      const open = mine.filter(t => !t.done).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      const done = mine.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+      const item = t => {
+        const canToggle = canAssignTodos() || key === me;
+        return `
+          <div class="todo-item ${t.done ? 'done' : ''}">
+            <button class="todo-check ${t.done ? 'done' : ''}" ${canToggle ? '' : 'disabled'} onclick="toggleTodo('${t.id}')" title="${t.done ? 'Wieder öffnen' : 'Erledigt'}">${t.done ? '✓' : ''}</button>
+            <div class="todo-body">
+              <div class="todo-text">${escapeHtml(t.text)}</div>
+              <div class="todo-meta">von ${escapeHtml(nameOf(t.createdByKey))}</div>
+            </div>
+            ${canAssignTodos() ? `<button class="del-btn" onclick="deleteTodo('${t.id}')" title="Löschen">✕</button>` : ''}
+          </div>`;
+      };
+      return `
+        <div class="card">
+          <div class="todo-head">
+            <div class="compare-avatar" data-avatar="${escapeHtml(n)}"></div>
+            <div class="compare-name">${escapeHtml(n)}</div>
+            <div class="todo-count">${open.length} offen</div>
+          </div>
+          ${open.length + done.length === 0 ? '<div class="todo-empty">Keine Aufgaben.</div>' : open.map(item).join('') + done.map(item).join('')}
+        </div>`;
+    }).join('');
+    applyAvatars();
+  }
+
+  async function addTodo() {
+    if (!canAssignTodos()) return;
+    const input = document.getElementById('todoText');
+    const text = input.value.trim();
+    if (!text) { showToast('Bitte eine Aufgabe eingeben'); return; }
+    const todo = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      text,
+      assigneeKey: document.getElementById('todoAssignee').value,
+      createdByKey: userKey(currentUser),
+      done: false,
+      createdAt: Date.now(),
+      doneAt: null
+    };
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.addTodo(todo));
+      todos.push(todo);
+      if (!cloudEnabled) persistTodosLocal();
+    } catch (e) {
+      showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen');
+      return;
+    }
+    input.value = '';
+    renderTodos();
+    showToast('Aufgabe hinzugefügt');
+  }
+
+  async function toggleTodo(id) {
+    const t = todos.find(x => x.id === id);
+    if (!t) return;
+    const patch = { done: !t.done, doneAt: !t.done ? Date.now() : null };
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(id, patch));
+      Object.assign(t, patch);
+      if (!cloudEnabled) persistTodosLocal();
+    } catch (e) {
+      showToast('Änderung fehlgeschlagen – bitte Verbindung prüfen');
+      return;
+    }
+    renderTodos();
+  }
+
+  async function deleteTodo(id) {
+    if (!canAssignTodos()) return;
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.deleteTodo(id));
+      todos = todos.filter(x => x.id !== id);
+      if (!cloudEnabled) persistTodosLocal();
+    } catch (e) {
+      showToast('Löschen fehlgeschlagen – bitte Verbindung prüfen');
+      return;
+    }
+    renderTodos();
+  }
+
+  // Beim Zurückkehren in die App aktuelle To-Do's holen
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !currentUser) return;
+    if (!document.getElementById('todoScreen').classList.contains('hidden')) refreshTodos();
+    else if (!document.getElementById('homeScreen').classList.contains('hidden')) updateTodoBadge();
+  });
+
   // ---------- Login (Cloud-Modus) ----------
 
   function showLoginForm() {
@@ -1847,7 +2067,13 @@
       ]);
 
       const app = initializeApp(window.FIREBASE_CONFIG);
-      const auth = A.getAuth(app);
+      // Anmeldung auf dem Gerät merken (bleibt bis zum Abmelden bestehen)
+      let auth;
+      try {
+        auth = A.initializeAuth(app, { persistence: [A.indexedDBLocalPersistence, A.browserLocalPersistence] });
+      } catch (e) {
+        auth = A.getAuth(app);
+      }
       const db = F.getFirestore(app);
       const colFor = type => (type === 'Feuerwehr' ? 'feuerwehr' : 'entries');
       const uid = () => auth.currentUser.uid;
@@ -1883,6 +2109,14 @@
           if (avatar) data.avatar = avatar;
           return F.setDoc(F.doc(db, 'profiles', uid()), data, { merge: true });
         },
+
+        listTodos: async () => {
+          const sn = await F.getDocs(F.collection(db, 'todos'));
+          return sn.docs.map(d => d.data());
+        },
+        addTodo: t => F.setDoc(F.doc(db, 'todos', t.id), t),
+        updateTodo: (id, patch) => F.updateDoc(F.doc(db, 'todos', id), patch),
+        deleteTodo: id => F.deleteDoc(F.doc(db, 'todos', id)),
 
         listAvatars: async () => {
           const sn = await F.getDocs(F.collection(db, 'profiles'));
