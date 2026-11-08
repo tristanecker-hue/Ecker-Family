@@ -1049,10 +1049,10 @@
           <input type="checkbox" id="exportInclDone" onchange="renderExportPick()" style="width:22px;height:22px;">
         </label>
         <label class="set-row">
-          <span>Zusätzlich als PDF mit allen Belegen</span>
-          <input type="checkbox" id="exportPdf" checked style="width:22px;height:22px;">
+          <span>Zusätzlich Excel erstellen</span>
+          <input type="checkbox" id="exportXlsx" style="width:22px;height:22px;">
         </label>
-        <button class="save-btn" id="btnExportGo" onclick="exportSpesen()">Excel erstellen und Belege verrechnen</button>
+        <button class="save-btn" id="btnExportGo" onclick="exportSpesen()">Spesen verrechnen</button>
         <div class="set-note">Die gewählten Belege wandern danach in den Ordner «Belege verrechnet».</div>
       </div>
     </div>
@@ -3430,18 +3430,18 @@
     const btn = document.getElementById('btnExportGo');
     btn.disabled = true;
     try {
-      const wantPdf = document.getElementById('exportPdf').checked;
+      const wantXlsx = document.getElementById('exportXlsx').checked;
       const rec = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         createdAt: Date.now(), year, liter, person: currentUser,
         total: Math.round(items.reduce((sum, x) => sum + x.amount, 0) * 100) / 100,
         items: items.map(x => ({ id: x.id, date: x.date, amount: x.amount, text: x.text || '', stelle: x.stelle || '', beleg: x.beleg || null }))
       };
-      const files = await buildAbrechnungFiles(rec, true, wantPdf);
+      const files = await buildAbrechnungFiles(rec, wantXlsx, true);
       try { localStorage.setItem('ef-oel-last', String(liter)); } catch (e) {}
       const base = abrFileBase(rec.createdAt);
-      downloadBlob(files.xlsx, base + '.xlsx');
-      if (files.pdf) setTimeout(() => downloadBlob(files.pdf, base + '.pdf'), 600);
+      downloadBlob(files.pdf, base + '.pdf');
+      if (files.xlsx) setTimeout(() => downloadBlob(files.xlsx, base + '.xlsx'), 600);
       // Abrechnung im Ordner «Spesenabrechnung erledigt» ablegen
       try {
         if (cloudEnabled) await withTimeout(cloudApi.saveAbrechnung(rec));
@@ -4157,7 +4157,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.16';
+  const APP_VERSION = '1.17';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
