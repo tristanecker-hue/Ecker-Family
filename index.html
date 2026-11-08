@@ -749,6 +749,28 @@
   .plan-orig td b { font-size: 11px; color: #000; }
   .plan-orig td small { font-size: 8.5px; color: #000; }
   .plan-orig th:first-child { border-color: #555; }
+  .paper.blk { padding: 8px 6px 10px; }
+  .blk-head { display: flex; border: 1px solid #000; border-bottom: 0; }
+  .blk-title { flex: 0 0 48%; font-size: 14px; padding: 5px 6px; border-right: 1px solid #000; line-height: 1.2; }
+  .blk-kontakt { flex: 1; font-size: 8.5px; padding: 4px 6px; line-height: 1.35; word-break: break-all; }
+  .blk-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .blk-table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #000; }
+  .blk-table th { font-weight: 400; font-size: 8.5px; border: 1px solid #000; padding: 3px 1px; background: #fff; }
+  .blk-table td { border: 1px solid #000; padding: 0; height: 32px; }
+  .blk-table th:first-child, .blk-table td.blk-time { width: 15%; }
+  .blk-time { font-size: 7.5px; line-height: 1.15; text-align: center; padding: 0 1px; }
+  .seg-row { display: flex; height: 100%; min-height: 29px; }
+  .seg { flex: 1; hyphens: manual; font-size: 6.3px; line-height: 1.1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 1px; min-width: 0; overflow: hidden; border-left: 1px solid rgba(0,0,0,.12); }
+  .seg:first-child { border-left: 0; }
+  .blk-legend { display: flex; margin: 10px 0; border: 1px solid #000; }
+  .blk-legend span { flex: 1; font-size: 6.8px; padding: 3px 1px; text-align: center; line-height: 1.15; }
+  .blk-groups { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9.5px; }
+  .blk-groups td { border: 1px solid #000; padding: 6px 5px; vertical-align: middle; line-height: 1.3; }
+  .blk-groups td:first-child { width: 20%; }
+  .blk-emoji { width: 11%; text-align: center; font-size: 22px; }
+  .blk-note { font-size: 11px; padding: 5px 6px; margin: 8px 0; display: inline-block; max-width: 100%; line-height: 1.3; }
+  .blk-note.green { background: #2E7D32; color: #000; }
+  .blk-note.pink { background: #D81B72; color: #000; }
   textarea.plan-in { resize: none; font-size: 10.5px; line-height: 1.15; }
   .plan-table th.today, .plan-table td.today { background: rgba(176,125,54,.13); }
   .plan-table th:first-child, .plan-table td:first-child { width: 38px; text-align: center; color: var(--ink-soft); font-weight: 700; }
@@ -2851,7 +2873,29 @@
     ];
     const cells = {};
     grid.forEach((row, r) => row.forEach((v, d) => { if (v) cells[d + '-' + r] = v; }));
-    return { florian: { locked: true, klasse: 'E26 a; 2026/2027 (ZE)', lehrperson: 'Tivadar Evelin', bestand: 'Total: 15 | m: 8 | w: 7', cells } };
+    const LINA = {
+      locked: true, kind: 'blocks',
+      title: 'Stundenplan 2026-2027 Klasse 3c',
+      kontakt: ['Klassenzimmer Tel. 032 686 82 39', 'jean-pierre.thaler@schulen-zuchwil.ch  Kommunikation via Klapp'],
+      days: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag'],
+      rows: [
+        ['08:00 – 08:18', [['Y', 'R'], ['Y', 'R'], ['Y', 'R'], ['Y'], ['Y']]],
+        ['08:20 – 09:05', [['Y', 'Gr', 'R', 'W*2:Logo Mak­sym'], ['Y', 'Gr', 'R'], ['Y:Be­wegung', 'R:+ Sport'], ['Y', 'Gr', 'K'], ['Y*1.5', 'Gr']]],
+        ['09:10 – 09:55', [['Y:Bewegung + Sport'], ['Y', 'G'], ['Y', 'R'], ['Y', 'Gr', 'K'], ['Y*1.5:Lern­coaching', 'O']]],
+        ['10:15 – 11:00', [['Y', 'B', 'K'], ['O', 'G', 'W*2.2:P-Moto. Mak­sym', 'W*1.8:Logo Anik'], ['Y', 'K'], ['Y'], ['O:Bewegung + Sport']]],
+        ['11:05 – 11:50', [['Y', 'B', 'K'], ['O', 'G', 'W*2:Logo Anik'], ['Y', 'K'], ['B', 'R'], ['O', 'R']]],
+        ['', [[], [], [], [], []]],
+        ['13:30 – 14:15', [['B'], ['Y:Ananas', 'K'], [], ['B', 'Y'], ['Y:Kiwi']]],
+        ['14:20 – 15:05', [['B'], ['Y:Ananas', 'K'], [], ['B', 'Y'], ['Y:Kiwi']]]
+      ],
+      legend: [['Y', 'Jean-Pierre Thaler'], ['G', 'Luzia Misteli'], ['B', 'Simona Ben Turkia'], ['Gr', 'Malgorzata Chlipalska'], ['O', 'Till Schwab'], ['K', 'Corinne Heer'], ['R', 'Juana Bracher']],
+      groups: [
+        ['Gruppe Ananas', '🍍', 'Anik, Désirée, Eymen, Ilijas, Lina, Maksym, Mateo R., Mateo T., Matthias, Noah, Nur, Samira'],
+        ['Gruppe Kiwi', '🥝', 'Ahmad, Aris, Arsema, Entela, Fidan, Frejya, Göktug, Huda, Nelio, Yasin']
+      ],
+      notes: [['green', 'Elterninformation: Montag, 17. August 2026 18:00 Uhr'], ['pink', 'Schulschwimmen: jeweils am Mittwoch, 12. August – 28. Oktober 2026 (Badekleid, Badehose, Badetuch)']]
+    };
+    return { lina: LINA, florian: { locked: true, klasse: 'E26 a; 2026/2027 (ZE)', lehrperson: 'Tivadar Evelin', bestand: 'Total: 15 | m: 8 | w: 7', cells } };
   })();
   let plans = {};
 
@@ -2887,12 +2931,47 @@
     renderPlans();
   }
 
+  const BLOCK_COLORS = { Y: '#F4E22A', G: '#CFCFCF', B: '#2F78C0', Gr: '#6A9A48', O: '#E9A23B', K: '#161B27', R: '#A6212E', W: '#FFFFFF' };
+  const BLOCK_TEXT = { R: '#fff', K: '#fff', B: '#fff' };
+
+  function renderBlocksPlan(n, plan) {
+    const seg = tok => {
+      const i = tok.indexOf(':');
+      const head = i < 0 ? tok : tok.slice(0, i);
+      const label = i < 0 ? '' : tok.slice(i + 1);
+      const [c, w] = head.split('*');
+      return `<span class="seg" style="flex:${w || 1};background:${BLOCK_COLORS[c]};color:${BLOCK_TEXT[c] || '#000'}">${escapeHtml(label)}</span>`;
+    };
+    const head = '<th>Zeit</th>' + plan.days.map(d => `<th>${escapeHtml(d)}</th>`).join('');
+    const body = plan.rows.map(([time, cells]) =>
+      `<tr><td class="blk-time">${escapeHtml(time)}</td>` +
+      cells.map(c => `<td class="blk-cell"><div class="seg-row">${c.map(seg).join('')}</div></td>`).join('') + '</tr>').join('');
+    return `
+        <div class="card" data-plan="${escapeHtml(userKey(n))}">
+          <div class="todo-head">
+            <div class="compare-avatar" data-avatar="${escapeHtml(n)}"></div>
+            <div class="compare-name">${escapeHtml(n)}</div>
+          </div>
+          <div class="paper blk">
+            <div class="blk-head">
+              <div class="blk-title">${escapeHtml(plan.title)}</div>
+              <div class="blk-kontakt">${plan.kontakt.map(escapeHtml).join('<br>')}</div>
+            </div>
+            <div class="blk-scroll"><table class="blk-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+            <div class="blk-legend">${plan.legend.map(([c, t]) => `<span style="background:${BLOCK_COLORS[c]};color:${BLOCK_TEXT[c] || '#000'}">${escapeHtml(t)}</span>`).join('')}</div>
+            <table class="blk-groups">${plan.groups.map(([g, e, names]) => `<tr><td>${escapeHtml(g)}</td><td class="blk-emoji">${e}</td><td>${escapeHtml(names)}</td></tr>`).join('')}</table>
+            ${plan.notes.map(([c, t]) => `<div class="blk-note ${c}">${escapeHtml(t)}</div>`).join('')}
+          </div>
+        </div>`;
+  }
+
   function renderPlans() {
     const wd = new Date().getDay();            // 1 = Montag
     const todayCol = (wd >= 1 && wd <= 5) ? wd - 1 : -1;
     document.getElementById('planLists').innerHTML = visibleKids().map(n => {
       const key = userKey(n);
       const plan = planOf(key);
+      if (plan.kind === 'blocks') return renderBlocksPlan(n, plan);
       const locked = !!plan.locked;               // Original-Plan: nur ansehen
       const edit = canEditPlan() && !locked;
       const cells = plan.cells || {};
@@ -3350,7 +3429,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.4';
+  const APP_VERSION = '2.8';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
