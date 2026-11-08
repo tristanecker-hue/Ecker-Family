@@ -2914,43 +2914,50 @@
     n.textContent = gcalOn() ? 'Verbunden: heutige und morgige Termine stehen auf der Startseite.' : 'Zeigt deine heutigen und morgigen Termine auf der Startseite (nur lesen).';
     b.textContent = gcalOn() ? 'Trennen' : 'Mit Google verbinden';
   }
-  function gcalLoadLib() {
-    return new Promise((res, rej) => {
-      if (window.google && google.accounts && google.accounts.oauth2) return res();
-      const s = document.createElement('script');
-      s.src = 'https://accounts.google.com/gsi/client'; s.onload = () => res(); s.onerror = rej;
-      document.head.appendChild(s);
-    });
-  }
+  const gcalRedirect = () => location.origin + location.pathname.replace(/index\.html$/, '');
+  const gcalTokKey = () => 'ef-gcaltok-' + userKey(currentUser);
+  // Rückkehr von Google (Token im URL-Fragment)
+  (function () {
+    try {
+      if (!/access_token=/.test(location.hash)) return;
+      const q = new URLSearchParams(location.hash.slice(1));
+      const k = localStorage.getItem('ef-gcal-pending');
+      if (q.get('access_token') && k) {
+        localStorage.setItem('ef-gcaltok-' + k, JSON.stringify({ t: q.get('access_token'), e: Date.now() + (Number(q.get('expires_in')) - 60) * 1000 }));
+        localStorage.setItem('ef-gcal-' + k, '1');
+        sessionStorage.setItem('ef-gcal-just', '1');
+      }
+      localStorage.removeItem('ef-gcal-pending');
+      history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) {}
+  })();
   async function gcalAuth(interactive) {
-    if (gcalToken && Date.now() < gcalExp) return gcalToken;
-    await gcalLoadLib();
-    return new Promise((resolve) => {
-      gcalClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        callback: (r) => { if (r && r.error) gcalErr = r.error; if (r && r.access_token) { gcalToken = r.access_token; gcalExp = Date.now() + (r.expires_in - 60) * 1000; resolve(gcalToken); } else resolve(null); },
-        error_callback: (e) => { gcalErr = (e && (e.type || e.message)) || 'unbekannt'; resolve(null); }
-      });
-      gcalClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
-      if (!interactive) setTimeout(() => resolve(null), 6000);
+    try {
+      const o = JSON.parse(localStorage.getItem(gcalTokKey()) || 'null');
+      if (o && o.t && Date.now() < o.e) return o.t;
+    } catch (e) {}
+    if (!interactive) return null;
+    try { localStorage.setItem('ef-gcal-pending', userKey(currentUser)); } catch (e) {}
+    const u = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID, redirect_uri: gcalRedirect(), response_type: 'token',
+      scope: 'https://www.googleapis.com/auth/calendar.readonly', include_granted_scopes: 'true'
     });
+    location.href = u;
+    return new Promise(() => {});
   }
   async function gcalConnect() {
-    const t = await gcalAuth(true).catch(() => null);
-    if (!t) { showToast('Verbinden fehlgeschlagen: ' + (gcalErr || 'keine Antwort')); return; }
-    try { localStorage.setItem(gcalKey(), '1'); } catch (e) {}
-    gcalRender(); showToast('Kalender verbunden'); gcalLoad();
+    await gcalAuth(true);
   }
   function gcalToggle() {
     if (gcalOn()) {
       try { localStorage.removeItem(gcalKey()); } catch (e) {}
-      if (gcalToken && window.google) google.accounts.oauth2.revoke(gcalToken, () => {});
+      try { localStorage.removeItem(gcalTokKey()); } catch (e) {}
       gcalToken = null; gcalLines = []; gcalNeedsLogin = false; gcalRender(); renderHomeInfo();
     } else gcalConnect();
   }
   async function gcalLoad() {
     gcalLines = []; gcalNeedsLogin = false;
+    try { if (sessionStorage.getItem('ef-gcal-just')) { sessionStorage.removeItem('ef-gcal-just'); showToast('Kalender verbunden'); } } catch (e) {}
     if (!GOOGLE_CLIENT_ID || !currentUser || !gcalOn()) { renderHomeInfo(); return; }
     try {
       const tok = await gcalAuth(false);
@@ -5443,7 +5450,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.44';
+  const APP_VERSION = '1.45';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
