@@ -2704,7 +2704,9 @@
         year, items, liter, name: currentUser + ' Ecker', signature: currentUser === 'Tristan'
       });
       try { localStorage.setItem('ef-oel-last', String(liter)); } catch (e) {}
-      downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Spesenabrechnung_${year}_${currentUser}.xlsx`);
+      const dn = new Date();
+      const fileBase = dn.getFullYear() + '_' + String(dn.getMonth() + 1).padStart(2, '0') + '_' + String(dn.getDate()).padStart(2, '0') + ' Spesenabrechnung Abwart Narzissenweg 2-6';
+      downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fileBase + '.xlsx');
       if (document.getElementById('exportPdf').checked) {
         const PDFLib = await loadPdfLib();
         const sorted = [...items].sort((a, b) => a.date.localeCompare(b.date));
@@ -2716,7 +2718,7 @@
         let sig = null;
         if (currentUser === 'Tristan') { try { sig = new Uint8Array(await (await fetch('unterschrift.png')).arrayBuffer()); } catch (e) {} }
         const pdfBytes = await buildSpesenPdf(PDFLib, { year, items, liter, name: currentUser + ' Ecker', signatureBytes: sig, belege });
-        setTimeout(() => downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), `Spesenabrechnung_${year}_${currentUser}_mit_Belegen.pdf`), 600);
+        setTimeout(() => downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), fileBase + '.pdf'), 600);
       }
       await setVerrechnet(items.map(x => x.id), true);
       showToast('Excel erstellt – Belege verrechnet');
@@ -3226,7 +3228,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.1';
+  const APP_VERSION = '2.2';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
