@@ -867,7 +867,7 @@
       </div>
       <div class="account-btn" role="button" tabindex="0" onclick="openSpesen()" onkeydown="if(event.key==='Enter'||event.key===' '){openSpesen()}">
         <div class="account-avatar" style="background:#4C9A8B;">💳</div>
-        <div class="account-name">Spesen verrechnen</div>
+        <div class="account-name">Spesen</div>
       </div>
     </div>
   </div>
@@ -877,7 +877,7 @@
     <div class="summary-header">
       <button class="back-btn" onclick="openHauswart()">←</button>
       <div>
-        <h1>Spesen verrechnen</h1>
+        <h1>Spesen</h1>
         <div class="sub">Auslagen erfassen</div>
       </div>
     </div>
@@ -927,7 +927,7 @@
     </div>
     <div class="card">
       <div class="card-title">Spesenabrechnung</div>
-      <button class="save-btn" id="btnExportOpen" onclick="openExport()">📄 Als Excel exportieren</button>
+      <button class="save-btn" id="btnExportOpen" onclick="openExport()">📄 Spesen verrechnen</button>
       <div id="exportPanel" style="display:none;margin-top:14px;">
         <div class="field">
           <label for="exportOel">Wie hoch ist der Heizölstand? (Liter)</label>
@@ -3033,7 +3033,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.7';
+  const APP_VERSION = '1.8';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
