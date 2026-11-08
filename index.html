@@ -1391,6 +1391,7 @@
     <div class="card" id="gcalCard">
       <div class="card-title">Google Kalender</div>
       <div class="set-note" style="margin-top:0;" id="gcalNote"></div>
+      <div id="gcalList" style="margin:8px 0;"></div>
       <button class="btn" id="gcalBtn" onclick="gcalToggle()" style="margin-top:8px;"></button>
     </div>
     <div id="settingsAdmin">
@@ -2913,6 +2914,32 @@
     b.classList.remove('hidden');
     n.textContent = gcalOn() ? 'Verbunden: heutige und morgige Termine stehen auf der Startseite.' : 'Zeigt deine heutigen und morgigen Termine auf der Startseite (nur lesen).';
     b.textContent = gcalOn() ? 'Trennen' : 'Mit Google verbinden';
+    gcalRenderList();
+  }
+  let gcalCals = null;
+  const gcalSelKey = () => 'ef-gcalsel-' + userKey(currentUser);
+  function gcalSel() { try { return JSON.parse(localStorage.getItem(gcalSelKey()) || 'null'); } catch (e) { return null; } }
+  function gcalChosen(c) { const sel = gcalSel(); return sel ? sel.includes(c.id) : !!c.selected; }
+  async function gcalFetchCals() {
+    const tok = await gcalAuth(false);
+    if (!tok) return null;
+    const r = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', { headers: { Authorization: 'Bearer ' + tok } });
+    const j = await r.json();
+    return j.items || null;
+  }
+  async function gcalRenderList() {
+    const el = document.getElementById('gcalList');
+    if (!el) return;
+    if (!gcalOn()) { el.innerHTML = ''; return; }
+    try { if (!gcalCals) gcalCals = await gcalFetchCals(); } catch (e) {}
+    if (!gcalCals) { el.innerHTML = '<div class="set-note">Kalenderliste erscheint, sobald die Verbindung aktiv ist (Startseite → «Kalender verbinden» antippen).</div>'; return; }
+    el.innerHTML = '<div class="set-note" style="margin:0 0 6px;">Angezeigte Kalender:</div>' + gcalCals.map((c, i) =>
+      `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;"><input type="checkbox" data-i="${i}" ${gcalChosen(c) ? 'checked' : ''} onchange="gcalPick()"><span style="width:12px;height:12px;border-radius:50%;background:${escapeHtml(c.backgroundColor || '#888')};display:inline-block;"></span>${escapeHtml(c.summaryOverride || c.summary || c.id)}</label>`).join('');
+  }
+  function gcalPick() {
+    const ids = [...document.querySelectorAll('#gcalList input')].filter(i => i.checked).map(i => gcalCals[+i.dataset.i].id);
+    try { localStorage.setItem(gcalSelKey(), JSON.stringify(ids)); } catch (e) {}
+    gcalLoad();
   }
   const gcalRedirect = () => location.origin + location.pathname.replace(/index\.html$/, '');
   const gcalTokKey = () => 'ef-gcaltok-' + userKey(currentUser);
@@ -2965,8 +2992,8 @@
       const H = { Authorization: 'Bearer ' + tok };
       const a = new Date(); a.setHours(0, 0, 0, 0);
       const b = new Date(a.getTime() + 2 * 86400000);
-      const cl = await (await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', { headers: H })).json();
-      const cals = (cl.items || []).filter(c => c.selected);
+      gcalCals = (await gcalFetchCals()) || [];
+      const cals = gcalCals.filter(gcalChosen);
       const evs = [];
       for (const c of cals) {
         const u = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(c.id) + '/events?singleEvents=true&orderBy=startTime&maxResults=15&timeMin=' + encodeURIComponent(a.toISOString()) + '&timeMax=' + encodeURIComponent(b.toISOString());
@@ -5450,7 +5477,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.45';
+  const APP_VERSION = '1.46';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
