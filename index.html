@@ -705,6 +705,19 @@
   .todo-text { font-size: 15.5px; line-height: 1.35; word-wrap: break-word; }
   .todo-item.done .todo-text { text-decoration: line-through; color: var(--ink-soft); }
   .todo-meta { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .todo-due { font-weight: 600; }
+  .todo-due.late { color: #B3402F; }
+  .todo-due.today { color: var(--gold); }
+  .todo-banner {
+    position: relative; overflow: hidden; height: 84px; margin: -4px -4px 10px;
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    gap: 14px; font-size: 38px;
+  }
+  .todo-banner span { filter: drop-shadow(0 2px 3px rgba(0,0,0,.18)); }
+  .todo-banner .b-big { font-size: 52px; }
+  .todo-banner .b-cloud { position: absolute; font-size: 26px; opacity: .85; }
+  .banner-lina { background: linear-gradient(135deg, #FFD6E8 0%, #E7D4FF 55%, #CFE8FF 100%); }
+  .banner-florian { background: linear-gradient(135deg, #CDEBFF 0%, #D4F5D0 60%, #FFF2B8 100%); }
   .todo-empty { font-size: 13.5px; color: var(--ink-soft); padding: 6px 2px 2px; }
 
   /* ---------- Login form (Cloud-Modus) ---------- */
@@ -867,6 +880,10 @@
       <div class="field">
         <label for="todoAssignee">Zuordnen an</label>
         <select id="todoAssignee"></select>
+      </div>
+      <div class="field">
+        <label for="todoDue">Erledigen bis (optional)</label>
+        <input type="date" id="todoDue">
       </div>
       <button class="save-btn" onclick="addTodo()">Aufgabe hinzufügen</button>
     </div>
@@ -2061,6 +2078,23 @@
     renderTodos();
   }
 
+  const BANNERS = {
+    lina: '<div class="todo-banner banner-lina"><span class="b-cloud" style="left:12%;top:8px">☁️</span><span class="b-cloud" style="right:14%;top:14px">✨</span><span>🌸</span><span class="b-big">🦄</span><span>🌈</span><span>🎨</span></div>',
+    florian: '<div class="todo-banner banner-florian"><span class="b-cloud" style="left:10%;top:8px">☁️</span><span class="b-cloud" style="right:12%;top:12px">⭐</span><span>⚽</span><span class="b-big">🚀</span><span>🦖</span><span>🏆</span></div>'
+  };
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function dueHtml(t) {
+    if (!t.dueAt) return '';
+    const [y, m, d] = t.dueAt.split('-');
+    const cls = t.done ? '' : (t.dueAt < todayStr() ? 'late' : (t.dueAt === todayStr() ? 'today' : ''));
+    const label = (t.dueAt === todayStr() && !t.done) ? 'heute' : `${d}.${m}.${y}`;
+    return ` · <span class="todo-due ${cls}">${cls === 'late' ? '⚠ ' : ''}bis ${label}</span>`;
+  }
+
   function renderTodos() {
     const wrap = document.getElementById('todoLists');
     const me = userKey(currentUser);
@@ -2069,7 +2103,7 @@
     wrap.innerHTML = USERS.map(n => {
       const key = userKey(n);
       const mine = todos.filter(t => t.assigneeKey === key);
-      const open = mine.filter(t => !t.done).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      const open = mine.filter(t => !t.done).sort((a, b) => (a.dueAt || '9999').localeCompare(b.dueAt || '9999') || (a.createdAt || 0) - (b.createdAt || 0));
       const done = mine.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
       const item = t => {
         const canToggle = canAssignTodos() || key === me;
@@ -2078,13 +2112,14 @@
             <button class="todo-check ${t.done ? 'done' : ''}" ${canToggle ? '' : 'disabled'} onclick="toggleTodo('${t.id}')" title="${t.done ? 'Wieder öffnen' : 'Erledigt'}">${t.done ? '✓' : ''}</button>
             <div class="todo-body">
               <div class="todo-text">${escapeHtml(t.text)}</div>
-              <div class="todo-meta">von ${escapeHtml(nameOf(t.createdByKey))}</div>
+              <div class="todo-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}</div>
             </div>
             ${canAssignTodos() ? `<button class="del-btn" onclick="deleteTodo('${t.id}')" title="Löschen">✕</button>` : ''}
           </div>`;
       };
       return `
         <div class="card">
+          ${BANNERS[key] || ''}
           <div class="todo-head">
             <div class="compare-avatar" data-avatar="${escapeHtml(n)}"></div>
             <div class="compare-name">${escapeHtml(n)}</div>
@@ -2108,7 +2143,8 @@
       createdByKey: userKey(currentUser),
       done: false,
       createdAt: Date.now(),
-      doneAt: null
+      doneAt: null,
+      dueAt: document.getElementById('todoDue').value || null
     };
     try {
       if (cloudEnabled) await withTimeout(cloudApi.addTodo(todo));
@@ -2119,6 +2155,7 @@
       return;
     }
     input.value = '';
+    document.getElementById('todoDue').value = '';
     renderTodos();
     showToast('Aufgabe hinzugefügt');
   }
