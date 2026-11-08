@@ -2664,7 +2664,7 @@
               let lo = 0, hi = 255, acc = 0;
               for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc > total * 0.003) { lo = v; break; } }
               acc = 0;
-              for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc > total * 0.2) { hi = v; break; } }
+              for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc > total * 0.45) { hi = v; break; } }
               if (hi - lo < 60) lo = Math.max(0, hi - 60);
               const span = hi - lo;
               for (let j = 0; j < px.length; j += 4) {
@@ -2693,11 +2693,12 @@
     for (const f of files) {
       const jpg = await compressImage(f, budget, true);
       const img = await pdf.embedJpg(dataUrlToBytes(jpg));
-      // Seite so gross wie der ausgeschnittene Beleg (kein weisser A4-Rand)
-      const k = 842 / Math.max(img.width, img.height);
+      // Ausgeschnittener Beleg, mittig auf weissem A4
+      const W = 595.28, H = 841.89, M = 28;
+      const k = Math.min((W - 2 * M) / img.width, (H - 2 * M) / img.height);
       const w = img.width * k, h = img.height * k;
-      const pg = pdf.addPage([w, h]);
-      pg.drawImage(img, { x: 0, y: 0, width: w, height: h });
+      const pg = pdf.addPage([W, H]);
+      pg.drawImage(img, { x: (W - w) / 2, y: H - M - h, width: w, height: h });
     }
     return pdf.saveAsBase64({ dataUri: true });
   }
@@ -3705,7 +3706,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.02';
+  const APP_VERSION = '1.03';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
