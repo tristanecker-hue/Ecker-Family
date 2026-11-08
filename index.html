@@ -2742,7 +2742,7 @@
           <div class="todo-meta">⭐ ${r.cost}${canRedeem && !ok ? ' · noch ' + (r.cost - bal) : ''}</div>
           ${canRedeem ? `<div class="rew-bar"><i style="width:${pct}%"></i></div>` : ''}</div>
         ${canRedeem ? `<button class="${ok ? 'save-btn' : 'switch-btn'}" style="width:auto;padding:8px 14px;" ${ok ? '' : 'disabled'} onclick="redeemReward('${r.id}')">Einlösen</button>` : ''}
-        ${canAssignTodos() ? `<button class="del-btn" onclick="deleteReward('${r.id}')" title="Löschen">✕</button>` : ''}
+        ${canAssignTodos() ? `<button class="del-btn" onclick="editReward('${r.id}')" title="Bearbeiten">✎</button><button class="del-btn" onclick="deleteReward('${r.id}')" title="Löschen">✕</button>` : ''}
       </div>`;
     }).join('') || '<div class="todo-empty">Noch keine Belohnungen.</div>';
   }
@@ -2817,6 +2817,19 @@
     const name = document.getElementById('rwName').value.trim(), cost = parseInt(document.getElementById('rwCost').value, 10);
     if (!name || !(cost > 0)) { showToast('Bitte Name und Sterne eingeben'); return; }
     if (await saveCatalog([...rewardsCatalog, { id: Date.now().toString(36), emoji: document.getElementById('rwEmoji').value || '🎁', name, cost }])) renderPunkte();
+  }
+  async function editReward(id) {
+    const r = rewardsCatalog.find(x => x.id === id);
+    if (!r) return;
+    const name = window.prompt('Name der Belohnung:', r.name);
+    if (name === null) return;
+    const cs = window.prompt('Sterne:', r.cost);
+    if (cs === null) return;
+    const emoji = window.prompt('Symbol (Emoji):', r.emoji || '🎁');
+    if (emoji === null) return;
+    const cost = parseInt(cs, 10);
+    if (!name.trim() || !(cost > 0)) { showToast('Bitte Name und Sterne eingeben'); return; }
+    if (await saveCatalog(rewardsCatalog.map(x => x.id === id ? { ...x, name: name.trim(), cost, emoji: emoji.trim() || '🎁' } : x))) renderPunkte();
   }
   async function deleteReward(id) {
     if (!window.confirm('Diese Belohnung löschen?')) return;
@@ -5476,7 +5489,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.47';
+  const APP_VERSION = '1.48';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
