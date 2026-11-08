@@ -2622,7 +2622,7 @@
             </div>
             <div class="todo-count" style="margin-left:0;">${chf(x.amount)}</div>
             ${done
-              ? `<button class="del-btn" onclick="setVerrechnet(['${x.id}'], false)" title="Zurück zu «noch nicht verrechnet»">↩</button>`
+              ? `<button class="del-btn" onclick="setVerrechnet(['${x.id}'], false)" title="Zurück zu «noch nicht verrechnet»">↩</button><button class="del-btn" onclick="deleteSpese('${x.id}')" title="Löschen">✕</button>`
               : `<button class="del-btn" onclick="deleteSpese('${x.id}')" title="Löschen">✕</button>`}
           </div>`;
   }
@@ -3478,7 +3478,18 @@
             </div>
             <button class="switch-btn" onclick="downloadAbrechnung('${r.id}', 'pdf')">PDF</button>
             <button class="switch-btn" onclick="downloadAbrechnung('${r.id}', 'xlsx')">Excel</button>
+            <button class="del-btn" onclick="deleteAbrechnung('${r.id}')" title="Löschen">✕</button>
           </div>`).join('');
+  }
+
+  async function deleteAbrechnung(id) {
+    if (!window.confirm('Diese exportierte Spesenabrechnung wirklich löschen?')) return;
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.deleteAbrechnung(id));
+      abrechnungen = abrechnungen.filter(r => r.id !== id);
+      if (!cloudEnabled) localStorage.setItem('ef-abr-' + userKey(currentUser), JSON.stringify(abrechnungen));
+    } catch (e) { showToast('Löschen fehlgeschlagen'); return; }
+    renderAbrechnungen();
   }
 
   async function downloadAbrechnung(id, kind) {
@@ -4033,6 +4044,7 @@
           return sn.docs.map(d => d.data());
         },
         saveAbrechnung: r => F.setDoc(F.doc(db, 'spesen', uid(), 'abrechnungen', r.id), r),
+        deleteAbrechnung: id => F.deleteDoc(F.doc(db, 'spesen', uid(), 'abrechnungen', id)),
         getStellen: async () => {
           const d = await F.getDoc(F.doc(db, 'spesen', uid(), 'meta', 'stellen'));
           return d.exists() ? d.data().list : null;
@@ -4082,7 +4094,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.08';
+  const APP_VERSION = '1.09';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
