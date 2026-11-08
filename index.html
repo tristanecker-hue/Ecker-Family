@@ -2928,7 +2928,7 @@
         if (c && (!pick || c.score > pick.score + 0.01)) pick = c;
       }
       if (!pick || pick.score < 0.8) return src;
-      const bestR = pick.r, { ca, sa } = bestR, grow = 1.5;
+      const bestR = pick.r, { ca, sa } = bestR, grow = 3;
       const cn = (u, v) => [u * ca - v * sa, u * sa + v * ca];
       let cs = [cn(bestR.u0 - grow, bestR.v0 - grow), cn(bestR.u1 + grow, bestR.v0 - grow), cn(bestR.u1 + grow, bestR.v1 + grow), cn(bestR.u0 - grow, bestR.v1 + grow)];
       const cx0 = cs.reduce((t, q) => t + q[0], 0) / 4, cy0 = cs.reduce((t, q) => t + q[1], 0) / 4;
@@ -2995,14 +2995,14 @@
       const lim = Math.max(otsu, paper * 0.62);                         // dunkler als Papier -> Hintergrund
       const rowDark = y => { let n = 0; for (let x = 0; x < w; x++) if (gr[y * w + x] < lim) n++; return n / w; };
       const colDark = x => { let n = 0; for (let y = 0; y < h; y++) if (gr[y * w + x] < lim) n++; return n / h; };
-      const TH = 0.1, capH = Math.floor(h * 0.15), capW = Math.floor(w * 0.15);
+      const TH = 0.22, capH = Math.floor(h * 0.08), capW = Math.floor(w * 0.08);
       let t = 0, b = 0, l = 0, r = 0;
       while (t < capH && rowDark(t) > TH) t++;
       while (b < capH && rowDark(h - 1 - b) > TH) b++;
       while (l < capW && colDark(l) > TH) l++;
       while (r < capW && colDark(w - 1 - r) > TH) r++;
       if (!(t || b || l || r)) return cv;
-      const pad = 3, fx = cv.width / w, fy = cv.height / h;
+      const pad = 1, fx = cv.width / w, fy = cv.height / h;
       const X = Math.round((l ? l + pad : 0) * fx), Y = Math.round((t ? t + pad : 0) * fy);
       const W2 = Math.round(cv.width - X - (r ? (r + pad) * fx : 0)), H2 = Math.round(cv.height - Y - (b ? (b + pad) * fy : 0));
       if (W2 < cv.width * 0.5 || H2 < cv.height * 0.5) return cv;
@@ -4082,7 +4082,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.07';
+  const APP_VERSION = '1.08';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
