@@ -941,6 +941,10 @@
           <label>Welche Belege werden verrechnet?</label>
           <div id="exportPick"></div>
         </div>
+        <label class="set-row">
+          <span>Zusätzlich als PDF mit allen Belegen</span>
+          <input type="checkbox" id="exportPdf" checked style="width:22px;height:22px;">
+        </label>
         <button class="save-btn" id="btnExportGo" onclick="exportSpesen()">Excel erstellen und Belege verrechnen</button>
         <div class="set-note">Die gewählten Belege wandern danach in den Ordner «Belege verrechnet».</div>
       </div>
@@ -2391,6 +2395,23 @@
 
   // ---------- Spesen: Excel-Export nach Vorlage ----------
 
+  // Gruppen: feste Reihenfolge der Vorlage, weitere Kostenstellen, am Schluss Sonstiges (nur mit Belegen)
+  function groupSpesen(items) {
+    const FIXED = ['Migros', 'Landi', 'Avia', 'Jumbo'];
+    const norm = s => (s || '').trim().toLowerCase();
+    const extra = [];
+    items.forEach(x => {
+      const n = (x.stelle || '').trim();
+      if (n && norm(n) !== 'sonstiges' && !FIXED.some(f => norm(f) === norm(n)) && !extra.some(e => norm(e) === norm(n))) extra.push(n);
+    });
+    return [...FIXED, ...extra, 'Sonstiges'].map(name => ({
+      name,
+      items: items
+        .filter(x => norm(x.stelle) === norm(name) || (norm(name) === 'sonstiges' && !(x.stelle || '').trim()))
+        .sort((a, b) => a.date.localeCompare(b.date))
+    })).filter(g => g.items.length > 0);
+  }
+
   // Füllt die Excel-Vorlage (Spesenabrechnung Abwart) aus.
   // data: { year, items:[{date,amount,text,stelle}], liter, name, signature:boolean }
   async function buildSpesenWorkbook(ExcelJS, templateBuf, data) {
@@ -2427,20 +2448,7 @@
       for (let c = 1; c <= COLS; c++) { const cell = row.getCell(c); cell.value = null; cell.style = {}; }
     }
 
-    // Gruppen: feste Reihenfolge der Vorlage, weitere Kostenstellen, am Schluss Sonstiges
-    const FIXED = ['Migros', 'Landi', 'Avia', 'Jumbo'];
-    const norm = s => (s || '').trim().toLowerCase();
-    const extra = [];
-    data.items.forEach(x => {
-      const n = (x.stelle || '').trim();
-      if (n && norm(n) !== 'sonstiges' && !FIXED.some(f => norm(f) === norm(n)) && !extra.some(e => norm(e) === norm(n))) extra.push(n);
-    });
-    const groups = [...FIXED, ...extra, 'Sonstiges'].map(name => ({
-      name,
-      items: data.items
-        .filter(x => norm(x.stelle) === norm(name) || (norm(name) === 'sonstiges' && !(x.stelle || '').trim()))
-        .sort((a, b) => a.date.localeCompare(b.date))
-    })).filter(g => g.items.length > 0);
+    const groups = groupSpesen(data.items);
 
     const fmtDate = iso => iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.';
     let r = HEAD_ROW, firstItem = null, lastItem = null;
@@ -2510,6 +2518,140 @@
     return excelJsPromise;
   }
 
+
+  // ---------- PDF: Abrechnung + Belege ----------
+
+  let pdfLibPromise = null;
+  function loadPdfLib() {
+    if (window.PDFLib) return Promise.resolve(window.PDFLib);
+    if (!pdfLibPromise) pdfLibPromise = new Promise((resolve, reject) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+      sc.onload = () => resolve(window.PDFLib);
+      sc.onerror = () => { pdfLibPromise = null; reject(new Error('pdf-lib')); };
+      document.head.appendChild(sc);
+    });
+    return pdfLibPromise;
+  }
+
+  function dataUrlToBytes(url) {
+    const bin = atob(url.split(',')[1]);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  // data: { year, items, liter, name, signatureBytes, belege:[{label, data}] }
+  async function buildSpesenPdf(PDFLib, data) {
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const W = 595.28, H = 841.89, L = 50, AMT = 360, RIGHT = 480;
+    let page = pdf.addPage([W, H]);
+    let y = H - 70;
+    const black = rgb(0, 0, 0);
+    const text = (t, x, size, f) => page.drawText(String(t), { x, y, size, font: f || font, color: black });
+    const line = (x1, x2, yy, th) => page.drawLine({ start: { x: x1, y: yy }, end: { x: x2, y: yy }, thickness: th || 0.6, color: black });
+    const chfT = n => 'CHF ' + n.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/[’']/g, "'");
+    const ensure = need => { if (y - need < 60) { page = pdf.addPage([W, H]); y = H - 70; } };
+
+    const title = 'Hauswartspesen';
+    const tw = bold.widthOfTextAtSize(title, 24);
+    text(title, (W - tw) / 2, 24, bold);
+    line((W - tw) / 2, (W + tw) / 2, y - 3, 1);
+    y -= 52;
+    text('Für das Jahr:', L, 10); text(data.year, L + 80, 10, bold);
+    y -= 28;
+    text('Liegenschaft:', L, 10); text('Narzissenweg 2-6 in Zuchwil', L + 80, 15, bold);
+    y -= 38;
+    text('Hauswartspesen:', L, 13, bold);
+    line(L, L + bold.widthOfTextAtSize('Hauswartspesen:', 13), y - 3, 0.8);
+    y -= 28;
+
+    const fmtDate = iso => iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.';
+    let total = 0;
+    groupSpesen(data.items).forEach(g => {
+      ensure(40);
+      text(g.name, L, 10.5, bold);
+      line(L, RIGHT - 130, y - 3);
+      y -= 17;
+      g.items.forEach(x => {
+        ensure(20);
+        text(fmtDate(x.date) + ' ' + (x.text || 'Spese'), L, 10);
+        text(chfT(x.amount), AMT, 10);
+        line(L, RIGHT - 130, y - 3);
+        total += x.amount;
+        y -= 15;
+      });
+      y -= 6;
+    });
+
+    ensure(230);
+    y -= 14;
+    text('Saldo zu meinen Gunsten', L + 100, 10.5, bold);
+    text(chfT(total), AMT, 10.5, bold);
+    line(AMT, RIGHT, y - 3, 0.6); line(AMT, RIGHT, y - 5.5, 0.6);
+    y -= 44;
+    text('Oelstand', L, 10.5, bold);
+    line(L, L + bold.widthOfTextAtSize('Oelstand', 10.5), y - 3, 0.8);
+    text("Tankgrösse 17'000 Liter", AMT, 10.5, bold);
+    y -= 28;
+    text('Am:', L, 10);
+    text(new Date().toLocaleDateString('de-CH'), L + 100, 10);
+    const lit = Number(data.liter).toLocaleString('de-CH', { maximumFractionDigits: 0 }).replace(/[’']/g, "'");
+    text(lit, AMT + 20, 10.5, bold); text('Liter', AMT + 20 + bold.widthOfTextAtSize(lit, 10.5) + 4, 10);
+    line(L, RIGHT, y - 4);
+    y -= 44;
+    text('Viele Grüsse', AMT, 10.5, bold);
+    if (data.signatureBytes) {
+      const img = await pdf.embedPng(data.signatureBytes);
+      page.drawImage(img, { x: AMT, y: y - 52, width: 100, height: 46 });
+    }
+    y -= 78;
+    text(data.name, AMT, 10);
+
+    // Belege anhängen
+    for (const b of data.belege) {
+      const label = b.label;
+      if (/^data:application\/pdf/.test(b.data)) {
+        const src = await PDFDocument.load(dataUrlToBytes(b.data));
+        const pages = await pdf.copyPages(src, src.getPageIndices());
+        pages.forEach((pg, i) => {
+          pdf.addPage(pg);
+          pg.drawText(label + (pages.length > 1 ? ` (Seite ${i + 1})` : ''), { x: 20, y: pg.getHeight() - 14, size: 8, font: bold, color: rgb(0.2, 0.2, 0.2) });
+        });
+      } else {
+        const bytes = dataUrlToBytes(b.data);
+        const img = /^data:image\/png/.test(b.data) ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+        const pg = pdf.addPage([W, H]);
+        pg.drawText(label, { x: 30, y: H - 30, size: 10, font: bold, color: black });
+        const maxW = W - 60, maxH = H - 80;
+        const k = Math.min(maxW / img.width, maxH / img.height, 1.5);
+        const w = img.width * k, h = img.height * k;
+        pg.drawImage(img, { x: (W - w) / 2, y: H - 50 - h, width: w, height: h });
+      }
+    }
+    return pdf.save();
+  }
+
+  async function getBelegData(x) {
+    if (!x.beleg) return null;
+    try {
+      if (cloudEnabled) return await withTimeout(cloudApi.getBeleg(x.id), 20000);
+      return JSON.parse(localStorage.getItem('ef-beleg-' + userKey(currentUser) + '-' + x.id) || 'null');
+    } catch (e) { return null; }
+  }
+
+  function downloadBlob(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   function openExport() {
     const years = new Set([new Date().getFullYear()]);
     spesen.forEach(x => years.add(parseInt(x.date.slice(0, 4), 10)));
@@ -2552,13 +2694,20 @@
         year, items, liter, name: currentUser + ' Ecker', signature: currentUser === 'Tristan'
       });
       try { localStorage.setItem('ef-oel-last', String(liter)); } catch (e) {}
-      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `Spesenabrechnung_${year}_${currentUser}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Spesenabrechnung_${year}_${currentUser}.xlsx`);
+      if (document.getElementById('exportPdf').checked) {
+        const PDFLib = await loadPdfLib();
+        const sorted = [...items].sort((a, b) => a.date.localeCompare(b.date));
+        const belege = [];
+        for (const x of sorted) {
+          const bd = await getBelegData(x);
+          if (bd) belege.push({ label: `Beleg ${belege.length + 1}: ${x.date.slice(8, 10)}.${x.date.slice(5, 7)}.${x.date.slice(0, 4)} · ${x.stelle || 'Sonstiges'} · ${x.text || 'Spese'} · ${chf(x.amount)}`.replace(/[^\x20-\xFF]/g, '-'), data: bd.data });
+        }
+        let sig = null;
+        if (currentUser === 'Tristan') { try { sig = new Uint8Array(await (await fetch('unterschrift.png')).arrayBuffer()); } catch (e) {} }
+        const pdfBytes = await buildSpesenPdf(PDFLib, { year, items, liter, name: currentUser + ' Ecker', signatureBytes: sig, belege });
+        setTimeout(() => downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), `Spesenabrechnung_${year}_${currentUser}_mit_Belegen.pdf`), 600);
+      }
       await setVerrechnet(items.map(x => x.id), true);
       showToast('Excel erstellt – Belege verrechnet');
     } catch (e) {
@@ -3033,7 +3182,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.9';
+  const APP_VERSION = '2.0';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
