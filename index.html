@@ -124,6 +124,9 @@
   .tp-count { font-size: 13px; color: var(--ink-soft); min-height: 16px; }
   .tp-text { font-size: 19px; font-weight: 600; margin: 14px 0 4px; word-break: break-word; }
   .tp-meta { font-size: 13px; color: var(--ink-soft); margin-bottom: 18px; }
+  .tp-note { background: #fbf3df; border-left: 3px solid var(--gold-dark, #c79a45); border-radius: 8px; padding: 8px 12px; text-align: left; font-size: 14px; margin: -6px 0 16px; white-space: pre-wrap; }
+  .tp-note.hidden { display: none; }
+  .todo-note { font-size: 13px; color: var(--ink); background: #fbf3df; border-radius: 8px; padding: 5px 9px; margin-top: 5px; white-space: pre-wrap; word-break: break-word; }
   .navbar { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 14px; padding: 2px 0 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .navbar::-webkit-scrollbar { display: none; }
   #spesenScreen .back-btn, #planScreen .back-btn, #todoScreen .back-btn, #hauswartScreen .back-btn { display: none; }
@@ -1153,6 +1156,10 @@
         <label for="todoDue">Erledigen bis (optional)</label>
         <input type="date" id="todoDue">
       </div>
+      <div class="field">
+        <label for="todoNote">Bemerkung (optional)</label>
+        <textarea id="todoNote" rows="2" maxlength="400" placeholder="z. B. Schlüssel liegt im Büro" style="width:100%;"></textarea>
+      </div>
       <button class="save-btn" onclick="addTodo()">Aufgabe hinzufügen</button>
     </div>
 
@@ -1350,6 +1357,7 @@
     <div class="tp-count" id="tpCount"></div>
     <div class="tp-text" id="tpText"></div>
     <div class="tp-meta" id="tpMeta"></div>
+    <div class="tp-note hidden" id="tpNote"></div>
     <button class="save-btn" onclick="todoPopupDone()">✅ Erledigt</button>
     <button class="switch-btn" style="width:100%;margin-top:10px;" onclick="todoPopupLater()">⏰ Mache ich später</button>
   </div>
@@ -1362,9 +1370,19 @@
     <label style="font-size:13px;color:var(--ink-soft);">Für wen</label>
     <select id="teAssignee" style="width:100%;margin:4px 0 12px;"></select>
     <label style="font-size:13px;color:var(--ink-soft);">Erledigen bis</label>
-    <input type="date" id="teDue" style="width:100%;margin:4px 0 16px;">
+    <input type="date" id="teDue" style="width:100%;margin:4px 0 12px;">
+    <label style="font-size:13px;color:var(--ink-soft);">Bemerkung</label>
+    <textarea id="teNote" rows="2" maxlength="400" style="width:100%;margin:4px 0 16px;"></textarea>
     <button class="save-btn" onclick="saveTodoEdit()">Speichern</button>
     <button class="switch-btn" style="width:100%;margin-top:10px;" onclick="closeTodoEdit()">Abbrechen</button>
+  </div>
+</div>
+<div class="todo-popup hidden" id="todoNotice" role="dialog" aria-modal="true">
+  <div class="todo-popup-card">
+    <div class="tp-emoji">🔔</div>
+    <div class="tp-title">Neuigkeiten zu deinen Pendenzen</div>
+    <div class="tp-text" id="tnList" style="font-size:16px;text-align:left;margin-top:14px;"></div>
+    <button class="save-btn" style="margin-top:14px;" onclick="closeTodoNotice()">OK</button>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -1786,6 +1804,8 @@
 
   function logout() {
     currentUser = null;
+    ['todoPopup', 'todoNotice', 'todoEdit'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    popupQueue = []; noticeItems = []; pendingPopup = 0;
     selectedType = null;
     selectedPause = 0;
     document.getElementById('btnAllgemein').classList.remove('selected');
@@ -3874,6 +3894,7 @@
     const me = userKey(currentUser);
     const nameOf = key => ACCOUNTS[key] || key;
 
+    markSeen(todos.filter(t => t.assigneeKey === me && !t.done));
     wrap.innerHTML = USERS.map(n => {
       const key = userKey(n);
       const mine = todos.filter(t => t.assigneeKey === key);
@@ -3886,7 +3907,8 @@
             <button class="todo-check ${t.done ? 'done' : ''}" ${canToggle ? '' : 'disabled'} onclick="toggleTodo('${t.id}')" title="${t.done ? 'Wieder öffnen' : 'Erledigt'}">${t.done ? '✓' : ''}</button>
             <div class="todo-body">
               <div class="todo-text">${escapeHtml(t.text)}</div>
-              <div class="todo-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}</div>
+              <div class="todo-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}${t.seenAt && t.createdByKey === me && !t.done ? ' · 👀 gesehen' : ''}</div>
+              ${t.note ? `<div class="todo-note">💬 ${escapeHtml(t.note)}</div>` : ''}
             </div>
             ${canAssignTodos() && t.createdByKey === me ? `<button class="del-btn" onclick="editTodo('${t.id}')" title="Bearbeiten">✎</button>` : ''}
             ${canAssignTodos() ? `<button class="del-btn" onclick="deleteTodo('${t.id}')" title="Löschen">✕</button>` : ''}
@@ -3919,7 +3941,9 @@
       done: false,
       createdAt: Date.now(),
       doneAt: null,
-      dueAt: document.getElementById('todoDue').value || null
+      dueAt: document.getElementById('todoDue').value || null,
+      note: document.getElementById('todoNote').value.trim(),
+      seenAt: null
     };
     try {
       if (cloudEnabled) await withTimeout(cloudApi.addTodo(todo));
@@ -3931,6 +3955,7 @@
     }
     input.value = '';
     document.getElementById('todoDue').value = '';
+    document.getElementById('todoNote').value = '';
     renderTodos();
     showToast('Aufgabe hinzugefügt');
   }
@@ -3958,6 +3983,7 @@
     document.getElementById('teText').value = t.text;
     document.getElementById('teAssignee').innerHTML = USERS.map(n => `<option value="${escapeHtml(userKey(n))}" ${userKey(n) === t.assigneeKey ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
     document.getElementById('teDue').value = t.dueAt || '';
+    document.getElementById('teNote').value = t.note || '';
     document.getElementById('todoEdit').classList.remove('hidden');
   }
   function closeTodoEdit() { editingTodo = null; document.getElementById('todoEdit').classList.add('hidden'); }
@@ -3966,7 +3992,7 @@
     if (!t) { closeTodoEdit(); return; }
     const text = document.getElementById('teText').value.trim();
     if (!text) { showToast('Bitte eine Aufgabe eingeben'); return; }
-    const patch = { text, assigneeKey: document.getElementById('teAssignee').value, dueAt: document.getElementById('teDue').value || null };
+    const patch = { text, assigneeKey: document.getElementById('teAssignee').value, dueAt: document.getElementById('teDue').value || null, note: document.getElementById('teNote').value.trim() };
     try {
       if (cloudEnabled) await withTimeout(cloudApi.updateTodo(t.id, patch));
       Object.assign(t, patch);
@@ -3991,14 +4017,55 @@
   }
 
   // Popup mit offenen Pendenzen nach dem Anmelden
-  let popupQueue = [];
+  let popupQueue = [], pendingPopup = 0;
+  const ackKey = () => 'ef-todo-ack-' + userKey(currentUser);
+  function getAck() { try { return JSON.parse(localStorage.getItem(ackKey()) || '{}'); } catch (e) { return {}; } }
+  function collectNews() {
+    const me = userKey(currentUser), ack = getAck(), out = [];
+    todos.forEach(t => {
+      if (t.createdByKey !== me || t.assigneeKey === me) return;
+      const who = ACCOUNTS[t.assigneeKey] || t.assigneeKey, a = ack[t.id] || {};
+      if (t.done && !a.done) out.push({ id: t.id, kind: 'done', html: '✅ <b>' + escapeHtml(who) + '</b> hat erledigt: ' + escapeHtml(t.text) });
+      else if (t.seenAt && !t.done && !a.seen) out.push({ id: t.id, kind: 'seen', html: '👀 <b>' + escapeHtml(who) + '</b> hat gesehen: ' + escapeHtml(t.text) });
+    });
+    return out;
+  }
+  let noticeItems = [];
+  function showTodoNotice(items) {
+    noticeItems = items;
+    document.getElementById('tnList').innerHTML = items.map(i => '<div style="margin:6px 0;">' + i.html + '</div>').join('');
+    document.getElementById('todoNotice').classList.remove('hidden');
+  }
+  function closeTodoNotice() {
+    const ack = getAck();
+    noticeItems.forEach(i => { const a = ack[i.id] || {}; if (i.kind === 'done') { a.done = true; a.seen = true; } else a.seen = true; ack[i.id] = a; });
+    try { localStorage.setItem(ackKey(), JSON.stringify(ack)); } catch (e) {}
+    noticeItems = [];
+    document.getElementById('todoNotice').classList.add('hidden');
+    nextTodoPopup(pendingPopup || popupQueue.length);
+  }
+  // Die zugeordnete Person hat die Pendenz gesehen -> für den Ersteller vermerken
+  async function markSeen(list) {
+    const me = userKey(currentUser);
+    for (const t of list) {
+      if (t.assigneeKey !== me || t.seenAt || t.createdByKey === me) continue;
+      const patch = { seenAt: Date.now() };
+      try {
+        if (cloudEnabled) await withTimeout(cloudApi.updateTodo(t.id, patch));
+        Object.assign(t, patch);
+        if (!cloudEnabled) persistTodosLocal();
+      } catch (e) { /* nicht schlimm, beim nächsten Mal */ }
+    }
+  }
   async function showTodoPopup() {
     if (!currentUser || !hasFeature('todo')) return;
     await loadTodos();
     const me = userKey(currentUser);
+    const news = collectNews();
     popupQueue = todos.filter(t => t.assigneeKey === me && !t.done)
       .sort((a, b) => (a.dueAt || '9999').localeCompare(b.dueAt || '9999') || (a.createdAt || 0) - (b.createdAt || 0)).map(t => t.id);
-    nextTodoPopup(popupQueue.length);
+    if (news.length) showTodoNotice(news); else nextTodoPopup(popupQueue.length);
+    if (news.length) pendingPopup = popupQueue.length;
   }
   function nextTodoPopup(total) {
     const el = document.getElementById('todoPopup');
@@ -4008,6 +4075,10 @@
     document.getElementById('tpCount').textContent = total > 1 ? 'Pendenz ' + (total - popupQueue.length + 1) + ' von ' + total : '';
     document.getElementById('tpText').textContent = t.text;
     document.getElementById('tpMeta').innerHTML = 'von ' + escapeHtml(nameOf(t.createdByKey)) + dueHtml(t);
+    const nEl = document.getElementById('tpNote');
+    nEl.textContent = t.note ? '💬 ' + t.note : '';
+    nEl.classList.toggle('hidden', !t.note);
+    markSeen([t]);
     el.dataset.total = total;
     el.classList.remove('hidden');
   }
@@ -4276,7 +4347,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.20';
+  const APP_VERSION = '1.21';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {

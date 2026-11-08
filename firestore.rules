@@ -57,19 +57,20 @@ service cloud.firestore {
 
     // To-Do's: Freigeschaltete lesen. Wer zuordnen darf, legt an und löscht.
     // Inhalt ändern (Text, Person, Datum) darf nur, wer die Pendenz erstellt hat.
-    // "Erledigt" ein- und ausschalten darf, wer zuordnen darf, und die zugeordnete Person.
+    // "Erledigt" ein- und ausschalten darf, wer zuordnen darf, und die zugeordnete Person
+    // (diese vermerkt ausserdem, dass sie die Pendenz gesehen hat).
     match /todos/{id} {
       allow read: if canTodo();
       allow create: if canAssign();
       allow update: if
         (canAssign()
           && resource.data.createdByKey == uname()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'assigneeKey', 'dueAt', 'done', 'doneAt']))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'assigneeKey', 'dueAt', 'note', 'done', 'doneAt']))
         || (canAssign()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt']))
         || (canTodo()
           && mail() == resource.data.assigneeKey + '@ecker.ch'
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt']));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'seenAt']));
       allow delete: if canAssign();
     }
 
