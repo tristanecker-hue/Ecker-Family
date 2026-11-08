@@ -1388,6 +1388,11 @@
       <div class="set-note" style="margin-top:0;">Gilt für dich auf diesem Gerät.</div>
       <div class="theme-list" id="themeList"></div>
     </div>
+    <div class="card" id="gcalCard">
+      <div class="card-title">Google Kalender</div>
+      <div class="set-note" style="margin-top:0;" id="gcalNote"></div>
+      <button class="btn" id="gcalBtn" onclick="gcalToggle()" style="margin-top:8px;"></button>
+    </div>
     <div id="settingsAdmin">
     <div id="settingsList"></div>
     <div class="card">
@@ -2618,7 +2623,7 @@
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
-    renderThemes();
+    renderThemes(); gcalRender();
     if (isAdmin()) renderSettings();
     applyAvatars();
   }
@@ -2896,19 +2901,103 @@
     } catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); }
   }
 
+  // ---------- Google Kalender (nur lesen, pro Person) ----------
+  const GOOGLE_CLIENT_ID = '';
+  let gcalLines = [], gcalNeedsLogin = false, gcalToken = null, gcalExp = 0, gcalClient = null;
+  const gcalKey = () => 'ef-gcal-' + userKey(currentUser);
+  const gcalOn = () => { try { return localStorage.getItem(gcalKey()) === '1'; } catch (e) { return false; } };
+  function gcalRender() {
+    const n = document.getElementById('gcalNote'), b = document.getElementById('gcalBtn');
+    if (!n) return;
+    if (!GOOGLE_CLIENT_ID) { n.textContent = 'Noch nicht eingerichtet.'; b.classList.add('hidden'); return; }
+    b.classList.remove('hidden');
+    n.textContent = gcalOn() ? 'Verbunden: heutige und morgige Termine stehen auf der Startseite.' : 'Zeigt deine heutigen und morgigen Termine auf der Startseite (nur lesen).';
+    b.textContent = gcalOn() ? 'Trennen' : 'Mit Google verbinden';
+  }
+  function gcalLoadLib() {
+    return new Promise((res, rej) => {
+      if (window.google && google.accounts && google.accounts.oauth2) return res();
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client'; s.onload = () => res(); s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  async function gcalAuth(interactive) {
+    if (gcalToken && Date.now() < gcalExp) return gcalToken;
+    await gcalLoadLib();
+    return new Promise((resolve) => {
+      gcalClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/calendar.readonly',
+        callback: (r) => { if (r && r.access_token) { gcalToken = r.access_token; gcalExp = Date.now() + (r.expires_in - 60) * 1000; resolve(gcalToken); } else resolve(null); },
+        error_callback: () => resolve(null)
+      });
+      gcalClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+      if (!interactive) setTimeout(() => resolve(null), 6000);
+    });
+  }
+  async function gcalConnect() {
+    const t = await gcalAuth(true).catch(() => null);
+    if (!t) { showToast('Verbinden fehlgeschlagen'); return; }
+    try { localStorage.setItem(gcalKey(), '1'); } catch (e) {}
+    gcalRender(); gcalLoad();
+  }
+  function gcalToggle() {
+    if (gcalOn()) {
+      try { localStorage.removeItem(gcalKey()); } catch (e) {}
+      if (gcalToken && window.google) google.accounts.oauth2.revoke(gcalToken, () => {});
+      gcalToken = null; gcalLines = []; gcalNeedsLogin = false; gcalRender(); renderHomeInfo();
+    } else gcalConnect();
+  }
+  async function gcalLoad() {
+    gcalLines = []; gcalNeedsLogin = false;
+    if (!GOOGLE_CLIENT_ID || !currentUser || !gcalOn()) { renderHomeInfo(); return; }
+    try {
+      const tok = await gcalAuth(false);
+      if (!tok) { gcalNeedsLogin = true; renderHomeInfo(); return; }
+      const H = { Authorization: 'Bearer ' + tok };
+      const a = new Date(); a.setHours(0, 0, 0, 0);
+      const b = new Date(a.getTime() + 2 * 86400000);
+      const cl = await (await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', { headers: H })).json();
+      const cals = (cl.items || []).filter(c => c.selected);
+      const evs = [];
+      for (const c of cals) {
+        const u = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(c.id) + '/events?singleEvents=true&orderBy=startTime&maxResults=15&timeMin=' + encodeURIComponent(a.toISOString()) + '&timeMax=' + encodeURIComponent(b.toISOString());
+        const j = await (await fetch(u, { headers: H })).json();
+        (j.items || []).forEach(e => evs.push(e));
+      }
+      const now = new Date(), tomorrow = new Date(a.getTime() + 86400000);
+      const pad = n => String(n).padStart(2, '0');
+      const rows = evs.map(e => {
+        const allDay = !!e.start.date;
+        const st = allDay ? new Date(e.start.date + 'T00:00:00') : new Date(e.start.dateTime);
+        const en = allDay ? new Date(e.end.date + 'T00:00:00') : new Date(e.end.dateTime);
+        return { e, allDay, st, en };
+      }).filter(x => x.en > now).sort((p, q) => p.st - q.st);
+      rows.slice(0, 4).forEach(x => {
+        const day = x.st < tomorrow ? 'Heute' : 'Morgen';
+        const tm = x.allDay ? 'ganztägig' : pad(x.st.getHours()) + ':' + pad(x.st.getMinutes());
+        gcalLines.push('📅 ' + day + ' ' + tm + ' ' + (x.e.summary || '(ohne Titel)'));
+      });
+    } catch (e) {}
+    renderHomeInfo();
+  }
+
   let homeMeal = '', homeTodo = null;
-  function updateHomeInfo() { homeMeal = ''; homeTodo = null; renderHomeInfo(); if (hasFeature('todo')) updateTodoBadge(); }
+  function updateHomeInfo() { homeMeal = ''; homeTodo = null; renderHomeInfo(); gcalLoad(); if (hasFeature('todo')) updateTodoBadge(); }
   function renderHomeInfo() {
     const el = document.getElementById('homeInfo');
     if (!el) return;
     const r = [];
     if (homeMeal && hasFeature('essen')) r.push(['', '🍽️ ' + homeMeal]);
+    gcalLines.forEach(l => r.push(['', l]));
+    if (gcalNeedsLogin) r.push(['gcal-link', '📅 Kalender verbinden – hier tippen']);
     if (homeTodo && hasFeature('todo')) {
       if (homeTodo.mine) r.push(['', `✅ ${homeTodo.mine} offene Pendenz${homeTodo.mine > 1 ? 'en' : ''}`]);
       if (homeTodo.late) r.push(['warn', `⚠ ${homeTodo.late} überfällig`]);
       if (homeTodo.confirmN) r.push(['', `⏳ ${homeTodo.confirmN} zu bestätigen`]);
     }
-    el.innerHTML = r.map(x => `<div class="hi ${x[0]}">${escapeHtml(x[1])}</div>`).join('');
+    el.innerHTML = r.map(x => x[0] === 'gcal-link' ? `<div class="hi" style="cursor:pointer" onclick="gcalConnect()">${escapeHtml(x[1])}</div>` : `<div class="hi ${x[0]}">${escapeHtml(x[1])}</div>`).join('');
   }
 
   async function loadEssenSub() {
@@ -5353,7 +5442,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.40';
+  const APP_VERSION = '1.41';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
