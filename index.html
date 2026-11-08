@@ -2650,9 +2650,20 @@
     const el = document.getElementById('essenSub');
     if (!el) return;
     try {
-      const m = mondayOf(new Date()), d = await kvGet('meals', isoDate(m));
-      const k = DAYS[(new Date().getDay() + 6) % 7][0], v = d && d.days && d.days[k];
-      el.textContent = v && (v.a || v.m) ? 'Heute: ' + (v.a || v.m) : '';
+      const now = new Date(), h = now.getHours() + now.getMinutes() / 60;
+      const weeks = {};
+      for (const off of [0, 7]) { const m = mondayOf(new Date(now.getTime() + off * 86400000)); weeks[isoDate(m)] = await kvGet('meals', isoDate(m)); }
+      const short = { mo: 'Mo', di: 'Di', mi: 'Mi', do: 'Do', fr: 'Fr', sa: 'Sa', so: 'So' };
+      let txt = '';
+      for (let i = 0; i < 14 && !txt; i++) {
+        const day = new Date(now.getTime() + i * 86400000), mon = isoDate(mondayOf(day));
+        const k = DAYS[(day.getDay() + 6) % 7][0], v = weeks[mon] && weeks[mon].days && weeks[mon].days[k];
+        if (!v) continue;
+        const label = i === 0 ? 'Heute' : i === 1 ? 'Morgen' : short[k];
+        if (v.m && (i > 0 || h < 13.5)) txt = label + ' Mittag: ' + v.m;
+        else if (v.a && (i > 0 || h < 20)) txt = label + ' Abend: ' + v.a;
+      }
+      el.textContent = txt ? 'Als Nächstes: ' + txt : '';
     } catch (e) { el.textContent = ''; }
   }
 
@@ -4811,7 +4822,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.23';
+  const APP_VERSION = '1.24';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
