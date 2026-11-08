@@ -920,7 +920,7 @@
     </div>
     <div class="card">
       <div class="todo-head">
-        <div class="card-title" style="margin:0;">Dieser Monat</div>
+        <div class="card-title" style="margin:0;">📁 Belege noch nicht verrechnet</div>
         <div class="todo-count" id="spesenMonth"></div>
       </div>
       <div id="spesenList"></div>
@@ -935,10 +935,21 @@
         </div>
         <div class="field">
           <label for="exportYear">Für das Jahr</label>
-          <select id="exportYear"></select>
+          <select id="exportYear" onchange="renderExportPick()"></select>
         </div>
-        <button class="save-btn" id="btnExportGo" onclick="exportSpesen()">Excel erstellen</button>
+        <div class="field">
+          <label>Welche Belege werden verrechnet?</label>
+          <div id="exportPick"></div>
+        </div>
+        <button class="save-btn" id="btnExportGo" onclick="exportSpesen()">Excel erstellen und Belege verrechnen</button>
+        <div class="set-note">Die gewählten Belege wandern danach in den Ordner «Belege verrechnet».</div>
       </div>
+    </div>
+    <div class="card">
+      <details id="doneBox">
+        <summary style="cursor:pointer;font-weight:700;">📁 Belege verrechnet (<span id="doneCount">0</span>)</summary>
+        <div id="spesenDoneList" style="margin-top:8px;"></div>
+      </details>
     </div>
   </div>
 
@@ -2200,22 +2211,51 @@
 
   function chf(n) { return 'CHF ' + n.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
-  function renderSpesen() {
-    const month = todayISO().slice(0, 7);
-    const sorted = [...spesen].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
-    const total = sorted.filter(x => x.date.startsWith(month)).reduce((sum, x) => sum + x.amount, 0);
-    document.getElementById('spesenMonth').textContent = chf(total);
-    document.getElementById('spesenList').innerHTML = sorted.length === 0
-      ? '<div class="todo-empty">Noch keine Spesen.</div>'
-      : sorted.map(x => `
+  function spesenRow(x, done) {
+    return `
           <div class="todo-item">
             <div class="todo-body">
               <div class="todo-text">${escapeHtml(x.text || 'Spese')}</div>
-              <div class="todo-meta">${escapeHtml(formatDateDisplay(x.date))}${x.stelle ? ' · ' + escapeHtml(x.stelle) : ''}${x.beleg ? ` · <a href="#" onclick="openBeleg('${x.id}');return false;">📎 Beleg</a>` : ''}</div>
+              <div class="todo-meta">${escapeHtml(formatDateDisplay(x.date))}${x.stelle ? ' · ' + escapeHtml(x.stelle) : ''}${x.beleg ? ` · <a href="#" onclick="openBeleg('${x.id}');return false;">📎 Beleg</a>` : ''}${done && x.verrechnetAt ? ' · verrechnet am ' + new Date(x.verrechnetAt).toLocaleDateString('de-CH') : ''}</div>
             </div>
             <div class="todo-count" style="margin-left:0;">${chf(x.amount)}</div>
-            <button class="del-btn" onclick="deleteSpese('${x.id}')" title="Löschen">✕</button>
-          </div>`).join('');
+            ${done
+              ? `<button class="del-btn" onclick="setVerrechnet(['${x.id}'], false)" title="Zurück zu «noch nicht verrechnet»">↩</button>`
+              : `<button class="del-btn" onclick="deleteSpese('${x.id}')" title="Löschen">✕</button>`}
+          </div>`;
+  }
+
+  function renderSpesen() {
+    const byDate = (a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0);
+    const open = spesen.filter(x => !x.verrechnet).sort(byDate);
+    const done = spesen.filter(x => x.verrechnet).sort(byDate);
+    document.getElementById('spesenMonth').textContent = open.length + ' · ' + chf(open.reduce((sum, x) => sum + x.amount, 0));
+    document.getElementById('spesenList').innerHTML = open.length === 0
+      ? '<div class="todo-empty">Keine offenen Belege.</div>'
+      : open.map(x => spesenRow(x, false)).join('');
+    document.getElementById('doneCount').textContent = done.length;
+    document.getElementById('spesenDoneList').innerHTML = done.length === 0
+      ? '<div class="todo-empty">Noch nichts verrechnet.</div>'
+      : done.map(x => spesenRow(x, true)).join('');
+    if (document.getElementById('exportPanel').style.display === 'block') renderExportPick();
+  }
+
+  async function setVerrechnet(ids, on) {
+    const at = on ? Date.now() : null;
+    try {
+      for (const id of ids) {
+        const patch = { verrechnet: on, verrechnetAt: at };
+        if (cloudEnabled) await withTimeout(cloudApi.updateSpese(id, patch));
+        const x = spesen.find(v => v.id === id);
+        if (x) Object.assign(x, patch);
+      }
+      if (!cloudEnabled) persistSpesenLocal();
+    } catch (e) {
+      showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen');
+      return false;
+    }
+    renderSpesen();
+    return true;
   }
 
   function readFileAsDataURL(file) {
@@ -2479,14 +2519,30 @@
     try { last = localStorage.getItem('ef-oel-last') || ''; } catch (e) {}
     document.getElementById('exportOel').value = last;
     document.getElementById('exportPanel').style.display = 'block';
+    renderExportPick();
     document.getElementById('exportOel').focus();
+  }
+
+  function renderExportPick() {
+    const year = document.getElementById('exportYear').value;
+    const open = spesen.filter(x => !x.verrechnet && x.date.startsWith(year + '-')).sort((a, b) => a.date.localeCompare(b.date));
+    document.getElementById('exportPick').innerHTML = open.length === 0
+      ? '<div class="todo-empty">Keine offenen Belege in diesem Jahr.</div>'
+      : open.map(x => `
+          <label class="set-row">
+            <span style="flex:1;min-width:0;">${escapeHtml(formatDateDisplay(x.date))} · ${escapeHtml(x.stelle || 'Sonstiges')}<br><small>${escapeHtml(x.text || 'Spese')}</small></span>
+            <span style="margin-right:10px;white-space:nowrap;">${chf(x.amount)}</span>
+            <input type="checkbox" class="pick-spese" value="${x.id}" checked style="width:22px;height:22px;">
+          </label>`).join('');
   }
 
   async function exportSpesen() {
     const liter = parseFloat(document.getElementById('exportOel').value);
     const year = document.getElementById('exportYear').value;
     if (!(liter >= 0) || isNaN(liter)) { showToast('Bitte den Heizölstand eingeben'); return; }
-    const items = spesen.filter(x => x.date.startsWith(year + '-'));
+    const picked = new Set([...document.querySelectorAll('.pick-spese:checked')].map(i => i.value));
+    const items = spesen.filter(x => picked.has(x.id));
+    if (items.length === 0) { showToast('Bitte mindestens einen Beleg wählen'); return; }
     const btn = document.getElementById('btnExportGo');
     btn.disabled = true;
     try {
@@ -2503,7 +2559,8 @@
       document.body.appendChild(a);
       a.click();
       a.remove();
-      showToast('Excel erstellt');
+      await setVerrechnet(items.map(x => x.id), true);
+      showToast('Excel erstellt – Belege verrechnet');
     } catch (e) {
       showToast('Export fehlgeschlagen – bitte Verbindung prüfen');
     }
@@ -2933,6 +2990,7 @@
           return sn.docs.map(d => d.data());
         },
         addSpese: x => F.setDoc(F.doc(db, 'spesen', uid(), 'items', x.id), x),
+        updateSpese: (id, patch) => F.updateDoc(F.doc(db, 'spesen', uid(), 'items', id), patch),
         deleteSpese: id => F.deleteDoc(F.doc(db, 'spesen', uid(), 'items', id)),
         getStellen: async () => {
           const d = await F.getDoc(F.doc(db, 'spesen', uid(), 'meta', 'stellen'));
@@ -2975,7 +3033,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.5';
+  const APP_VERSION = '1.6';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
