@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="Ecker's Family">
 <meta name="theme-color" content="#96692A">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Patrick+Hand&family=Permanent+Marker&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg: #F5F1E8;
@@ -259,6 +259,32 @@
   }
   .account-btn:active { transform: scale(0.97); }
   .no-punkte .punkte-field { display: none !important; }
+
+  /* Kinder-Darstellung der To-Dos (Familien-To-Do-Liste) */
+  .kid-head { text-align:center; padding:4px 8px 14px; }
+  .kid-head .kt { font-family:'Permanent Marker','Patrick Hand',cursive; font-size:30px; line-height:1.05; color:#262319; }
+  .kid-head .ks { font-family:'Patrick Hand',cursive; font-size:19px; display:inline-block; margin-top:6px; padding:0 12px 3px; border-bottom:3px solid #262319; border-radius:0 0 50% 50% / 0 0 7px 7px; }
+  .kid-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+  @media (min-width: 900px) { .kid-grid { grid-template-columns:1fr 1fr; gap:20px; } .kid-head .kt { font-size:42px; } }
+  .kid-card { border:3px solid var(--kc); background:var(--kbg); border-radius:24px; padding:14px 16px 8px; }
+  .kid-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
+  .kid-name { font-family:'Permanent Marker','Patrick Hand',cursive; font-size:30px; line-height:1.1; padding:0 12px 0 6px; border-radius:6px; background:linear-gradient(transparent 52%, var(--km) 52%); }
+  .kid-count { font-family:'Patrick Hand',cursive; font-size:17px; color:#4a4436; background:rgba(255,255,255,.75); border-radius:999px; padding:2px 12px; }
+  .kid-row { display:grid; grid-template-columns:40px 1fr auto; gap:14px; align-items:center; padding:12px 0 10px; }
+  .kid-row + .kid-row { border-top:0; }
+  .kid-card .todo-check { width:38px; height:38px; border:3px solid #262319; border-radius:11px; background:#fff; font-size:24px; font-weight:800; color:var(--kc); display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer; }
+  .kid-card .todo-check.done { background:var(--kc); color:#fff; border-color:#262319; }
+  .kid-card .todo-check:disabled { opacity:.55; cursor:default; }
+  .kid-text { font-family:'Patrick Hand','Comic Sans MS',cursive; font-size:21px; line-height:1.15; color:#262319; overflow-wrap:anywhere; }
+  .kid-line { height:4px; width:85%; margin-top:6px; border-radius:4px; background:var(--kc); opacity:.7; }
+  .kid-meta { font-family:'Patrick Hand',cursive; font-size:15px; color:#6b6455; margin-top:5px; }
+  .kid-note { font-family:'Patrick Hand',cursive; font-size:16px; margin-top:4px; background:rgba(255,255,255,.8); border-radius:10px; padding:4px 9px; }
+  .kid-ico { font-size:44px; line-height:1; filter:drop-shadow(0 2px 2px rgba(0,0,0,.15)); }
+  .kid-row.done .kid-text { text-decoration:line-through; opacity:.55; }
+  .kid-row.done .kid-ico { opacity:.45; filter:grayscale(.6); }
+  .kid-empty { font-family:'Patrick Hand',cursive; font-size:18px; text-align:center; color:#6b6455; padding:14px 0 18px; }
+  .kid-foot { text-align:center; margin-top:16px; font-family:'Patrick Hand',cursive; font-size:19px; }
+  .kid-foot .fd { font-size:56px; display:block; line-height:1.1; }
 
   /* Anmeldebildschirm: 2 x 2 (Eltern oben, Kinder unten), grosse Bilder */
   #accountGrid { grid-template-columns: 1fr 1fr !important; max-width: 560px; margin-left: auto; margin-right: auto; gap: 16px; }
@@ -4622,12 +4648,55 @@
     return ` · <span class="todo-due ${cls}">${cls === 'late' ? '⚠ ' : ''}bis ${label}</span>`;
   }
 
+  const KID_STYLE = {
+    florian: { kc: '#4DB5F0', kbg: '#EAF5FE', km: '#BFE3FB', ico: '🚀' },
+    tristan: { kc: '#7CCB4A', kbg: '#F0FAE6', km: '#CDEFA8', ico: '🛠️' },
+    lina: { kc: '#F58AB8', kbg: '#FEEAF3', km: '#F9C3DB', ico: '🦄' },
+    claudia: { kc: '#A27BE0', kbg: '#F2EBFC', km: '#D7C4F3', ico: '💜' }
+  };
+  const KID_ICONS = [
+    [/wäsche|waesche|kleider|socken|pullover/, '🧺'], [/hausaufgabe|aufgaben|lernen|prüfung|hausi/, '📚'], [/schulsache|rucksack|schulrucksack|ranzen|znüni/, '🎒'],
+    [/tisch|decken/, '🪑'], [/rasen|mäh|garten|unkraut|beet/, '🌿'], [/dusch|baden|waschen/, '🚿'], [/abendessen|mittagessen|kochen|essen|koch|backen/, '🍲'],
+    [/hund|yuna|gassi|spazier|tier|katze/, '🐾'], [/ordnung|aufräum|zimmer|spielzeug|legos?/, '🧸'], [/müll|abfall|kehricht|recycl|altglas/, '🗑️'],
+    [/abwasch|geschirr|spülmaschine|abräumen|abtrocknen/, '🍽️'], [/staub|saug|putzen|wischen|fegen/, '🧹'], [/bett/, '🛏️'], [/zähne|zahn/, '🪥'],
+    [/fenster/, '🪟'], [/blume|giess|gieß|pflanze/, '🌻'], [/einkauf|einkaufen/, '🛒'], [/lesen|buch/, '📖'], [/üben|klavier|musik|flöte|gitarre/, '🎹'],
+    [/auto|velo|fahrrad|roller/, '🚲'], [/briefkasten|post/, '📬'], [/tasche|packen|koffer/, '🎒']
+  ];
+  const kidIcon = text => { const t = (text || '').toLowerCase(); for (const [re, ic] of KID_ICONS) if (re.test(t)) return ic; return '✨'; };
+
+  function renderKidTodos(wrap, me, nameOf) {
+    const order = [USERS.find(n => userKey(n) === me), ...USERS.filter(n => userKey(n) !== me)].filter(Boolean);
+    const card = n => {
+      const key = userKey(n), st = KID_STYLE[key] || KID_STYLE.claudia;
+      const mine = todos.filter(t => t.assigneeKey === key);
+      const open = mine.filter(t => !t.done).sort((a, b) => (a.dueAt || '9999').localeCompare(b.dueAt || '9999') || (a.createdAt || 0) - (b.createdAt || 0));
+      const done = mine.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+      const row = t => {
+        const canToggle = canAssignTodos() || key === me;
+        return `<div class="kid-row ${t.done ? 'done' : ''}">
+          <button class="todo-check ${t.done ? 'done' : ''}" ${canToggle ? '' : 'disabled'} onclick="toggleTodo('${t.id}')" title="${t.done ? 'Wieder öffnen' : 'Erledigt'}">${t.done ? '✓' : ''}</button>
+          <div><div class="kid-text">${escapeHtml(t.text)}</div><div class="kid-line"></div>
+            ${(t.dueAt || t.createdByKey !== key) ? `<div class="kid-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}${t.seenAt && t.createdByKey === me && !t.done ? ' · 👀 gesehen' : ''}</div>` : ''}
+            ${t.note ? `<div class="kid-note">💬 ${escapeHtml(t.note)}</div>` : ''}</div>
+          <div class="kid-ico">${kidIcon(t.text)}</div></div>`;
+      };
+      return `<div class="kid-card" style="--kc:${st.kc};--kbg:${st.kbg};--km:${st.km}">
+        <div class="kid-top"><div class="kid-name">${escapeHtml(n)} ${key === me ? '♡' : ''}</div><div class="kid-count">${open.length === 0 ? '✅ alles fertig' : open.length + ' offen'}</div></div>
+        ${open.length + done.length === 0 ? '<div class="kid-empty">Noch keine Aufgaben 🎈</div>' : open.map(row).join('') + done.map(row).join('')}
+      </div>`;
+    };
+    wrap.innerHTML = `<div class="kid-head"><div class="kt">Familien To-Do-Liste</div><div class="ks">Gemeinsam schaffen wir das! ♡</div></div>
+      <div class="kid-grid">${order.map(card).join('')}</div>
+      <div class="kid-foot"><span class="fd">🐶</span>Team ♡ &nbsp;·&nbsp; Zusammen ist alles leichter!</div>`;
+  }
+
   function renderTodos() {
     const wrap = document.getElementById('todoLists');
     const me = userKey(currentUser);
     const nameOf = key => ACCOUNTS[key] || key;
 
     markSeen(todos.filter(t => t.assigneeKey === me && !t.done));
+    if (KIDS.includes(currentUser)) { renderKidTodos(wrap, me, nameOf); return; }
     wrap.innerHTML = USERS.map(n => {
       const key = userKey(n);
       const mine = todos.filter(t => t.assigneeKey === key);
@@ -5096,7 +5165,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.30';
+  const APP_VERSION = '1.31';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
