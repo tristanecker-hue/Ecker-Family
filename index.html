@@ -122,6 +122,13 @@
   .mole-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; max-width:340px; margin:12px auto; }
   .mole-hole { aspect-ratio:1; border-radius:50%; border:0; background:radial-gradient(circle at 50% 60%,#4b3320 0,#6b4a2e 60%,#8a6a45 100%); font-size:46px; cursor:pointer; touch-action:manipulation; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 6px 10px rgba(0,0,0,.35); }
   .reflex-box { height:260px; border-radius:20px; display:flex; align-items:center; justify-content:center; text-align:center; font-size:24px; font-weight:800; color:#fff; cursor:pointer; user-select:none; touch-action:manipulation; padding:16px; }
+  .hm-svg { display:block; width:170px; height:170px; margin:4px auto 0; }
+  .hm-svg .part { stroke:#3b3426; stroke-width:5; stroke-linecap:round; fill:none; }
+  .hm-word { display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin:10px 0 14px; }
+  .hm-letter { width:30px; height:42px; border-bottom:3px solid #3b3426; text-align:center; font-size:28px; font-weight:800; font-family:'Fraunces', serif; line-height:40px; }
+  .hm-keys { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; max-width:380px; margin:0 auto; }
+  .hm-keys button { width:40px; height:46px; border-radius:10px; border:1px solid var(--line); background:#fff; font:inherit; font-weight:700; font-size:18px; cursor:pointer; touch-action:manipulation; }
+  .hm-keys button.good { background:#C9F0BE; border-color:#8BC77E; } .hm-keys button.bad { background:#F7C4BD; border-color:#E39A90; } .hm-keys button:disabled { cursor:default; }
   .ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 320px; margin: 12px auto; }
   .ttt-cell { aspect-ratio: 1; font-size: 46px; border-radius: 14px; border: 1px solid var(--line); background: #fff; cursor: pointer; font-family: inherit; }
   .game-msg { text-align: center; font-size: 18px; font-weight: 700; margin: 10px 0; min-height: 26px; }
@@ -2734,7 +2741,8 @@
     { k: 'snake', e: '🐍', n: 'Schlange' },
     { k: 'simon', e: '🎵', n: 'Farben merken' },
     { k: 'mole', e: '🐹', n: 'Maulwurf' },
-    { k: 'reflex', e: '⚡', n: 'Blitzreaktion' }
+    { k: 'reflex', e: '⚡', n: 'Blitzreaktion' },
+    { k: 'hangman', e: '🔤', n: 'Galgenmännchen' }
   ];
 
   function scoresKey() { return 'ef-spiele-' + userKey(currentUser); }
@@ -2771,6 +2779,7 @@
       if (k === 'snake') return sc.snake !== undefined ? 'Beste: ' + sc.snake + ' Äpfel' : '';
       if (k === 'simon') return sc.simon !== undefined ? 'Beste: Runde ' + sc.simon : '';
       if (k === 'mole') return sc.mole !== undefined ? 'Beste: ' + sc.mole + ' Treffer' : '';
+      if (k === 'hangman') return sc['hangman-wins'] ? sc['hangman-wins'] + ' Siege' : '';
       if (k === 'reflex') return sc.reflex !== undefined ? 'Beste: ' + sc.reflex + ' ms' : '';
       return sc['tictac-wins'] ? sc['tictac-wins'] + ' Siege' : '';
     };
@@ -2799,7 +2808,7 @@
   }
 
   function startGame(kind) {
-    ({ memory: gameMemory, mathe: gameMathe, sterne: gameSterne, tictac: gameTicTac, snake: gameSnake, simon: gameSimon, mole: gameMole, reflex: gameReflex })[kind]();
+    ({ memory: gameMemory, mathe: gameMathe, sterne: gameSterne, tictac: gameTicTac, snake: gameSnake, simon: gameSimon, mole: gameMole, reflex: gameReflex, hangman: gameHangman })[kind]();
   }
 
   const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -3109,6 +3118,51 @@
     };
     body.innerHTML = `<div class="card"><div class="game-msg">Tippe so schnell wie möglich, sobald das Feld grün wird! 5 Runden.</div><div style="text-align:center"><button class="save-btn" id="rfGo">Los geht's!</button></div></div>`;
     document.getElementById('rfGo').onclick = round;
+  }
+
+  // 9) Galgenmännchen
+  const HM_WORDS = {
+    leicht: [['HUND', 'Tier'], ['KATZE', 'Tier'], ['PFERD', 'Tier'], ['FROSCH', 'Tier'], ['APFEL', 'Essen'], ['BANANE', 'Essen'], ['PIZZA', 'Essen'], ['KUCHEN', 'Essen'], ['SONNE', 'Natur'], ['BLUME', 'Natur'], ['SCHNEE', 'Natur'], ['TISCH', 'Zuhause'], ['LAMPE', 'Zuhause'], ['BETT', 'Zuhause'], ['AUTO', 'Fahrzeug'], ['ZUG', 'Fahrzeug'], ['BALL', 'Spielzeug'], ['PUPPE', 'Spielzeug'], ['SCHULE', 'Ort'], ['HAUS', 'Ort']],
+    mittel: [['ELEFANT', 'Tier'], ['SCHMETTERLING', 'Tier'], ['KROKODIL', 'Tier'], ['PINGUIN', 'Tier'], ['SCHOKOLADE', 'Essen'], ['ERDBEERE', 'Essen'], ['SPAGHETTI', 'Essen'], ['REGENBOGEN', 'Natur'], ['GEWITTER', 'Natur'], ['FEUERWEHR', 'Beruf'], ['HAUSWART', 'Beruf'], ['BIBLIOTHEK', 'Ort'], ['SPIELPLATZ', 'Ort'], ['TRAMPOLIN', 'Spielzeug'], ['FAHRRAD', 'Fahrzeug'], ['HELIKOPTER', 'Fahrzeug'], ['GEBURTSTAG', 'Fest'], ['WEIHNACHTEN', 'Fest'], ['SCHWEIZ', 'Land'], ['SCHMETTERLINGE', 'Tier']],
+    schwer: [['STAUBSAUGER', ''], ['KUEHLSCHRANK', ''], ['REGENSCHIRM', ''], ['SCHLITTSCHUH', ''], ['ZAHNBUERSTE', ''], ['FEUERLOESCHER', ''], ['ATEMSCHUTZ', ''], ['LEITERWAGEN', ''], ['ABENTEUER', ''], ['GEHEIMNIS', ''], ['SCHATZKARTE', ''], ['FERNSEHER', ''], ['SCHOKOLADENKUCHEN', ''], ['HAENDEDRUCK', ''], ['WASSERFALL', ''], ['NORDLICHT', ''], ['ERFINDUNG', ''], ['SPAZIERGANG', ''], ['STERNSCHNUPPE', ''], ['MARIENKAEFER', '']]
+  };
+  const hmNorm = w => w.replace(/AE/g, 'Ä').replace(/OE/g, 'Ö').replace(/UE/g, 'Ü');
+  let hmLast = '';
+  function gameHangman() {
+    const body = gameArea('Galgenmännchen');
+    levelPicker(body, 'Errate das Wort Buchstabe für Buchstabe – aber nicht zu oft falsch!', level => {
+      let pool = HM_WORDS[level].filter(x => x[0] !== hmLast);
+      const pick = pool[Math.floor(Math.random() * pool.length)]; hmLast = pick[0];
+      const word = hmNorm(pick[0]), hint = pick[1], MAX = 8;
+      let wrong = 0, used = new Set(), over = false;
+      const LET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ'.split('');
+      const parts = ['<line x1="20" y1="160" x2="120" y2="160"/>', '<line x1="45" y1="160" x2="45" y2="15"/>', '<polyline points="45,15 110,15"/>', '<line x1="110" y1="15" x2="110" y2="38"/>', '<circle cx="110" cy="50" r="12"/>', '<line x1="110" y1="62" x2="110" y2="105"/>', '<polyline points="90,80 110,70 130,80"/>', '<polyline points="94,138 110,105 126,138"/>'];
+      const info = document.getElementById('gameInfo');
+      const render = () => {
+        info.textContent = `❌ ${wrong}/${MAX}`;
+        const done = [...word].every(c => used.has(c));
+        body.innerHTML = `${hint ? `<div class="game-msg" style="font-size:15px;color:var(--ink-soft);margin:2px">Tipp: ${hint}</div>` : ''}
+          <svg class="hm-svg" viewBox="0 0 160 170">${parts.slice(0, wrong).map(x => x.replace('<', '<g class="part"><').replace(/\/?>$/, m => m + '</g>')).join('')}</svg>
+          <div class="hm-word">${[...word].map(c => `<div class="hm-letter">${used.has(c) || over ? (used.has(c) ? c : `<span style="color:#A8352A">${c}</span>`) : ''}</div>`).join('')}</div>
+          ${over || done ? '' : `<div class="hm-keys">${LET.map(c => `<button data-c="${c}" class="${used.has(c) ? (word.includes(c) ? 'good' : 'bad') : ''}" ${used.has(c) ? 'disabled' : ''}>${c}</button>`).join('')}</div>`}
+          <div class="game-msg" id="hmMsg"></div>`;
+        body.querySelectorAll('.hm-keys button').forEach(b => b.onclick = () => guess(b.dataset.c));
+        if (done || over) {
+          if (done) { const sc = getScores(); sc['hangman-wins'] = (sc['hangman-wins'] || 0) + 1; try { localStorage.setItem(scoresKey(), JSON.stringify(sc)); } catch (e) {} }
+          document.getElementById('hmMsg').innerHTML = (done ? '🎉 Richtig!' : '😵 Leider verloren – das gesuchte Wort ist rot markiert.') + '<br><button class="switch-btn" style="margin-top:10px" onclick="gameHangman()">Nochmal</button>';
+        }
+      };
+      const guess = c => {
+        if (over || used.has(c)) return;
+        used.add(c);
+        if (!word.includes(c)) { wrong++; if (wrong >= MAX) over = true; }
+        render();
+      };
+      const keys = e => { const c = e.key.length === 1 ? e.key.toUpperCase() : ''; if (LET.includes(c)) guess(c); };
+      document.addEventListener('keydown', keys);
+      gameCleanup = () => document.removeEventListener('keydown', keys);
+      render();
+    });
   }
 
   // ---------- Zeiterfassung: Monatsabrechnung als PDF ----------
@@ -5024,7 +5078,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.27';
+  const APP_VERSION = '1.28';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
