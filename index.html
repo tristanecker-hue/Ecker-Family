@@ -835,7 +835,7 @@
     </div>
 
     <div class="account-grid" id="homeTiles">
-      <div class="account-btn hidden" id="tileZeit" role="button" tabindex="0" onclick="openTimeTracking()" onkeydown="if(event.key==='Enter'||event.key===' '){openTimeTracking()}">
+      <div class="account-btn hidden" id="tileZeit" role="button" tabindex="0" onclick="openHauswart()" onkeydown="if(event.key==='Enter'||event.key===' '){openHauswart()}">
         <div class="account-avatar" style="background:var(--gold-dark);">🧰</div>
         <div class="account-name">Hauswart</div>
       </div>
@@ -848,6 +848,61 @@
         <div class="account-avatar" style="background:#6C7FD8;">📚</div>
         <div class="account-name" id="tilePlanName">Stundenplan</div>
       </div>
+    </div>
+  </div>
+
+  <!-- Hauswart (Übersicht) -->
+  <div id="hauswartScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>Hauswart</h1>
+        <div class="sub">Was möchtest du erfassen?</div>
+      </div>
+    </div>
+    <div class="account-grid">
+      <div class="account-btn" role="button" tabindex="0" onclick="openTimeTracking()" onkeydown="if(event.key==='Enter'||event.key===' '){openTimeTracking()}">
+        <div class="account-avatar" style="background:var(--gold-dark);">⏱</div>
+        <div class="account-name">Zeiterfassung</div>
+      </div>
+      <div class="account-btn" role="button" tabindex="0" onclick="openSpesen()" onkeydown="if(event.key==='Enter'||event.key===' '){openSpesen()}">
+        <div class="account-avatar" style="background:#4C9A8B;">💳</div>
+        <div class="account-name">Spesen</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spesen -->
+  <div id="spesenScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="openHauswart()">←</button>
+      <div>
+        <h1>Spesen</h1>
+        <div class="sub">Auslagen erfassen</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Neue Spese</div>
+      <div class="field">
+        <label for="spesenDate">Datum</label>
+        <input type="date" id="spesenDate">
+      </div>
+      <div class="field">
+        <label for="spesenAmount">Betrag (CHF)</label>
+        <input type="number" id="spesenAmount" inputmode="decimal" step="0.05" min="0" placeholder="0.00">
+      </div>
+      <div class="field">
+        <label for="spesenText">Beschreibung</label>
+        <input type="text" id="spesenText" maxlength="120" placeholder="z. B. Putzmittel, Material Baumarkt" onkeydown="if(event.key==='Enter'){addSpese()}">
+      </div>
+      <button class="save-btn" onclick="addSpese()">Spese speichern</button>
+    </div>
+    <div class="card">
+      <div class="todo-head">
+        <div class="card-title" style="margin:0;">Dieser Monat</div>
+        <div class="todo-count" id="spesenMonth"></div>
+      </div>
+      <div id="spesenList"></div>
     </div>
   </div>
 
@@ -930,6 +985,7 @@
         <div class="switch-user-name" id="switchName"></div>
       </div>
       <div>
+        <button class="switch-btn" onclick="openHauswart()">🧰 Hauswart</button>
         <button class="switch-btn" onclick="goHome()">🏠 Startseite</button>
         <button class="switch-btn hidden" id="btnCompare" onclick="openSummary()">Vergleichen</button>
         <button class="switch-btn" onclick="logout()">Abmelden</button>
@@ -1461,7 +1517,7 @@
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
@@ -1480,7 +1536,7 @@
     if (!currentUser || !TIME_USERS.includes(currentUser)) return;
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -1498,7 +1554,7 @@
   function goHome() {
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -1524,7 +1580,7 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
@@ -1993,7 +2049,7 @@
 
   function openSettings() {
     if (!isAdmin()) return;
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     renderSettings();
@@ -2034,6 +2090,94 @@
     await saveSettings();
   }
 
+  // ---------- Hauswart / Spesen ----------
+
+  let spesen = [];
+
+  function openHauswart() {
+    if (!currentUser || !TIME_USERS.includes(currentUser)) return;
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'settingsScreen', 'spesenScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    document.getElementById('hauswartScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+  }
+
+  async function loadSpesen() {
+    if (cloudEnabled) {
+      try { spesen = await withTimeout(cloudApi.listSpesen()); } catch (e) { spesen = []; showToast('Laden fehlgeschlagen'); }
+      return;
+    }
+    try { spesen = JSON.parse(localStorage.getItem('ef-spesen-' + userKey(currentUser)) || '[]'); } catch (e) { spesen = []; }
+  }
+  function persistSpesenLocal() {
+    try { localStorage.setItem('ef-spesen-' + userKey(currentUser), JSON.stringify(spesen)); } catch (e) { showToast('Speichern fehlgeschlagen'); }
+  }
+
+  async function openSpesen() {
+    if (!currentUser || !TIME_USERS.includes(currentUser)) return;
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'settingsScreen', 'hauswartScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    document.getElementById('spesenScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    document.getElementById('spesenDate').value = todayISO();
+    await loadSpesen();
+    renderSpesen();
+  }
+
+  function chf(n) { return 'CHF ' + n.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  function renderSpesen() {
+    const month = todayISO().slice(0, 7);
+    const sorted = [...spesen].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0));
+    const total = sorted.filter(x => x.date.startsWith(month)).reduce((sum, x) => sum + x.amount, 0);
+    document.getElementById('spesenMonth').textContent = chf(total);
+    document.getElementById('spesenList').innerHTML = sorted.length === 0
+      ? '<div class="todo-empty">Noch keine Spesen.</div>'
+      : sorted.map(x => `
+          <div class="todo-item">
+            <div class="todo-body">
+              <div class="todo-text">${escapeHtml(x.text || 'Spese')}</div>
+              <div class="todo-meta">${escapeHtml(formatDateDisplay(x.date))}</div>
+            </div>
+            <div class="todo-count" style="margin-left:0;">${chf(x.amount)}</div>
+            <button class="del-btn" onclick="deleteSpese('${x.id}')" title="Löschen">✕</button>
+          </div>`).join('');
+  }
+
+  async function addSpese() {
+    const date = document.getElementById('spesenDate').value;
+    const amount = parseFloat(document.getElementById('spesenAmount').value);
+    const text = document.getElementById('spesenText').value.trim();
+    if (!date) { showToast('Bitte ein Datum wählen'); return; }
+    if (!(amount > 0)) { showToast('Bitte einen Betrag eingeben'); return; }
+    const item = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      date, amount: Math.round(amount * 100) / 100, text, createdAt: Date.now()
+    };
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.addSpese(item));
+      spesen.push(item);
+      if (!cloudEnabled) persistSpesenLocal();
+    } catch (e) {
+      showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen');
+      return;
+    }
+    document.getElementById('spesenAmount').value = '';
+    document.getElementById('spesenText').value = '';
+    renderSpesen();
+    showToast('Spese gespeichert');
+  }
+
+  async function deleteSpese(id) {
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.deleteSpese(id));
+      spesen = spesen.filter(x => x.id !== id);
+      if (!cloudEnabled) persistSpesenLocal();
+    } catch (e) {
+      showToast('Löschen fehlgeschlagen');
+      return;
+    }
+    renderSpesen();
+  }
+
   // ---------- Stundenplan ----------
 
   const PLAN_KEY = 'ef-plans';
@@ -2059,7 +2203,7 @@
 
   async function openPlan() {
     if (!currentUser) return;
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'settingsScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'settingsScreen', 'hauswartScreen', 'spesenScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('planScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('planTitle').textContent = canEditPlan() ? 'Stundenplan Kinder' : 'Stundenplan';
@@ -2452,6 +2596,13 @@
         },
         saveSettings: st => F.setDoc(F.doc(db, 'settings', 'app'), st),
 
+        listSpesen: async () => {
+          const sn = await F.getDocs(F.collection(db, 'spesen', uid(), 'items'));
+          return sn.docs.map(d => d.data());
+        },
+        addSpese: x => F.setDoc(F.doc(db, 'spesen', uid(), 'items', x.id), x),
+        deleteSpese: id => F.deleteDoc(F.doc(db, 'spesen', uid(), 'items', id)),
+
         getPlan: async key => {
           const d = await F.getDoc(F.doc(db, 'plans', key));
           return d.exists() ? d.data() : null;
@@ -2481,7 +2632,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.2';
+  const APP_VERSION = '1.3';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
