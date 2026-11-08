@@ -93,6 +93,28 @@
   #bvTitle { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #bvPages { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 10px; touch-action: pan-x pan-y pinch-zoom; }
   #bvPages canvas, #bvPages img { display: block; width: 100%; height: auto; background: #fff; margin: 0 auto 12px; }
+  .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .game-tile { background: var(--card, #fffdf8); border: 1px solid var(--line); border-radius: 18px; padding: 18px 10px; text-align: center; cursor: pointer; font: inherit; color: var(--ink); }
+  .game-tile .g-emoji { font-size: 44px; line-height: 1.1; }
+  .game-tile .g-name { font-weight: 700; margin-top: 6px; }
+  .game-tile .g-best { font-size: 12px; color: var(--ink-soft); margin-top: 4px; min-height: 15px; }
+  .game-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-weight: 700; }
+  .lvl-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .lvl-btn { flex: 1; min-width: 90px; padding: 14px 8px; border-radius: 14px; border: 1px solid var(--line); background: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+  .mem-grid { display: grid; gap: 8px; }
+  .mem-card { aspect-ratio: 1; border-radius: 14px; border: 0; font-size: 34px; background: linear-gradient(135deg, #7B8CE8, #B06BE0); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .2s; }
+  .mem-card.open { background: #fff; border: 2px solid var(--line); transform: rotateY(0); }
+  .mem-card.done { background: #D8F3D0; border: 2px solid #8BC77E; }
+  .math-q { font-size: 40px; font-weight: 800; text-align: center; margin: 14px 0; font-family: 'Fraunces', serif; }
+  .math-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .math-answers button { padding: 20px 6px; font-size: 24px; font-weight: 700; border-radius: 16px; border: 1px solid var(--line); background: #fff; cursor: pointer; font-family: inherit; }
+  .math-answers button.good { background: #C9F0BE; } .math-answers button.bad { background: #F7C4BD; }
+  .star-field { position: relative; height: 340px; border-radius: 18px; background: linear-gradient(180deg, #1B2A6B, #3E1F7A); overflow: hidden; touch-action: manipulation; }
+  .star-item { position: absolute; font-size: 40px; border: 0; background: none; cursor: pointer; padding: 0; line-height: 1; animation: pop .15s ease-out; }
+  @keyframes pop { from { transform: scale(.3); } to { transform: scale(1); } }
+  .ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 320px; margin: 12px auto; }
+  .ttt-cell { aspect-ratio: 1; font-size: 46px; border-radius: 14px; border: 1px solid var(--line); background: #fff; cursor: pointer; font-family: inherit; }
+  .game-msg { text-align: center; font-size: 18px; font-weight: 700; margin: 10px 0; min-height: 26px; }
   .navbar { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 14px; padding: 2px 0 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .navbar::-webkit-scrollbar { display: none; }
   #spesenScreen .back-btn, #planScreen .back-btn, #todoScreen .back-btn, #hauswartScreen .back-btn { display: none; }
@@ -135,6 +157,20 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
+  }
+
+  /* ---------- Desktop-Ansicht (breite Bildschirme) ---------- */
+  @media (min-width: 900px) {
+    .wrap { max-width: 1040px; padding: 32px 32px 80px; }
+    .account-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 22px; }
+    .game-grid { grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .mem-grid { max-width: 620px; margin: 0 auto; }
+    .math-q, .math-answers, .star-field { max-width: 620px; margin-left: auto; margin-right: auto; }
+    .star-field { height: 440px; }
+  }
+  @media (min-width: 600px) and (max-width: 899px) {
+    .wrap { max-width: 720px; }
+    .account-grid { grid-template-columns: repeat(3, 1fr); }
   }
 
   .account-btn {
@@ -909,6 +945,10 @@
         <div class="account-avatar" style="background:#6C7FD8;">📚</div>
         <div class="account-name" id="tilePlanName">Stundenplan</div>
       </div>
+      <div class="account-btn hidden" id="tileSpiele" role="button" tabindex="0" onclick="openSpiele()" onkeydown="if(event.key==='Enter'||event.key===' '){openSpiele()}">
+        <div class="account-avatar" style="background:#E0568B;">🎮</div>
+        <div class="account-name">Spiele</div>
+      </div>
     </div>
   </div>
 
@@ -1028,6 +1068,20 @@
         <div id="spesenDoneList" style="margin-top:8px;"></div>
       </details>
     </div>
+  </div>
+
+  <!-- Spiele -->
+  <div id="spieleScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>Spiele</h1>
+        <div class="sub">Viel Spass! 🎉</div>
+      </div>
+    </div>
+    <div class="navbar" data-nav="spiele"></div>
+    <div id="spieleMenu"></div>
+    <div id="spieleArea" class="hidden"></div>
   </div>
 
   <!-- Stundenplan -->
@@ -1644,7 +1698,7 @@
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
@@ -1664,7 +1718,7 @@
     hideAllScreens(); refreshNavs();
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -1682,7 +1736,7 @@
   function goHome() {
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -1708,7 +1762,7 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
@@ -2115,7 +2169,8 @@
     { key: 'zeit', label: 'Kachel Hauswart (Zeiterfassung)' },
     { key: 'todo', label: "Kachel To-Do's" },
     { key: 'assign', label: "To-Do's zuordnen und löschen" },
-    { key: 'compare', label: 'Zeiten vergleichen' }
+    { key: 'compare', label: 'Zeiten vergleichen' },
+    { key: 'spiele', label: 'Kachel Spiele' }
   ];
   let settings = null;
 
@@ -2124,7 +2179,8 @@
       zeit: ['Tristan', 'Claudia'].map(userKey),
       todo: USERS.map(userKey),
       assign: ['Tristan', 'Claudia'].map(userKey),
-      compare: ['Tristan'].map(userKey)
+      compare: ['Tristan'].map(userKey),
+      spiele: ['Lina', 'Florian'].map(userKey)
     };
   }
 
@@ -2168,6 +2224,7 @@
     const t = hasFeature('todo');
     document.getElementById('tileZeit').classList.toggle('hidden', !z);
     document.getElementById('tileTodo').classList.toggle('hidden', !t);
+    document.getElementById('tileSpiele').classList.toggle('hidden', !hasFeature('spiele'));
     document.getElementById('btnSettings').classList.toggle('hidden', !isAdmin());
     const hint = document.getElementById('homeHint');
     hint.textContent = '';
@@ -2177,7 +2234,7 @@
 
   function openSettings() {
     if (!isAdmin()) return;
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     renderSettings();
@@ -2221,7 +2278,7 @@
   // ---------- Menüleiste zum Wechseln ----------
 
   function hideAllScreens() {
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'settingsScreen']
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'settingsScreen']
       .forEach(id => document.getElementById(id).classList.add('hidden'));
   }
 
@@ -2233,6 +2290,248 @@
       if (cur === 'spesen') items.push({ label: '← Zurück', fn: 'openHauswart()' });
       items.push({ label: '🏠 Start', fn: 'goHome()' });
       el.innerHTML = cur === 'zeit' ? '' : items.map(i => `<button class="nav-chip" onclick="${i.fn}">${escapeHtml(i.label)}</button>`).join('');
+    });
+  }
+
+  // ---------- Spiele ----------
+
+  let gameTimer = null, gameCleanup = null;
+  const GAME_LIST = [
+    { k: 'memory', e: '🃏', n: 'Memory' },
+    { k: 'mathe', e: '🧮', n: 'Kopfrechnen' },
+    { k: 'sterne', e: '⭐', n: 'Sterne fangen' },
+    { k: 'tictac', e: '❌', n: 'Drei gewinnt' }
+  ];
+
+  function scoresKey() { return 'ef-spiele-' + userKey(currentUser); }
+  function getScores() { try { return JSON.parse(localStorage.getItem(scoresKey()) || '{}'); } catch (e) { return {}; } }
+  function saveScore(key, value, higherBetter) {
+    const sc = getScores(), old = sc[key];
+    const better = old === undefined || (higherBetter ? value > old : value < old);
+    if (better) { sc[key] = value; try { localStorage.setItem(scoresKey(), JSON.stringify(sc)); } catch (e) {} }
+    return better;
+  }
+
+  function stopGame() {
+    if (gameTimer) { clearInterval(gameTimer); gameTimer = null; }
+    if (gameCleanup) { gameCleanup(); gameCleanup = null; }
+  }
+
+  function openSpiele() {
+    if (!currentUser) return;
+    hideAllScreens(); refreshNavs();
+    document.getElementById('spieleScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    backToGames();
+  }
+
+  function backToGames() {
+    stopGame();
+    document.getElementById('spieleArea').classList.add('hidden');
+    document.getElementById('spieleArea').innerHTML = '';
+    const sc = getScores();
+    const best = k => {
+      if (k === 'memory') { const v = ['leicht', 'mittel', 'schwer'].map(l => sc['memory-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.min(...v) + ' Züge' : ''; }
+      if (k === 'mathe') { const v = ['leicht', 'mittel', 'schwer'].map(l => sc['mathe-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.max(...v) + ' Punkte' : ''; }
+      if (k === 'sterne') return sc.sterne !== undefined ? 'Beste: ' + sc.sterne + ' Punkte' : '';
+      return sc['tictac-wins'] ? sc['tictac-wins'] + ' Siege' : '';
+    };
+    const menu = document.getElementById('spieleMenu');
+    menu.classList.remove('hidden');
+    menu.innerHTML = '<div class="game-grid">' + GAME_LIST.map(g => `
+      <button class="game-tile" onclick="startGame('${g.k}')">
+        <div class="g-emoji">${g.e}</div><div class="g-name">${g.n}</div><div class="g-best">${best(g.k)}</div>
+      </button>`).join('') + '</div>';
+  }
+
+  function gameArea(title) {
+    stopGame();
+    document.getElementById('spieleMenu').classList.add('hidden');
+    const a = document.getElementById('spieleArea');
+    a.classList.remove('hidden');
+    a.innerHTML = `<div class="game-bar"><button class="switch-btn" onclick="backToGames()">← Spiele</button><span>${title}</span><span id="gameInfo"></span></div><div id="gameBody"></div>`;
+    window.scrollTo(0, 0);
+    return document.getElementById('gameBody');
+  }
+
+  function levelPicker(body, intro, cb) {
+    body.innerHTML = `<div class="card"><div class="game-msg">${intro}</div><div class="lvl-row">
+      <button class="lvl-btn" data-l="leicht">🙂 Leicht</button><button class="lvl-btn" data-l="mittel">😎 Mittel</button><button class="lvl-btn" data-l="schwer">🤓 Schwer</button></div></div>`;
+    body.querySelectorAll('.lvl-btn').forEach(b => b.onclick = () => cb(b.dataset.l));
+  }
+
+  function startGame(kind) {
+    ({ memory: gameMemory, mathe: gameMathe, sterne: gameSterne, tictac: gameTicTac })[kind]();
+  }
+
+  const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  // 1) Memory
+  function gameMemory() {
+    const body = gameArea('Memory');
+    levelPicker(body, 'Finde alle Paare!', level => {
+      const EMO = ['🦄', '🚀', '⚽', '🦖', '🐶', '🐱', '🍕', '🌈', '🎈', '🐠', '🦊', '🐸'];
+      const pairs = { leicht: 6, mittel: 8, schwer: 12 }[level], cols = { leicht: 3, mittel: 4, schwer: 4 }[level];
+      const cards = shuffle([...EMO.slice(0, pairs), ...EMO.slice(0, pairs)]);
+      let open = [], moves = 0, matched = 0, lock = false;
+      const t0 = Date.now();
+      body.innerHTML = `<div class="mem-grid" style="grid-template-columns:repeat(${cols},1fr)">${cards.map((c, i) => `<button class="mem-card" data-i="${i}" aria-label="Karte"></button>`).join('')}</div><div class="game-msg" id="memMsg"></div>`;
+      const info = document.getElementById('gameInfo');
+      info.textContent = 'Züge: 0';
+      body.querySelectorAll('.mem-card').forEach(btn => btn.onclick = () => {
+        const i = +btn.dataset.i;
+        if (lock || btn.classList.contains('open') || btn.classList.contains('done')) return;
+        btn.classList.add('open'); btn.textContent = cards[i]; open.push(i);
+        if (open.length === 2) {
+          moves++; info.textContent = 'Züge: ' + moves;
+          const [a, b] = open, A = body.querySelector(`[data-i="${a}"]`), B = body.querySelector(`[data-i="${b}"]`);
+          if (cards[a] === cards[b]) {
+            A.classList.replace('open', 'done'); B.classList.replace('open', 'done'); open = []; matched++;
+            if (matched === pairs) {
+              const rec = saveScore('memory-' + level, moves, false);
+              document.getElementById('memMsg').innerHTML = `🎉 Geschafft in ${moves} Zügen (${Math.round((Date.now() - t0) / 1000)} s)!${rec ? '<br>⭐ Neuer Rekord!' : ''}<br><button class="switch-btn" style="margin-top:10px" onclick="gameMemory()">Nochmal</button>`;
+            }
+          } else {
+            lock = true;
+            setTimeout(() => { A.classList.remove('open'); B.classList.remove('open'); A.textContent = ''; B.textContent = ''; open = []; lock = false; }, 800);
+          }
+        }
+      });
+    });
+  }
+
+  // 2) Kopfrechnen
+  function mathQuestion(level) {
+    const r = n => Math.floor(Math.random() * n);
+    let q, a;
+    if (level === 'leicht') {
+      if (Math.random() < 0.5) { const x = r(11) + 1, y = r(10) + 1; q = `${x} + ${y}`; a = x + y; }
+      else { const x = r(15) + 5, y = r(x) ; q = `${x} − ${y}`; a = x - y; }
+    } else if (level === 'mittel') {
+      const t = r(3);
+      if (t === 0) { const x = r(60) + 20, y = r(40) + 10; q = `${x} + ${y}`; a = x + y; }
+      else if (t === 1) { const x = r(80) + 20, y = r(x - 5) + 1; q = `${x} − ${y}`; a = x - y; }
+      else { const x = r(9) + 2, y = r(9) + 2; q = `${x} × ${y}`; a = x * y; }
+    } else {
+      const t = r(4);
+      if (t === 0) { const x = r(12) + 3, y = r(12) + 3; q = `${x} × ${y}`; a = x * y; }
+      else if (t === 1) { const y = r(11) + 2, a0 = r(11) + 2; q = `${y * a0} ÷ ${y}`; a = a0; }
+      else if (t === 2) { const x = r(400) + 100, y = r(300) + 50; q = `${x} + ${y}`; a = x + y; }
+      else { const x = r(500) + 200, y = r(150) + 20; q = `${x} − ${y}`; a = x - y; }
+    }
+    const opts = new Set([a]);
+    const spread = Math.max(3, Math.round(Math.abs(a) * 0.25));
+    while (opts.size < 4) { const d = (r(spread) + 1) * (Math.random() < 0.5 ? -1 : 1); if (a + d >= 0) opts.add(a + d); }
+    return { q, a, opts: shuffle([...opts]) };
+  }
+
+  function gameMathe() {
+    const body = gameArea('Kopfrechnen');
+    levelPicker(body, '60 Sekunden – wie viele schaffst du?', level => {
+      let score = 0, left = 60, cur;
+      const info = document.getElementById('gameInfo');
+      const next = () => {
+        cur = mathQuestion(level);
+        body.innerHTML = `<div class="card"><div class="math-q">${cur.q} = ?</div><div class="math-answers">${cur.opts.map(o => `<button data-v="${o}">${o}</button>`).join('')}</div></div>`;
+        body.querySelectorAll('button').forEach(b => b.onclick = () => {
+          if (b.disabled) return;
+          const ok = +b.dataset.v === cur.a;
+          body.querySelectorAll('button').forEach(x => x.disabled = true);
+          b.classList.add(ok ? 'good' : 'bad');
+          if (!ok) body.querySelector(`[data-v="${cur.a}"]`).classList.add('good');
+          if (ok) score++;
+          info.textContent = `⏱ ${left} · ⭐ ${score}`;
+          setTimeout(() => { if (left > 0) next(); }, ok ? 250 : 700);
+        });
+      };
+      info.textContent = `⏱ ${left} · ⭐ 0`;
+      next();
+      gameTimer = setInterval(() => {
+        left--; info.textContent = `⏱ ${Math.max(0, left)} · ⭐ ${score}`;
+        if (left <= 0) {
+          clearInterval(gameTimer); gameTimer = null;
+          const rec = saveScore('mathe-' + level, score, true);
+          body.innerHTML = `<div class="card"><div class="game-msg">⏰ Zeit ist um!<br>${score} richtig${rec ? '<br>⭐ Neuer Rekord!' : ''}</div><div style="text-align:center"><button class="switch-btn" onclick="gameMathe()">Nochmal</button></div></div>`;
+        }
+      }, 1000);
+    });
+  }
+
+  // 3) Sterne fangen
+  function gameSterne() {
+    const body = gameArea('Sterne fangen');
+    body.innerHTML = `<div class="card"><div class="game-msg">Tippe auf die Sterne ⭐ – aber nicht auf die Bomben 💣! 30 Sekunden.</div><div style="text-align:center"><button class="save-btn" id="starGo">Los geht's!</button></div></div>`;
+    document.getElementById('starGo').onclick = () => {
+      body.innerHTML = '<div class="star-field" id="starField"></div>';
+      const field = document.getElementById('starField'), info = document.getElementById('gameInfo');
+      let score = 0, left = 30, spawn = null;
+      info.textContent = `⏱ ${left} · ⭐ 0`;
+      const add = () => {
+        const bomb = Math.random() < 0.2, b = document.createElement('button');
+        b.className = 'star-item'; b.textContent = bomb ? '💣' : (Math.random() < 0.15 ? '🌟' : '⭐');
+        b.style.left = Math.random() * (field.clientWidth - 50) + 'px'; b.style.top = Math.random() * (field.clientHeight - 50) + 'px';
+        b.onclick = () => { score += bomb ? -2 : (b.textContent === '🌟' ? 3 : 1); info.textContent = `⏱ ${left} · ⭐ ${score}`; b.remove(); };
+        field.appendChild(b);
+        setTimeout(() => b.remove(), 1100);
+      };
+      spawn = setInterval(add, 520);
+      gameCleanup = () => clearInterval(spawn);
+      gameTimer = setInterval(() => {
+        left--; info.textContent = `⏱ ${Math.max(0, left)} · ⭐ ${score}`;
+        if (left <= 0) {
+          stopGame();
+          const rec = saveScore('sterne', score, true);
+          body.innerHTML = `<div class="card"><div class="game-msg">🎉 Fertig!<br>${score} Punkte${rec ? '<br>⭐ Neuer Rekord!' : ''}</div><div style="text-align:center"><button class="switch-btn" onclick="gameSterne()">Nochmal</button></div></div>`;
+        }
+      }, 1000);
+    };
+  }
+
+  // 4) Drei gewinnt (Tic-Tac-Toe) gegen den Computer
+  function tttWinner(b) {
+    const L = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+    for (const [a, c, d] of L) if (b[a] && b[a] === b[c] && b[a] === b[d]) return b[a];
+    return b.every(x => x) ? 'T' : null;
+  }
+  function tttMinimax(b, turn) {
+    const w = tttWinner(b);
+    if (w === 'O') return { s: 1 }; if (w === 'X') return { s: -1 }; if (w === 'T') return { s: 0 };
+    let best = null;
+    for (let i = 0; i < 9; i++) {
+      if (b[i]) continue;
+      b[i] = turn; const r = tttMinimax(b, turn === 'O' ? 'X' : 'O'); b[i] = '';
+      if (best === null || (turn === 'O' ? r.s > best.s : r.s < best.s)) best = { s: r.s, m: i };
+    }
+    return best;
+  }
+  function gameTicTac() {
+    const body = gameArea('Drei gewinnt');
+    levelPicker(body, 'Du bist ❌ – der Computer ist ⭕', level => {
+      let b = Array(9).fill(''), over = false;
+      const render = () => {
+        body.innerHTML = `<div class="ttt-grid">${b.map((v, i) => `<button class="ttt-cell" data-i="${i}">${v === 'X' ? '❌' : v === 'O' ? '⭕' : ''}</button>`).join('')}</div><div class="game-msg" id="tttMsg"></div>`;
+        body.querySelectorAll('.ttt-cell').forEach(c => c.onclick = () => play(+c.dataset.i));
+      };
+      const finish = w => {
+        over = true;
+        const wins = (getScores()['tictac-wins'] || 0) + (w === 'X' ? 1 : 0);
+        if (w === 'X') { const sc = getScores(); sc['tictac-wins'] = wins; try { localStorage.setItem(scoresKey(), JSON.stringify(sc)); } catch (e) {} }
+        render();
+        document.getElementById('tttMsg').innerHTML = (w === 'X' ? '🎉 Du hast gewonnen!' : w === 'O' ? '🤖 Der Computer gewinnt.' : '🤝 Unentschieden!') + '<br><button class="switch-btn" style="margin-top:10px" onclick="gameTicTac()">Nochmal</button>';
+      };
+      const play = i => {
+        if (over || b[i]) return;
+        b[i] = 'X'; let w = tttWinner(b);
+        if (w) { finish(w); return; }
+        const free = b.map((v, k) => v ? -1 : k).filter(k => k >= 0);
+        let m;
+        if (level === 'leicht' || (level === 'mittel' && Math.random() < 0.5)) m = free[Math.floor(Math.random() * free.length)];
+        else m = tttMinimax([...b], 'O').m;
+        b[m] = 'O'; w = tttWinner(b);
+        if (w) { finish(w); return; }
+        render();
+      };
+      render();
     });
   }
 
@@ -2590,19 +2889,44 @@
         if (qt > bestSize) { bestSize = qt; bestLab = cur; }
       }
       if (bestSize < tot * 0.12) return src;
-      // Ecken: extreme Punkte der Fläche
-      let tl = null, tr = null, br = null, bl = null, mTL = 1e9, mTR = -1e9, mBR = -1e9, mBL = 1e9;
-      for (let i = 0; i < w * h; i++) {
-        if (lab[i] !== bestLab) continue;
-        const x = i % w, y = (i / w) | 0, a1 = x + y, a2 = x - y;
-        if (a1 < mTL) { mTL = a1; tl = [x, y]; }
-        if (a1 > mBR) { mBR = a1; br = [x, y]; }
-        if (a2 > mTR) { mTR = a2; tr = [x, y]; }
-        if (a2 < mBL) { mBL = a2; bl = [x, y]; }
+      // Gebiet leicht erodieren (Ausläufer von hellen Holzstellen entfernen), dann Hülle + kleinstes drehbares Rechteck
+      const inner = new Uint8Array(w * h);
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        if (lab[i] === bestLab && lab[i - 1] === bestLab && lab[i + 1] === bestLab && lab[i - w] === bestLab && lab[i + w] === bestLab) inner[i] = 1;
       }
-      const area = Math.abs((tl[0] * tr[1] - tr[0] * tl[1]) + (tr[0] * br[1] - br[0] * tr[1]) + (br[0] * bl[1] - bl[0] * br[1]) + (bl[0] * tl[1] - tl[0] * bl[1])) / 2;
+      const pts = [];
+      for (let y = 0; y < h; y++) {
+        let x0 = -1, x1 = -1;
+        for (let x = 0; x < w; x++) if (inner[y * w + x]) { if (x0 < 0) x0 = x; x1 = x; }
+        if (x0 >= 0) { pts.push([x0, y]); if (x1 !== x0) pts.push([x1, y]); }
+      }
+      if (pts.length < 20) return src;
+      pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+      const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+      const lo = [], up = [];
+      for (const q of pts) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+      for (let i = pts.length - 1; i >= 0; i--) { const q = pts[i]; while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+      const hull = lo.slice(0, -1).concat(up.slice(0, -1));
+      let bestR = null, bestA = 1e18;
+      for (let i = 0; i < hull.length; i++) {
+        const A0 = hull[i], B0 = hull[(i + 1) % hull.length];
+        const ang = Math.atan2(B0[1] - A0[1], B0[0] - A0[0]), ca = Math.cos(ang), sa = Math.sin(ang);
+        let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
+        for (const q of hull) { const u = q[0] * ca + q[1] * sa, v = -q[0] * sa + q[1] * ca; if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v; }
+        const ar = (u1 - u0) * (v1 - v0);
+        if (ar < bestA) { bestA = ar; bestR = { ca, sa, u0, u1, v0, v1 }; }
+      }
+      const area = bestA;
       if (area < tot * 0.15 || area > tot * 0.97) return src;           // kaum Rand oder unklar
-      const P = [tl, tr, br, bl].map(([x, y]) => [x / k, y / k]);
+      const { ca, sa } = bestR, grow = 1.5;                             // Erosion wieder ausgleichen
+      const cn = (u, v) => [u * ca - v * sa, u * sa + v * ca];
+      let cs = [cn(bestR.u0 - grow, bestR.v0 - grow), cn(bestR.u1 + grow, bestR.v0 - grow), cn(bestR.u1 + grow, bestR.v1 + grow), cn(bestR.u0 - grow, bestR.v1 + grow)];
+      const cx0 = cs.reduce((t, q) => t + q[0], 0) / 4, cy0 = cs.reduce((t, q) => t + q[1], 0) / 4;
+      cs.sort((p, q) => Math.atan2(p[1] - cy0, p[0] - cx0) - Math.atan2(q[1] - cy0, q[0] - cx0));
+      let st = 0; cs.forEach((q, i) => { if (q[0] + q[1] < cs[st][0] + cs[st][1]) st = i; });
+      cs = cs.slice(st).concat(cs.slice(0, st));                        // TL, TR, BR, BL (im Uhrzeigersinn)
+      const P = cs.map(([x, y]) => [x / k, y / k]);
       const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
       let ow = Math.round((dist(P[0], P[1]) + dist(P[3], P[2])) / 2), oh = Math.round((dist(P[0], P[3]) + dist(P[1], P[2])) / 2);
       if (ow < 100 || oh < 100) return src;
@@ -2616,7 +2940,7 @@
       const sctx2 = src.getContext('2d'), sd = sctx2.getImageData(0, 0, src.width, src.height).data, sw = src.width, sh = src.height;
       const out = document.createElement('canvas'); out.width = ow; out.height = oh;
       const octx = out.getContext('2d'), od = octx.createImageData(ow, oh), o = od.data;
-      const m = 0.012;                                                  // kleiner Innenrand, damit kein Rand bleibt
+      const m = 0.02;                                                   // kleiner Innenrand, damit kein Rand bleibt
       for (let y = 0; y < oh; y++) {
         const v = m + (1 - 2 * m) * (y / (oh - 1));
         for (let x = 0; x < ow; x++) {
@@ -3706,7 +4030,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.03';
+  const APP_VERSION = '1.04';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
