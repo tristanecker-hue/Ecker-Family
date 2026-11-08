@@ -1391,6 +1391,7 @@
       <div class="card-title">Google Kalender</div>
       <div class="set-note" style="margin-top:0;" id="gcalNote"></div>
       <div id="gcalList" style="margin:8px 0;"></div>
+      <div class="set-note" id="gcalRu" style="word-break:break-all;"></div>
       <button class="btn" id="gcalBtn" onclick="gcalToggle()" style="margin-top:8px;"></button>
     </div>
     <div id="settingsAdmin">
@@ -2932,6 +2933,7 @@
     b.classList.remove('hidden');
     n.textContent = gcalOn() ? 'Verbunden: heutige und morgige Termine stehen auf der Startseite.' : 'Zeigt deine heutigen und morgigen Termine auf der Startseite (nur lesen).';
     b.textContent = gcalOn() ? 'Trennen' : 'Mit Google verbinden';
+    const ru = document.getElementById('gcalRu'); if (ru) ru.textContent = 'Adresse dieser App: ' + gcalRedirect();
     gcalRenderList();
   }
   let gcalCals = null;
@@ -5495,7 +5497,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.49';
+  const APP_VERSION = '1.50';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
