@@ -127,6 +127,21 @@
   .tp-note { background: #fbf3df; border-left: 3px solid var(--gold-dark, #c79a45); border-radius: 8px; padding: 8px 12px; text-align: left; font-size: 14px; margin: -6px 0 16px; white-space: pre-wrap; }
   .tp-note.hidden { display: none; }
   .todo-note { font-size: 13px; color: var(--ink); background: #fbf3df; border-radius: 8px; padding: 5px 9px; margin-top: 5px; white-space: pre-wrap; word-break: break-word; }
+  .star-big { font-size: 46px; font-weight: 800; text-align: center; font-family: 'Fraunces', Georgia, serif; }
+  .star-sub { text-align: center; color: var(--ink-soft); font-size: 13px; }
+  .rew-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .rew-row:first-child { border-top: 0; }
+  .rew-emoji { font-size: 30px; }
+  .rew-body { flex: 1; min-width: 0; }
+  .rew-name { font-weight: 600; }
+  .rew-bar { height: 6px; background: #eee6d3; border-radius: 99px; margin-top: 6px; overflow: hidden; }
+  .rew-bar > i { display: block; height: 100%; background: #E5A823; border-radius: 99px; }
+  .meal-day { display: grid; grid-template-columns: 62px 1fr; gap: 6px 10px; align-items: center; }
+  .meal-day .dn { font-weight: 700; font-family: 'Fraunces', Georgia, serif; }
+  .meal-day .dd { font-size: 12px; color: var(--ink-soft); font-weight: 400; }
+  .meal-day input { width: 100%; }
+  .meal-lbl { font-size: 12px; color: var(--ink-soft); }
+  .meal-today { border-color: #D9693B !important; box-shadow: 0 0 0 2px rgba(217,105,59,.18); }
   .navbar { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 14px; padding: 2px 0 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .navbar::-webkit-scrollbar { display: none; }
   #spesenScreen .back-btn, #planScreen .back-btn, #todoScreen .back-btn, #hauswartScreen .back-btn { display: none; }
@@ -948,6 +963,15 @@
         <div class="account-avatar" style="background:#E0568B;">🎮</div>
         <div class="account-name">Spiele</div>
       </div>
+      <div class="account-btn hidden" id="tilePunkte" role="button" tabindex="0" onclick="openPunkte()" onkeydown="if(event.key==='Enter'||event.key===' '){openPunkte()}">
+        <div class="account-avatar" style="background:#E5A823;">⭐</div>
+        <div class="account-name">Sterne</div>
+      </div>
+      <div class="account-btn hidden" id="tileEssen" role="button" tabindex="0" onclick="openEssen()" onkeydown="if(event.key==='Enter'||event.key===' '){openEssen()}">
+        <div class="account-avatar" style="background:#D9693B;">🍽️</div>
+        <div class="account-name">Essen</div>
+        <div class="account-hint" id="essenSub" style="margin-top:-8px;"></div>
+      </div>
     </div>
   </div>
 
@@ -1056,6 +1080,22 @@
       </div>
     </div>
     <div class="card">
+      <details id="oelBox">
+        <summary style="cursor:pointer;font-weight:700;">🛢 Heizöl-Verlauf</summary>
+        <div id="oelChart" style="margin-top:10px;"></div>
+        <div class="field" style="margin-top:12px;">
+          <label>Heizölstand erfassen</label>
+          <div style="display:flex;gap:8px;">
+            <input type="date" id="oelDate" style="flex:1;min-width:0;">
+            <input type="number" inputmode="numeric" id="oelLiter" placeholder="Liter" style="width:96px;">
+            <button class="switch-btn" onclick="addOel()">+</button>
+          </div>
+        </div>
+        <div id="oelList"></div>
+        <div class="set-note">Die Stände aus «Spesen verrechnen» kommen automatisch dazu.</div>
+      </details>
+    </div>
+    <div class="card">
       <details id="abrBox">
         <summary style="cursor:pointer;font-weight:700;">📁 Spesenabrechnung erledigt (<span id="abrCount">0</span>)</summary>
         <div id="abrList" style="margin-top:8px;"></div>
@@ -1085,6 +1125,37 @@
     <div class="navbar" data-nav="spiele"></div>
     <div id="spieleMenu"></div>
     <div id="spieleArea" class="hidden"></div>
+  </div>
+
+  <!-- Sterne & Belohnungen -->
+  <div id="punkteScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>Sterne</h1>
+        <div class="sub">Sammeln und Belohnungen holen</div>
+      </div>
+    </div>
+    <div class="navbar" data-nav="punkte"></div>
+    <div id="punkteBody"></div>
+  </div>
+
+  <!-- Essen -->
+  <div id="essenScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>Essen</h1>
+        <div class="sub">Wochenplan</div>
+      </div>
+    </div>
+    <div class="navbar" data-nav="essen"></div>
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <button class="switch-btn" onclick="essenShift(-1)">‹</button>
+      <div style="text-align:center;font-weight:700;" id="essenWeekLabel"></div>
+      <button class="switch-btn" onclick="essenShift(1)">›</button>
+    </div>
+    <div id="essenBody"></div>
   </div>
 
   <!-- Stundenplan -->
@@ -1155,6 +1226,10 @@
       <div class="field">
         <label for="todoDue">Erledigen bis (optional)</label>
         <input type="date" id="todoDue">
+      </div>
+      <div class="field">
+        <label for="todoPoints">Sterne fürs Erledigen (für Lina und Florian)</label>
+        <select id="todoPoints"><option value="0">keine</option><option value="1" selected>⭐ 1</option><option value="2">⭐ 2</option><option value="3">⭐ 3</option><option value="4">⭐ 4</option><option value="5">⭐ 5</option></select>
       </div>
       <div class="field">
         <label for="todoNote">Bemerkung (optional)</label>
@@ -1272,6 +1347,10 @@
           <div class="breakdown-value" id="monthGarten">0 Std</div>
         </div>
       </div>
+      <div style="display:flex;gap:8px;margin-top:14px;align-items:center;">
+        <input type="month" id="monthPdfSel" style="flex:1;min-width:0;">
+        <button class="switch-btn" id="btnMonthPdf" onclick="exportMonthPdf()">📄 Monatsabrechnung PDF</button>
+      </div>
     </div>
 
     <!-- Feuerwehr (privat, nur Tristan) -->
@@ -1371,6 +1450,8 @@
     <select id="teAssignee" style="width:100%;margin:4px 0 12px;"></select>
     <label style="font-size:13px;color:var(--ink-soft);">Erledigen bis</label>
     <input type="date" id="teDue" style="width:100%;margin:4px 0 12px;">
+    <label style="font-size:13px;color:var(--ink-soft);">Sterne fürs Erledigen</label>
+    <select id="tePoints" style="width:100%;margin:4px 0 12px;"><option value="0">keine</option><option value="1">⭐ 1</option><option value="2">⭐ 2</option><option value="3">⭐ 3</option><option value="4">⭐ 4</option><option value="5">⭐ 5</option></select>
     <label style="font-size:13px;color:var(--ink-soft);">Bemerkung</label>
     <textarea id="teNote" rows="2" maxlength="400" style="width:100%;margin:4px 0 16px;"></textarea>
     <button class="save-btn" onclick="saveTodoEdit()">Speichern</button>
@@ -1755,7 +1836,7 @@
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
@@ -1776,7 +1857,7 @@
     hideAllScreens(); refreshNavs();
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -1794,7 +1875,7 @@
   function goHome() {
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -1822,7 +1903,7 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
@@ -2007,6 +2088,8 @@
     document.getElementById('monthAllgemein').textContent = formatHours(allgemeinMin);
     document.getElementById('monthGarten').textContent = formatHours(gartenMin);
 
+    const sel = document.getElementById('monthPdfSel');
+    if (sel && !sel.value) sel.value = ym;
     const feuerwehrCard = document.getElementById('feuerwehrCard');
     if (canSeeFeuerwehr()) {
       feuerwehrCard.classList.remove('hidden');
@@ -2231,7 +2314,9 @@
     { key: 'todo', label: "Kachel To-Do's" },
     { key: 'assign', label: "To-Do's zuordnen und löschen" },
     { key: 'compare', label: 'Zeiten vergleichen' },
-    { key: 'spiele', label: 'Kachel Spiele' }
+    { key: 'spiele', label: 'Kachel Spiele' },
+    { key: 'punkte', label: 'Kachel Sterne & Belohnungen' },
+    { key: 'essen', label: 'Kachel Essen (Wochenplan)' }
   ];
   let settings = null;
 
@@ -2241,7 +2326,9 @@
       todo: USERS.map(userKey),
       assign: ['Tristan', 'Claudia'].map(userKey),
       compare: ['Tristan'].map(userKey),
-      spiele: USERS.map(userKey)
+      spiele: USERS.map(userKey),
+      punkte: USERS.map(userKey),
+      essen: USERS.map(userKey)
     };
   }
 
@@ -2286,6 +2373,9 @@
     document.getElementById('tileZeit').classList.toggle('hidden', !z);
     document.getElementById('tileTodo').classList.toggle('hidden', !t);
     document.getElementById('tileSpiele').classList.toggle('hidden', !hasFeature('spiele'));
+    document.getElementById('tilePunkte').classList.toggle('hidden', !hasFeature('punkte'));
+    document.getElementById('tileEssen').classList.toggle('hidden', !hasFeature('essen'));
+    if (hasFeature('essen')) loadEssenSub();
     const hint = document.getElementById('homeHint');
     hint.textContent = '';
     document.getElementById('tilePlanName').textContent = canEditPlan() ? 'Stundenplan Kinder' : 'Stundenplan';
@@ -2294,7 +2384,7 @@
 
   function openSettings() {
     if (!currentUser) return;
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
@@ -2340,7 +2430,7 @@
   // ---------- Menüleiste zum Wechseln ----------
 
   function hideAllScreens() {
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'settingsScreen']
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'settingsScreen']
       .forEach(id => document.getElementById(id).classList.add('hidden'));
   }
 
@@ -2353,6 +2443,217 @@
       items.push({ label: '🏠 Start', fn: 'goHome()' });
       el.innerHTML = cur === 'zeit' ? '' : items.map(i => `<button class="nav-chip" onclick="${i.fn}">${escapeHtml(i.label)}</button>`).join('');
     });
+  }
+
+  // ---------- Gemeinsame Ablage (Firestore / lokal) ----------
+
+  async function kvGet(col, id) {
+    if (cloudEnabled) return await withTimeout(cloudApi.kvGet(col, id));
+    try { return JSON.parse(localStorage.getItem('ef-kv-' + col + '-' + id) || 'null'); } catch (e) { return null; }
+  }
+  async function kvMerge(col, id, data) {
+    if (cloudEnabled) return await withTimeout(cloudApi.kvMerge(col, id, data));
+    const cur = (await kvGet(col, id)) || {};
+    localStorage.setItem('ef-kv-' + col + '-' + id, JSON.stringify({ ...cur, ...data }));
+  }
+
+  // ---------- Sterne & Belohnungen ----------
+
+  const KIDS = ['Lina', 'Florian'];
+  const DEFAULT_REWARDS = [
+    { id: 'r1', emoji: '🍦', name: 'Eis essen', cost: 10 },
+    { id: 'r2', emoji: '🎮', name: '30 Min extra Spielzeit', cost: 15 },
+    { id: 'r3', emoji: '🎬', name: 'Filmabend aussuchen', cost: 20 },
+    { id: 'r4', emoji: '🍕', name: 'Pizza-Abend', cost: 40 }
+  ];
+  let rewardsCatalog = [], kidData = {};
+
+  async function loadPunkte() {
+    await loadTodos();
+    try {
+      const cat = await kvGet('rewards', 'catalog');
+      rewardsCatalog = cat && Array.isArray(cat.list) ? cat.list : DEFAULT_REWARDS.map(r => ({ ...r }));
+      kidData = {};
+      for (const n of KIDS) {
+        const d = await kvGet('rewards', userKey(n));
+        kidData[userKey(n)] = { redeemed: (d && d.redeemed) || [], bonus: (d && d.bonus) || [] };
+      }
+    } catch (e) { showToast('Sterne konnten nicht geladen werden'); }
+  }
+  function earnedTodoStars(key) { return todos.filter(t => t.assigneeKey === key && t.done).reduce((a, t) => a + (+t.points || 0), 0); }
+  function balanceOf(key) {
+    const d = kidData[key] || { redeemed: [], bonus: [] };
+    return earnedTodoStars(key) + d.bonus.reduce((a, b) => a + (+b.pts || 0), 0) - d.redeemed.reduce((a, r) => a + (+r.cost || 0), 0);
+  }
+
+  async function openPunkte() {
+    if (!currentUser) return;
+    hideAllScreens(); refreshNavs();
+    document.getElementById('punkteScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    document.getElementById('punkteBody').innerHTML = '<div class="card"><div class="todo-empty">Wird geladen …</div></div>';
+    await loadPunkte();
+    renderPunkte();
+  }
+
+  function rewardRows(bal, canRedeem, key) {
+    return rewardsCatalog.map(r => {
+      const pct = Math.min(100, Math.round((Math.max(0, bal) / r.cost) * 100));
+      const ok = bal >= r.cost;
+      return `<div class="rew-row">
+        <div class="rew-emoji">${escapeHtml(r.emoji || '🎁')}</div>
+        <div class="rew-body"><div class="rew-name">${escapeHtml(r.name)}</div>
+          <div class="todo-meta">⭐ ${r.cost}${canRedeem && !ok ? ' · noch ' + (r.cost - bal) : ''}</div>
+          ${canRedeem ? `<div class="rew-bar"><i style="width:${pct}%"></i></div>` : ''}</div>
+        ${canRedeem ? `<button class="${ok ? 'save-btn' : 'switch-btn'}" style="width:auto;padding:8px 14px;" ${ok ? '' : 'disabled'} onclick="redeemReward('${r.id}')">Einlösen</button>` : ''}
+        ${canAssignTodos() ? `<button class="del-btn" onclick="deleteReward('${r.id}')" title="Löschen">✕</button>` : ''}
+      </div>`;
+    }).join('') || '<div class="todo-empty">Noch keine Belohnungen.</div>';
+  }
+
+  function historyRows(key) {
+    const d = kidData[key] || { redeemed: [], bonus: [] };
+    const ev = [];
+    todos.filter(t => t.assigneeKey === key && t.done && t.points > 0).forEach(t => ev.push({ at: t.doneAt || 0, txt: '✅ ' + t.text, pts: +t.points }));
+    d.bonus.forEach(b => ev.push({ at: b.at || 0, txt: '🎉 ' + (b.reason || 'Bonus'), pts: +b.pts }));
+    d.redeemed.forEach(r => ev.push({ at: r.at || 0, txt: '🎁 ' + r.name, pts: -r.cost }));
+    ev.sort((a, b) => b.at - a.at);
+    return ev.slice(0, 12).map(e => `<div class="todo-item"><div class="todo-body"><div class="todo-text" style="font-size:14px;">${escapeHtml(e.txt)}</div><div class="todo-meta">${e.at ? escapeHtml(new Date(e.at).toLocaleDateString('de-CH')) : ''}</div></div><div class="todo-count" style="margin-left:0;font-weight:700;color:${e.pts < 0 ? '#b3402e' : '#3d5a3a'}">${e.pts > 0 ? '+' : ''}${e.pts} ⭐</div></div>`).join('') || '<div class="todo-empty">Noch nichts passiert.</div>';
+  }
+
+  function renderPunkte() {
+    const body = document.getElementById('punkteBody');
+    const me = userKey(currentUser);
+    const isKid = KIDS.includes(currentUser);
+    let html = '';
+    if (isKid) {
+      const bal = balanceOf(me);
+      html += `<div class="card"><div class="star-sub">Deine Sterne</div><div class="star-big">⭐ ${bal}</div>
+        <div class="star-sub">Für jede erledigte Pendenz gibt es Sterne.</div></div>
+        <div class="card"><div class="card-title">Belohnungen</div>${rewardRows(bal, true, me)}</div>
+        <div class="card"><div class="card-title">Verlauf</div>${historyRows(me)}</div>`;
+    } else {
+      KIDS.forEach(n => {
+        const key = userKey(n), bal = balanceOf(key);
+        html += `<div class="card"><div style="display:flex;align-items:center;gap:12px;">
+          <div class="compare-avatar" data-avatar="${escapeHtml(n)}"></div>
+          <div style="flex:1;"><div class="compare-name">${escapeHtml(n)}</div></div>
+          <div class="star-big" style="font-size:30px;">⭐ ${bal}</div></div>
+          ${canAssignTodos() ? `<button class="switch-btn" style="margin-top:10px;" onclick="giveBonus('${key}')">+ Bonus / Abzug</button>` : ''}
+          <details style="margin-top:8px;"><summary style="cursor:pointer;font-weight:600;font-size:14px;">Verlauf</summary>${historyRows(key)}</details></div>`;
+      });
+      html += `<div class="card"><div class="card-title">Belohnungen</div>${rewardRows(0, false)}
+        ${canAssignTodos() ? `<div style="display:flex;gap:8px;margin-top:12px;"><input type="text" id="rwEmoji" value="🎁" maxlength="4" style="width:54px;text-align:center;"><input type="text" id="rwName" placeholder="Belohnung" maxlength="60" style="flex:1;min-width:0;"><input type="number" inputmode="numeric" id="rwCost" placeholder="⭐" style="width:70px;"><button class="switch-btn" onclick="addReward()">+</button></div>` : ''}</div>`;
+    }
+    body.innerHTML = html;
+    applyAvatars();
+  }
+
+  async function redeemReward(id) {
+    const r = rewardsCatalog.find(x => x.id === id), me = userKey(currentUser);
+    if (!r || balanceOf(me) < r.cost) return;
+    if (!window.confirm('«' + r.name + '» für ' + r.cost + ' Sterne einlösen?')) return;
+    const d = kidData[me];
+    const redeemed = [...d.redeemed, { id: Date.now().toString(36), name: r.name, cost: r.cost, at: Date.now() }];
+    try { await kvMerge('rewards', me, { redeemed }); } catch (e) { showToast('Einlösen fehlgeschlagen – bitte Verbindung prüfen'); return; }
+    d.redeemed = redeemed;
+    showToast('Eingelöst! Mama und Papa wissen Bescheid 🎉');
+    renderPunkte();
+  }
+
+  async function giveBonus(key) {
+    const v = window.prompt('Sterne für ' + (ACCOUNTS[key] || key) + ' (z. B. 3 oder -2):');
+    const pts = parseInt(v, 10);
+    if (!v || isNaN(pts) || pts === 0) return;
+    const reason = (window.prompt('Wofür? (optional)') || '').trim();
+    const d = kidData[key];
+    const bonus = [...d.bonus, { id: Date.now().toString(36), pts, reason, at: Date.now() }];
+    try { await kvMerge('rewards', key, { bonus }); } catch (e) { showToast('Speichern fehlgeschlagen'); return; }
+    d.bonus = bonus;
+    renderPunkte();
+  }
+
+  async function saveCatalog(list) {
+    try { await kvMerge('rewards', 'catalog', { list }); } catch (e) { showToast('Speichern fehlgeschlagen'); return false; }
+    rewardsCatalog = list; return true;
+  }
+  async function addReward() {
+    const name = document.getElementById('rwName').value.trim(), cost = parseInt(document.getElementById('rwCost').value, 10);
+    if (!name || !(cost > 0)) { showToast('Bitte Name und Sterne eingeben'); return; }
+    if (await saveCatalog([...rewardsCatalog, { id: Date.now().toString(36), emoji: document.getElementById('rwEmoji').value || '🎁', name, cost }])) renderPunkte();
+  }
+  async function deleteReward(id) {
+    if (!window.confirm('Diese Belohnung löschen?')) return;
+    if (await saveCatalog(rewardsCatalog.filter(r => r.id !== id))) renderPunkte();
+  }
+
+  // Eltern: neue Einlösungen als Hinweis nach dem Anmelden
+  async function collectRedeemNews() {
+    if (!canAssignTodos() || KIDS.includes(currentUser)) return [];
+    let ack = {};
+    try { ack = JSON.parse(localStorage.getItem('ef-redeem-ack-' + userKey(currentUser)) || '{}'); } catch (e) {}
+    const out = [];
+    for (const n of KIDS) {
+      try {
+        const d = await kvGet('rewards', userKey(n));
+        ((d && d.redeemed) || []).forEach(r => { if (!ack[r.id]) out.push({ id: r.id, kind: 'redeem', html: '🎁 <b>' + escapeHtml(n) + '</b> hat eingelöst: ' + escapeHtml(r.name) + ' (⭐ ' + r.cost + ')' }); });
+      } catch (e) {}
+    }
+    return out;
+  }
+
+  // ---------- Essen: Wochenplan ----------
+
+  const DAYS = [['mo', 'Montag'], ['di', 'Dienstag'], ['mi', 'Mittwoch'], ['do', 'Donnerstag'], ['fr', 'Freitag'], ['sa', 'Samstag'], ['so', 'Sonntag']];
+  let essenMonday = null, essenData = {};
+
+  function mondayOf(date) { const d = new Date(date); d.setHours(12, 0, 0, 0); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd); return d; }
+  const isoDate = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  function isoWeek(d) { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y0) / 86400000 + 1) / 7); }
+
+  async function openEssen() {
+    if (!currentUser) return;
+    hideAllScreens(); refreshNavs();
+    document.getElementById('essenScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    essenMonday = mondayOf(new Date());
+    await renderEssen();
+  }
+  async function essenShift(delta) { essenMonday.setDate(essenMonday.getDate() + 7 * delta); await renderEssen(); }
+
+  async function renderEssen() {
+    const id = isoDate(essenMonday), sun = new Date(essenMonday); sun.setDate(sun.getDate() + 6);
+    const fmt = d => d.getDate() + '. ' + d.toLocaleDateString('de-CH', { month: 'short' });
+    document.getElementById('essenWeekLabel').textContent = 'KW ' + isoWeek(essenMonday) + ' · ' + fmt(essenMonday) + ' – ' + fmt(sun);
+    try { const d = await kvGet('meals', id); essenData = (d && d.days) || {}; } catch (e) { essenData = {}; showToast('Plan konnte nicht geladen werden'); }
+    const edit = canAssignTodos(), today = isoDate(new Date());
+    document.getElementById('essenBody').innerHTML = DAYS.map(([k, name], i) => {
+      const dd = new Date(essenMonday); dd.setDate(dd.getDate() + i);
+      const v = essenData[k] || {};
+      const cell = (f, label) => edit
+        ? `<div class="meal-lbl">${label}</div><input type="text" value="${escapeHtml(v[f] || '')}" maxlength="80" placeholder="–" onchange="saveMeal('${k}','${f}',this.value)">`
+        : `<div class="meal-lbl">${label}</div><div>${escapeHtml(v[f] || '–')}</div>`;
+      return `<div class="card ${isoDate(dd) === today ? 'meal-today' : ''}" style="padding:12px 16px;"><div class="meal-day">
+        <div class="dn">${name.slice(0, 2)}<div class="dd">${dd.getDate()}.${dd.getMonth() + 1}.</div></div>
+        <div style="display:grid;grid-template-columns:50px 1fr;gap:6px 8px;align-items:center;">${cell('m', 'Mittag')}${cell('a', 'Abend')}</div></div></div>`;
+    }).join('');
+  }
+
+  async function saveMeal(day, field, value) {
+    const id = isoDate(essenMonday);
+    essenData[day] = { ...(essenData[day] || {}), [field]: value.trim() };
+    try { await kvMerge('meals', id, { days: { [day]: essenData[day] } }); showToast('Gespeichert'); }
+    catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); }
+  }
+
+  async function loadEssenSub() {
+    const el = document.getElementById('essenSub');
+    if (!el) return;
+    try {
+      const m = mondayOf(new Date()), d = await kvGet('meals', isoDate(m));
+      const k = DAYS[(new Date().getDay() + 6) % 7][0], v = d && d.days && d.days[k];
+      el.textContent = v && (v.a || v.m) ? 'Heute: ' + (v.a || v.m) : '';
+    } catch (e) { el.textContent = ''; }
   }
 
   // ---------- Spiele ----------
@@ -2597,6 +2898,148 @@
     });
   }
 
+  // ---------- Zeiterfassung: Monatsabrechnung als PDF ----------
+
+  async function buildZeitPdf(PDFLib, d) {
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica), bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const W = 595.28, H = 841.89, M = 48, green = rgb(0.24, 0.35, 0.23), gray = rgb(0.45, 0.42, 0.36);
+    const clean = t => String(t == null ? '' : t).replace(/[^\x20-\xFF]/g, '-');
+    const fit = (t, f, size, maxW) => { t = clean(t); if (f.widthOfTextAtSize(t, size) <= maxW) return t; while (t.length > 1 && f.widthOfTextAtSize(t + '...', size) > maxW) t = t.slice(0, -1); return t + '...'; };
+    const cols = [M, M + 72, M + 140, M + 222, M + 276, M + 326];       // Datum, Art, Zeit, Pause, Std, Bemerkung
+    let page, y;
+    const head = () => {
+      const f = (t, x, yy) => page.drawText(t, { x, y: yy, size: 8.5, font: bold, color: gray });
+      ['DATUM', 'ART', 'VON - BIS', 'PAUSE', 'STUNDEN', 'BEMERKUNG'].forEach((t, i) => f(t, cols[i], y));
+      page.drawLine({ start: { x: M, y: y - 6 }, end: { x: W - M, y: y - 6 }, thickness: 0.8, color: green });
+      y -= 22;
+    };
+    const newPage = first => {
+      page = pdf.addPage([W, H]); y = H - M;
+      if (first) {
+        page.drawRectangle({ x: 0, y: H - 110, width: W, height: 110, color: green });
+        page.drawText('Zeitabrechnung Hauswart', { x: M, y: H - 54, size: 22, font: bold, color: rgb(1, 1, 1) });
+        page.drawText(clean(d.name) + '  -  ' + clean(d.monthLabel), { x: M, y: H - 80, size: 12, font, color: rgb(1, 1, 1) });
+        y = H - 140;
+      }
+      head();
+    };
+    newPage(true);
+    const hrs = m => (m / 60).toFixed(2) + ' h';
+    d.rows.forEach((e, i) => {
+      if (y < M + 120) newPage(false);
+      if (i % 2 === 0) page.drawRectangle({ x: M - 4, y: y - 5, width: W - 2 * M + 8, height: 18, color: rgb(0.97, 0.96, 0.93) });
+      const t = (txt, x, f, w) => page.drawText(fit(txt, f || font, 9.5, w), { x, y, size: 9.5, font: f || font, color: rgb(0.16, 0.14, 0.09) });
+      t(e.date.slice(8, 10) + '.' + e.date.slice(5, 7) + '.' + e.date.slice(0, 4), cols[0], font, 66);
+      t(e.type, cols[1], font, 64);
+      t(e.start + ' - ' + e.end, cols[2], font, 78);
+      t(e.pause ? e.pause + ' Min' : '-', cols[3], font, 50);
+      t(hrs(e.minutes), cols[4], bold, 46);
+      t(e.note || '', cols[5], font, W - M - cols[5]);
+      y -= 18;
+    });
+    // Summen
+    if (y < M + 110) newPage(false);
+    y -= 12;
+    page.drawLine({ start: { x: M, y: y + 6 }, end: { x: W - M, y: y + 6 }, thickness: 0.8, color: green });
+    y -= 12;
+    const line = (label, min, strong) => {
+      page.drawText(label, { x: M, y, size: strong ? 12 : 10.5, font: strong ? bold : font, color: rgb(0.16, 0.14, 0.09) });
+      const v = formatHours(min).replace(/[^\x20-\xFF]/g, '') + '   (' + hrs(min) + ')';
+      page.drawText(v, { x: W - M - (strong ? bold : font).widthOfTextAtSize(v, strong ? 12 : 10.5), y, size: strong ? 12 : 10.5, font: strong ? bold : font, color: rgb(0.16, 0.14, 0.09) });
+      y -= strong ? 22 : 17;
+    };
+    ['Allgemein', 'Garten'].forEach(tp => line(tp, d.rows.filter(e => e.type === tp).reduce((a, e) => a + e.minutes, 0), false));
+    y -= 4;
+    line('Total', d.rows.reduce((a, e) => a + e.minutes, 0), true);
+    const n = pdf.getPageCount();
+    pdf.getPages().forEach((pg, i) => pg.drawText('Seite ' + (i + 1) + ' / ' + n, { x: W - M - 50, y: 24, size: 8, font, color: gray }));
+    return pdf.save();
+  }
+
+  async function exportMonthPdf() {
+    const ym = document.getElementById('monthPdfSel').value;
+    if (!ym) { showToast('Bitte einen Monat wählen'); return; }
+    const btn = document.getElementById('btnMonthPdf');
+    btn.disabled = true;
+    try {
+      await loadEntries();
+      const rows = entries.filter(e => e.user === currentUser && e.date.startsWith(ym) && e.type !== 'Feuerwehr')
+        .sort((a, b) => a.date.localeCompare(b.date) || (a.start || '').localeCompare(b.start || ''));
+      if (!rows.length) { showToast('Keine Einträge in diesem Monat'); btn.disabled = false; return; }
+      const [y, m] = ym.split('-').map(Number);
+      const monthLabel = new Date(y, m - 1, 1).toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
+      const PDFLib = await loadPdfLib();
+      const bytes = await buildZeitPdf(PDFLib, { name: currentUser + ' Ecker', monthLabel, rows });
+      downloadBlob(new Blob([bytes], { type: 'application/pdf' }), y + '_' + String(m).padStart(2, '0') + ' Zeitabrechnung Hauswart ' + currentUser + '.pdf');
+    } catch (e) { showToast('PDF konnte nicht erstellt werden (Internet nötig)'); }
+    btn.disabled = false;
+  }
+
+  // ---------- Heizöl-Verlauf ----------
+
+  let oelManual = [];
+  const isoOfTs = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+
+  async function loadOel() {
+    try {
+      if (cloudEnabled) oelManual = (await withTimeout(cloudApi.getOel())) || [];
+      else oelManual = JSON.parse(localStorage.getItem('ef-oel-' + userKey(currentUser)) || '[]');
+    } catch (e) { oelManual = []; }
+  }
+  async function saveOel() {
+    if (cloudEnabled) await withTimeout(cloudApi.saveOel(oelManual));
+    else localStorage.setItem('ef-oel-' + userKey(currentUser), JSON.stringify(oelManual));
+  }
+  function oelPoints() {
+    const pts = abrechnungen.filter(r => r.liter >= 0).map(r => ({ id: 'a' + r.id, date: isoOfTs(r.createdAt), liter: r.liter, manual: false }));
+    oelManual.forEach(x => pts.push({ id: x.id, date: x.date, liter: x.liter, manual: true }));
+    return pts.sort((a, b) => a.date.localeCompare(b.date));
+  }
+  async function addOel() {
+    const date = document.getElementById('oelDate').value || todayISO();
+    const liter = parseFloat(document.getElementById('oelLiter').value);
+    if (!(liter >= 0) || isNaN(liter)) { showToast('Bitte die Liter eingeben'); return; }
+    oelManual.push({ id: Date.now().toString(36), date, liter });
+    try { await saveOel(); } catch (e) { oelManual.pop(); showToast('Speichern fehlgeschlagen'); return; }
+    document.getElementById('oelLiter').value = '';
+    renderOel();
+  }
+  async function deleteOel(id) {
+    if (!window.confirm('Diesen Heizölstand löschen?')) return;
+    const keep = oelManual.filter(x => x.id !== id);
+    const old = oelManual; oelManual = keep;
+    try { await saveOel(); } catch (e) { oelManual = old; showToast('Löschen fehlgeschlagen'); return; }
+    renderOel();
+  }
+  function renderOel() {
+    const pts = oelPoints(), chart = document.getElementById('oelChart'), list = document.getElementById('oelList');
+    if (!chart) return;
+    if (pts.length === 0) { chart.innerHTML = '<div class="todo-empty">Noch kein Heizölstand erfasst.</div>'; list.innerHTML = ''; return; }
+    const W = 320, H = 170, L = 44, R = 12, T = 14, B = 28;
+    const t0 = new Date(pts[0].date).getTime(), t1 = new Date(pts[pts.length - 1].date).getTime();
+    const vals = pts.map(p => p.liter), vmax = Math.max(...vals), vmin = Math.min(...vals);
+    const top = Math.ceil(vmax / 500) * 500 || 500, bot = Math.max(0, Math.floor(vmin / 500) * 500 - (vmin === vmax ? 500 : 0));
+    const x = p => pts.length === 1 || t1 === t0 ? (L + W - R) / 2 : L + ((new Date(p.date).getTime() - t0) / (t1 - t0)) * (W - L - R);
+    const y = v => T + (1 - (v - bot) / (top - bot || 1)) * (H - T - B);
+    const grid = [bot, (bot + top) / 2, top].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e6dfcf"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="10" fill="#6b6252">${Math.round(v)}</text>`).join('');
+    const poly = pts.map(p => x(p).toFixed(1) + ',' + y(p.liter).toFixed(1)).join(' ');
+    const dots = pts.map(p => `<circle cx="${x(p).toFixed(1)}" cy="${y(p.liter).toFixed(1)}" r="4" fill="#8f6b36"/>`).join('');
+    const dl = iso => iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' + iso.slice(2, 4);
+    chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-width:520px;display:block;margin:0 auto;">
+      ${grid}<polyline points="${poly}" fill="none" stroke="#8f6b36" stroke-width="2.5" stroke-linejoin="round"/>${dots}
+      <text x="${L}" y="${H - 8}" font-size="10" fill="#6b6252">${dl(pts[0].date)}</text>
+      ${pts.length > 1 ? `<text x="${W - R}" y="${H - 8}" font-size="10" text-anchor="end" fill="#6b6252">${dl(pts[pts.length - 1].date)}</text>` : ''}
+      <text x="${L}" y="9" font-size="10" fill="#6b6252">Liter</text></svg>`;
+    list.innerHTML = [...pts].reverse().map((p, i, arr) => {
+      const prev = arr[i + 1];
+      const diff = prev ? p.liter - prev.liter : null;
+      const info = diff === null ? '' : diff < 0 ? ` · Verbrauch ${Math.abs(Math.round(diff))} L` : diff > 0 ? ` · nachgefüllt ${Math.round(diff)} L` : '';
+      return `<div class="todo-item"><div class="todo-body"><div class="todo-text">${escapeHtml(String(p.liter))} Liter</div><div class="todo-meta">${escapeHtml(formatDateDisplay(p.date))}${info}${p.manual ? '' : ' · aus Abrechnung'}</div></div>${p.manual ? `<button class="del-btn" onclick="deleteOel('${p.id}')" title="Löschen">✕</button>` : ''}</div>`;
+    }).join('');
+  }
+
   // ---------- Hauswart / Spesen ----------
 
   let spesen = [];
@@ -2638,9 +3081,12 @@
     document.getElementById('stelleAddRow').style.display = 'none';
     await loadSpesen();
     await loadAbrechnungen();
+    await loadOel();
+    document.getElementById('oelDate').value = todayISO();
     renderStellen();
     renderSpesen();
     renderAbrechnungen();
+    renderOel();
   }
 
   function renderStellen(selected) {
@@ -3508,6 +3954,7 @@
       } catch (e) { showToast('Abrechnung konnte nicht im Ordner abgelegt werden'); }
       await setVerrechnet(items.filter(x => !x.verrechnet).map(x => x.id), true);
       renderAbrechnungen();
+      renderOel();
       showToast('Spesen verrechnet – Abrechnung abgelegt');
     } catch (e) {
       showToast('Export fehlgeschlagen – bitte Verbindung prüfen');
@@ -3611,6 +4058,7 @@
       if (!cloudEnabled) localStorage.setItem('ef-abr-' + userKey(currentUser), JSON.stringify(abrechnungen));
     } catch (e) { showToast('Löschen fehlgeschlagen'); return; }
     renderAbrechnungen();
+    renderOel();
   }
 
   async function downloadAbrechnung(id, kind) {
@@ -3907,7 +4355,7 @@
             <button class="todo-check ${t.done ? 'done' : ''}" ${canToggle ? '' : 'disabled'} onclick="toggleTodo('${t.id}')" title="${t.done ? 'Wieder öffnen' : 'Erledigt'}">${t.done ? '✓' : ''}</button>
             <div class="todo-body">
               <div class="todo-text">${escapeHtml(t.text)}</div>
-              <div class="todo-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}${t.seenAt && t.createdByKey === me && !t.done ? ' · 👀 gesehen' : ''}</div>
+              <div class="todo-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}${t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.seenAt && t.createdByKey === me && !t.done ? ' · 👀 gesehen' : ''}</div>
               ${t.note ? `<div class="todo-note">💬 ${escapeHtml(t.note)}</div>` : ''}
             </div>
             ${canAssignTodos() && t.createdByKey === me ? `<button class="del-btn" onclick="editTodo('${t.id}')" title="Bearbeiten">✎</button>` : ''}
@@ -3943,6 +4391,7 @@
       doneAt: null,
       dueAt: document.getElementById('todoDue').value || null,
       note: document.getElementById('todoNote').value.trim(),
+      points: parseInt(document.getElementById('todoPoints').value, 10) || 0,
       seenAt: null
     };
     try {
@@ -3956,6 +4405,7 @@
     input.value = '';
     document.getElementById('todoDue').value = '';
     document.getElementById('todoNote').value = '';
+    document.getElementById('todoPoints').value = '1';
     renderTodos();
     showToast('Aufgabe hinzugefügt');
   }
@@ -3984,6 +4434,7 @@
     document.getElementById('teAssignee').innerHTML = USERS.map(n => `<option value="${escapeHtml(userKey(n))}" ${userKey(n) === t.assigneeKey ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
     document.getElementById('teDue').value = t.dueAt || '';
     document.getElementById('teNote').value = t.note || '';
+    document.getElementById('tePoints').value = String(t.points || 0);
     document.getElementById('todoEdit').classList.remove('hidden');
   }
   function closeTodoEdit() { editingTodo = null; document.getElementById('todoEdit').classList.add('hidden'); }
@@ -3992,7 +4443,7 @@
     if (!t) { closeTodoEdit(); return; }
     const text = document.getElementById('teText').value.trim();
     if (!text) { showToast('Bitte eine Aufgabe eingeben'); return; }
-    const patch = { text, assigneeKey: document.getElementById('teAssignee').value, dueAt: document.getElementById('teDue').value || null, note: document.getElementById('teNote').value.trim() };
+    const patch = { text, assigneeKey: document.getElementById('teAssignee').value, dueAt: document.getElementById('teDue').value || null, note: document.getElementById('teNote').value.trim(), points: parseInt(document.getElementById('tePoints').value, 10) || 0 };
     try {
       if (cloudEnabled) await withTimeout(cloudApi.updateTodo(t.id, patch));
       Object.assign(t, patch);
@@ -4038,8 +4489,10 @@
   }
   function closeTodoNotice() {
     const ack = getAck();
-    noticeItems.forEach(i => { const a = ack[i.id] || {}; if (i.kind === 'done') { a.done = true; a.seen = true; } else a.seen = true; ack[i.id] = a; });
-    try { localStorage.setItem(ackKey(), JSON.stringify(ack)); } catch (e) {}
+    let rack = {};
+    try { rack = JSON.parse(localStorage.getItem('ef-redeem-ack-' + userKey(currentUser)) || '{}'); } catch (e) {}
+    noticeItems.forEach(i => { if (i.kind === 'redeem') { rack[i.id] = true; return; } const a = ack[i.id] || {}; if (i.kind === 'done') { a.done = true; a.seen = true; } else a.seen = true; ack[i.id] = a; });
+    try { localStorage.setItem(ackKey(), JSON.stringify(ack)); localStorage.setItem('ef-redeem-ack-' + userKey(currentUser), JSON.stringify(rack)); } catch (e) {}
     noticeItems = [];
     document.getElementById('todoNotice').classList.add('hidden');
     nextTodoPopup(pendingPopup || popupQueue.length);
@@ -4061,7 +4514,7 @@
     if (!currentUser || !hasFeature('todo')) return;
     await loadTodos();
     const me = userKey(currentUser);
-    const news = collectNews();
+    const news = collectNews().concat(await collectRedeemNews());
     popupQueue = todos.filter(t => t.assigneeKey === me && !t.done)
       .sort((a, b) => (a.dueAt || '9999').localeCompare(b.dueAt || '9999') || (a.createdAt || 0) - (b.createdAt || 0)).map(t => t.id);
     if (news.length) showTodoNotice(news); else nextTodoPopup(popupQueue.length);
@@ -4074,7 +4527,7 @@
     const nameOf = key => ACCOUNTS[key] || key;
     document.getElementById('tpCount').textContent = total > 1 ? 'Pendenz ' + (total - popupQueue.length + 1) + ' von ' + total : '';
     document.getElementById('tpText').textContent = t.text;
-    document.getElementById('tpMeta').innerHTML = 'von ' + escapeHtml(nameOf(t.createdByKey)) + dueHtml(t);
+    document.getElementById('tpMeta').innerHTML = 'von ' + escapeHtml(nameOf(t.createdByKey)) + dueHtml(t) + (t.points > 0 ? ' · ⭐ ' + t.points : '');
     const nEl = document.getElementById('tpNote');
     nEl.textContent = t.note ? '💬 ' + t.note : '';
     nEl.classList.toggle('hidden', !t.note);
@@ -4303,6 +4756,11 @@
           return d.exists() ? d.data().list : null;
         },
         saveStellen: list => F.setDoc(F.doc(db, 'spesen', uid(), 'meta', 'stellen'), { list }),
+        getOel: async () => {
+          const d = await F.getDoc(F.doc(db, 'spesen', uid(), 'meta', 'oel'));
+          return d.exists() ? d.data().list : null;
+        },
+        saveOel: list => F.setDoc(F.doc(db, 'spesen', uid(), 'meta', 'oel'), { list }),
         saveBeleg: (id, b) => F.setDoc(F.doc(db, 'spesen', uid(), 'belege', id), b),
         getBeleg: async id => {
           const d = await F.getDoc(F.doc(db, 'spesen', uid(), 'belege', id));
@@ -4323,6 +4781,12 @@
         addTodo: t => F.setDoc(F.doc(db, 'todos', t.id), t),
         updateTodo: (id, patch) => F.updateDoc(F.doc(db, 'todos', id), patch),
         deleteTodo: id => F.deleteDoc(F.doc(db, 'todos', id)),
+
+        kvGet: async (col, id) => {
+          const d = await F.getDoc(F.doc(db, col, id));
+          return d.exists() ? d.data() : null;
+        },
+        kvMerge: (col, id, data) => F.setDoc(F.doc(db, col, id), data, { merge: true }),
 
         listAvatars: async () => {
           const sn = await F.getDocs(F.collection(db, 'profiles'));
@@ -4347,7 +4811,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.21';
+  const APP_VERSION = '1.23';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {

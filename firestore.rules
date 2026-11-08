@@ -36,6 +36,8 @@ service cloud.firestore {
     function isTimeUser() { return featureOn('zeit', ['tristan', 'claudia']); }
     function canTodo()    { return featureOn('todo', ['tristan', 'claudia', 'lina', 'florian']); }
     function canAssign()  { return featureOn('assign', ['tristan', 'claudia']); }
+    function canPoints()  { return featureOn('punkte', ['tristan', 'claudia', 'lina', 'florian']); }
+    function canMeals()   { return featureOn('essen', ['tristan', 'claudia', 'lina', 'florian']); }
 
     // Einstellungen: alle lesen, nur Tristan ändert
     match /settings/{id} {
@@ -65,13 +67,28 @@ service cloud.firestore {
       allow update: if
         (canAssign()
           && resource.data.createdByKey == uname()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'assigneeKey', 'dueAt', 'note', 'done', 'doneAt']))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'assigneeKey', 'dueAt', 'note', 'points', 'done', 'doneAt']))
         || (canAssign()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt']))
         || (canTodo()
           && mail() == resource.data.assigneeKey + '@ecker.ch'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'seenAt']));
       allow delete: if canAssign();
+    }
+
+    // Sterne und Belohnungen: Dokument "catalog" (Belohnungen) ändern nur Eltern;
+    // pro Kind (lina, florian): Eltern vergeben Bonus, das Kind löst selbst ein.
+    match /rewards/{id} {
+      allow read: if canPoints();
+      allow create: if canPoints() && (canAssign() || (uname() == id && request.resource.data.keys().hasOnly(['redeemed'])));
+      allow update: if canPoints() && (canAssign() || (uname() == id && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['redeemed'])));
+      allow delete: if canAssign();
+    }
+
+    // Essen (Wochenplan): alle Freigeschalteten lesen, Eltern tragen ein
+    match /meals/{id} {
+      allow read: if canMeals();
+      allow write: if canAssign();
     }
 
     // Spesen (Einträge, Belege, Kostenstellen): privat, nur die eigene Person (mit Zugriff auf Hauswart)
