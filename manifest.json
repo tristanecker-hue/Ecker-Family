@@ -1,6 +1,6 @@
 {
-  "name": "Zeiterfassung Hauswart",
-  "short_name": "Zeiterfassung",
+  "name": "Ecker's Family",
+  "short_name": "Ecker's Family",
   "description": "Zeiterfassung für Hauswart-Arbeiten (Claudia & Tristan)",
   "start_url": "./index.html",
   "scope": "./",
