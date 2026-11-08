@@ -2397,7 +2397,7 @@
 
   const SETTINGS_KEY = 'ef-settings';
   // Sterne & Belohnungen: auf true setzen, um die Funktion wieder einzuschalten
-  const PUNKTE_AKTIV = false;
+  const PUNKTE_AKTIV = true;
   if (!PUNKTE_AKTIV) document.body.classList.add('no-punkte');
   const FEATURES = [
     { key: 'zeit', label: 'Kachel Hauswart (Zeiterfassung)' },
@@ -4679,7 +4679,7 @@
         return `<div class="kid-row ${t.done ? 'done' : ''}">
           <button class="todo-check ${t.done ? 'done' : ''}" ${canToggle ? '' : 'disabled'} onclick="toggleTodo('${t.id}')" title="${t.done ? 'Wieder öffnen' : 'Erledigt'}">${t.done ? '✓' : ''}</button>
           <div><div class="kid-text">${escapeHtml(t.text)}</div><div class="kid-line"></div>
-            ${(t.dueAt || t.createdByKey !== key) ? `<div class="kid-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}${t.seenAt && t.createdByKey === me && !t.done ? ' · 👀 gesehen' : ''}</div>` : ''}
+            ${(t.dueAt || t.createdByKey !== key || (PUNKTE_AKTIV && t.points > 0)) ? `<div class="kid-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.seenAt && t.createdByKey === me && !t.done ? ' · 👀 gesehen' : ''}</div>` : ''}
             ${t.note ? `<div class="kid-note">💬 ${escapeHtml(t.note)}</div>` : ''}
             ${canAssignTodos() ? `<div class="kid-actions">${t.createdByKey === me ? `<button onclick="editTodo('${t.id}')" title="Bearbeiten">✎ Bearbeiten</button>` : ''}<button onclick="deleteTodo('${t.id}')" title="Löschen">✕ Löschen</button></div>` : ''}</div>
           <div class="kid-ico">${kidIcon(t.text)}</div></div>`;
@@ -5169,7 +5169,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.33';
+  const APP_VERSION = '1.34';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
