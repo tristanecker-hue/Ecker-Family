@@ -2923,23 +2923,26 @@
 
   // ---------- Google Kalender (nur lesen, pro Person) ----------
   const GOOGLE_CLIENT_ID = '607539029616-bfek2vohk1vajomsj63das384bs05fht.apps.googleusercontent.com';
-  let gcalErr = '', gcalLines = [], gcalNeedsLogin = false, gcalToken = null, gcalExp = 0, gcalClient = null;
+  let gcalErr = '', gcalLines = [], gcalNeedsLogin = false;
   const gcalKey = () => 'ef-gcal-' + userKey(currentUser);
   const gcalOn = () => { try { return localStorage.getItem(gcalKey()) === '1'; } catch (e) { return false; } };
+  const isCalAdmin = () => currentUser === 'Tristan';
+  const calUser = () => userKey(currentUser);
+  const calDocId = id => 'c_' + String(id).replace(/[^A-Za-z0-9_.-]/g, '_');
+  let calDocs = [], gcalCals = null;
   function gcalRender() {
+    const card = document.getElementById('gcalCard');
+    if (!card) return;
+    card.classList.toggle('hidden', !isCalAdmin());
+    if (!isCalAdmin()) return;
     const n = document.getElementById('gcalNote'), b = document.getElementById('gcalBtn');
-    if (!n) return;
+    const ru = document.getElementById('gcalRu'); if (ru) ru.textContent = 'Adresse dieser App: ' + gcalRedirect();
     if (!GOOGLE_CLIENT_ID) { n.textContent = 'Noch nicht eingerichtet.'; b.classList.add('hidden'); return; }
     b.classList.remove('hidden');
-    n.textContent = gcalOn() ? 'Verbunden: heutige und morgige Termine stehen auf der Startseite.' : 'Zeigt deine heutigen und morgigen Termine auf der Startseite (nur lesen).';
+    n.textContent = gcalOn() ? 'Verbunden. Lege fest, wer welchen Kalender sieht (Heute und Morgen auf der Startseite). Die Termine werden bei jedem Öffnen der App aktualisiert.' : 'Verbinde deinen Google-Kalender (nur lesen) und gib ihn danach für die Familie frei.';
     b.textContent = gcalOn() ? 'Trennen' : 'Mit Google verbinden';
-    const ru = document.getElementById('gcalRu'); if (ru) ru.textContent = 'Adresse dieser App: ' + gcalRedirect();
     gcalRenderList();
   }
-  let gcalCals = null;
-  const gcalSelKey = () => 'ef-gcalsel-' + userKey(currentUser);
-  function gcalSel() { try { return JSON.parse(localStorage.getItem(gcalSelKey()) || 'null'); } catch (e) { return null; } }
-  function gcalChosen(c) { const sel = gcalSel(); return sel ? sel.includes(c.id) : !!c.selected; }
   async function gcalFetchCals() {
     const tok = await gcalAuth(false);
     if (!tok) return null;
@@ -2947,19 +2950,37 @@
     const j = await r.json();
     return j.items || null;
   }
+  const calAllowed = c => { const d = calDocs.find(x => x.id === calDocId(c.id)); return (d && d.allowed) || []; };
   async function gcalRenderList() {
     const el = document.getElementById('gcalList');
     if (!el) return;
     if (!gcalOn()) { el.innerHTML = ''; return; }
-    try { if (!gcalCals) gcalCals = await gcalFetchCals(); } catch (e) {}
+    try { await calReadDocs(); if (!gcalCals) gcalCals = await gcalFetchCals(); } catch (e) {}
     if (!gcalCals) { el.innerHTML = '<div class="set-note">Kalenderliste erscheint, sobald die Verbindung aktiv ist (Startseite → «Kalender verbinden» antippen).</div>'; return; }
-    el.innerHTML = '<div class="set-note" style="margin:0 0 6px;">Angezeigte Kalender:</div>' + gcalCals.map((c, i) =>
-      `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;"><input type="checkbox" data-i="${i}" ${gcalChosen(c) ? 'checked' : ''} onchange="gcalPick()"><span style="width:12px;height:12px;border-radius:50%;background:${escapeHtml(c.backgroundColor || '#888')};display:inline-block;"></span>${escapeHtml(c.summaryOverride || c.summary || c.id)}</label>`).join('');
+    el.innerHTML = '<div class="set-note" style="margin:0 0 6px;">Wer sieht den Kalender?</div>' + gcalCals.map((c, i) => {
+      const al = calAllowed(c);
+      return `<div style="padding:6px 0;border-top:1px solid rgba(0,0,0,.12);"><div style="display:flex;align-items:center;gap:8px;"><span style="width:12px;height:12px;border-radius:50%;background:${escapeHtml(c.backgroundColor || '#888')};display:inline-block;"></span><b>${escapeHtml(c.summaryOverride || c.summary || c.id)}</b></div><div style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px;">` +
+        USERS.map(n => `<label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" data-i="${i}" data-u="${escapeHtml(userKey(n))}" ${al.includes(userKey(n)) ? 'checked' : ''} onchange="gcalPick(${i})">${escapeHtml(n)}</label>`).join('') + '</div></div>';
+    }).join('');
   }
-  function gcalPick() {
-    const ids = [...document.querySelectorAll('#gcalList input')].filter(i => i.checked).map(i => gcalCals[+i.dataset.i].id);
-    try { localStorage.setItem(gcalSelKey(), JSON.stringify(ids)); } catch (e) {}
-    gcalLoad();
+  async function gcalPick(i) {
+    const c = gcalCals[i];
+    const allowed = [...document.querySelectorAll('#gcalList input[data-i="' + i + '"]')].filter(x => x.checked).map(x => x.dataset.u);
+    try {
+      await kvMerge('calendars', calDocId(c.id), { name: c.summaryOverride || c.summary || c.id, color: c.backgroundColor || '#888', allowed });
+      const d = calDocs.find(x => x.id === calDocId(c.id));
+      if (d) d.allowed = allowed; else calDocs.push({ id: calDocId(c.id), allowed, events: [] });
+      showToast('Gespeichert');
+      gcalLoad();
+    } catch (e) { showToast('Speichern fehlgeschlagen'); }
+  }
+  async function calReadDocs() {
+    if (cloudEnabled) calDocs = await withTimeout(cloudApi.calList(isCalAdmin() ? null : calUser()));
+    else {
+      calDocs = [];
+      for (let k = 0; k < localStorage.length; k++) { const key = localStorage.key(k); if (key && key.startsWith('ef-kv-calendars-')) { try { calDocs.push({ id: key.slice(16), ...JSON.parse(localStorage.getItem(key)) }); } catch (e) {} } }
+    }
+    return calDocs;
   }
   const gcalRedirect = () => location.origin + location.pathname.replace(/index\.html$/, '');
   const gcalTokKey = () => 'ef-gcaltok-' + userKey(currentUser);
@@ -2997,44 +3018,52 @@
   }
   function gcalToggle() {
     if (gcalOn()) {
-      try { localStorage.removeItem(gcalKey()); } catch (e) {}
-      try { localStorage.removeItem(gcalTokKey()); } catch (e) {}
-      gcalToken = null; gcalLines = []; gcalNeedsLogin = false; gcalRender(); renderHomeInfo();
+      try { localStorage.removeItem(gcalKey()); localStorage.removeItem(gcalTokKey()); } catch (e) {}
+      gcalCals = null; gcalNeedsLogin = false; gcalRender(); gcalLoad();
     } else gcalConnect();
+  }
+  // Tristan: Termine der freigegebenen Kalender in die Familien-Datenbank schreiben
+  async function gcalSync() {
+    if (!isCalAdmin() || !GOOGLE_CLIENT_ID || !gcalOn()) return;
+    const tok = await gcalAuth(false);
+    if (!tok) { gcalNeedsLogin = true; return; }
+    const H = { Authorization: 'Bearer ' + tok };
+    gcalCals = (await gcalFetchCals()) || gcalCals || [];
+    const a = new Date(); a.setHours(0, 0, 0, 0);
+    const b = new Date(a.getTime() + 15 * 86400000);
+    for (const c of gcalCals) {
+      if (!calAllowed(c).length) continue;
+      const u = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(c.id) + '/events?singleEvents=true&orderBy=startTime&maxResults=60&timeMin=' + encodeURIComponent(a.toISOString()) + '&timeMax=' + encodeURIComponent(b.toISOString());
+      const j = await (await fetch(u, { headers: H })).json();
+      if (!j.items) continue;
+      const events = j.items.map(e => ({ t: String(e.summary || '(ohne Titel)').slice(0, 80), s: e.start.date || e.start.dateTime, e: e.end.date || e.end.dateTime, a: !!e.start.date }));
+      await kvMerge('calendars', calDocId(c.id), { name: c.summaryOverride || c.summary || c.id, color: c.backgroundColor || '#888', events, updatedAt: Date.now() });
+    }
   }
   async function gcalLoad() {
     gcalLines = []; gcalNeedsLogin = false;
     try { if (sessionStorage.getItem('ef-gcal-just')) { sessionStorage.removeItem('ef-gcal-just'); showToast('Kalender verbunden'); } } catch (e) {}
-    if (!GOOGLE_CLIENT_ID || !currentUser || !gcalOn()) { renderHomeInfo(); return; }
+    if (!currentUser) { renderHomeInfo(); return; }
     try {
-      const tok = await gcalAuth(false);
-      if (!tok) { gcalNeedsLogin = true; renderHomeInfo(); return; }
-      const H = { Authorization: 'Bearer ' + tok };
+      await calReadDocs();
+      if (isCalAdmin()) { try { await gcalSync(); await calReadDocs(); } catch (e) {} }
+      const me = calUser();
       const a = new Date(); a.setHours(0, 0, 0, 0);
-      const b = new Date(a.getTime() + 2 * 86400000);
-      gcalCals = (await gcalFetchCals()) || [];
-      const cals = gcalCals.filter(gcalChosen);
-      const evs = [];
-      for (const c of cals) {
-        const u = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(c.id) + '/events?singleEvents=true&orderBy=startTime&maxResults=15&timeMin=' + encodeURIComponent(a.toISOString()) + '&timeMax=' + encodeURIComponent(b.toISOString());
-        const j = await (await fetch(u, { headers: H })).json();
-        (j.items || []).forEach(e => evs.push(e));
-      }
-      const now = new Date(), tomorrow = new Date(a.getTime() + 86400000);
+      const now = new Date(), tomorrow = new Date(a.getTime() + 86400000), end = new Date(a.getTime() + 2 * 86400000);
       const pad = n => String(n).padStart(2, '0');
-      const rows = evs.map(e => {
-        const allDay = !!e.start.date;
-        const st = allDay ? new Date(e.start.date + 'T00:00:00') : new Date(e.start.dateTime);
-        const en = allDay ? new Date(e.end.date + 'T00:00:00') : new Date(e.end.dateTime);
-        return { e, allDay, st, en };
-      }).filter(x => x.en > now).sort((p, q) => p.st - q.st);
-      rows.slice(0, 4).forEach(x => {
+      const rows = [];
+      calDocs.filter(d => (d.allowed || []).includes(me)).forEach(d => (d.events || []).forEach(e => {
+        const st = e.a ? new Date(e.s + 'T00:00:00') : new Date(e.s), en = e.a ? new Date(e.e + 'T00:00:00') : new Date(e.e);
+        if (en > now && st < end) rows.push({ e, st, d });
+      }));
+      rows.sort((p, q) => p.st - q.st);
+      rows.slice(0, 5).forEach(x => {
         const day = x.st < tomorrow ? 'Heute' : 'Morgen';
-        const tm = x.allDay ? 'ganztägig' : pad(x.st.getHours()) + ':' + pad(x.st.getMinutes());
-        gcalLines.push('📅 ' + day + ' ' + tm + ' ' + (x.e.summary || '(ohne Titel)'));
+        const tm = x.e.a ? 'ganztägig' : pad(x.st.getHours()) + ':' + pad(x.st.getMinutes());
+        gcalLines.push('📅 ' + day + ' ' + tm + ' ' + x.e.t);
       });
-      if (!gcalLines.length) gcalLines.push('📅 Keine Termine heute und morgen');
-    } catch (e) { gcalLines = ['📅 Kalender konnte nicht geladen werden']; }
+      if (!gcalLines.length && calDocs.some(d => (d.allowed || []).includes(me))) gcalLines.push('📅 Keine Termine heute und morgen');
+    } catch (e) {}
     renderHomeInfo();
   }
 
@@ -5473,6 +5502,13 @@
           return d.exists() ? d.data() : null;
         },
         kvMerge: (col, id, data) => F.setDoc(F.doc(db, col, id), data, { merge: true }),
+        calList: async (me) => {
+          const ref = F.collection(db, 'calendars');
+          const sn = await F.getDocs(me ? F.query(ref, F.where('allowed', 'array-contains', me)) : ref);
+          const out = [];
+          sn.forEach(d => out.push({ id: d.id, ...d.data() }));
+          return out;
+        },
 
         listAvatars: async () => {
           const sn = await F.getDocs(F.collection(db, 'profiles'));
@@ -5497,7 +5533,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.50';
+  const APP_VERSION = '1.51';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {

@@ -92,6 +92,12 @@ service cloud.firestore {
       allow write: if canAssign();
     }
 
+    // Kalender: Tristan schreibt (Sync aus Google), gelesen wird nur, wer im Feld "allowed" steht
+    match /calendars/{id} {
+      allow read: if isTristan() || (isFamily() && uname() in resource.data.allowed);
+      allow write: if isTristan();
+    }
+
     // Spesen (Einträge, Belege, Kostenstellen): privat, nur die eigene Person (mit Zugriff auf Hauswart)
     match /spesen/{userId}/{sub}/{id} {
       allow read, write: if isTimeUser() && request.auth.uid == userId;
