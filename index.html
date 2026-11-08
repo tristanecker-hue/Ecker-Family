@@ -836,8 +836,8 @@
 
     <div class="account-grid" id="homeTiles">
       <div class="account-btn hidden" id="tileZeit" role="button" tabindex="0" onclick="openTimeTracking()" onkeydown="if(event.key==='Enter'||event.key===' '){openTimeTracking()}">
-        <div class="account-avatar" style="background:var(--gold-dark);">⏱</div>
-        <div class="account-name">Zeiterfassung</div>
+        <div class="account-avatar" style="background:var(--gold-dark);">🧰</div>
+        <div class="account-name">Hauswart</div>
       </div>
       <div class="account-btn hidden" id="tileTodo" role="button" tabindex="0" onclick="openTodos()" onkeydown="if(event.key==='Enter'||event.key===' '){openTodos()}">
         <div class="account-avatar" style="background:var(--garten);">✅</div>
@@ -1928,7 +1928,7 @@
 
   const SETTINGS_KEY = 'ef-settings';
   const FEATURES = [
-    { key: 'zeit', label: 'Kachel Zeiterfassung' },
+    { key: 'zeit', label: 'Kachel Hauswart (Zeiterfassung)' },
     { key: 'todo', label: "Kachel To-Do's" },
     { key: 'assign', label: "To-Do's zuordnen und löschen" },
     { key: 'compare', label: 'Zeiten vergleichen' }
@@ -2481,7 +2481,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.1';
+  const APP_VERSION = '1.2';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
