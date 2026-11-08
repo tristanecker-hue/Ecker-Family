@@ -907,8 +907,14 @@
         <input type="text" id="spesenText" maxlength="120" placeholder="z. B. Putzmittel, Material Baumarkt" onkeydown="if(event.key==='Enter'){addSpese()}">
       </div>
       <div class="field">
-        <label for="spesenBeleg">Beleg (PDF oder Foto, max. 700 KB)</label>
-        <input type="file" id="spesenBeleg" accept="application/pdf,image/*">
+        <label>Beleg</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="switch-btn" type="button" onclick="document.getElementById('spesenCam').click()">📷 Quittung scannen</button>
+          <button class="switch-btn" type="button" onclick="document.getElementById('spesenBeleg').click()">📎 PDF / Foto wählen</button>
+        </div>
+        <div class="set-note" id="belegName" style="margin-top:8px;">Kein Beleg gewählt</div>
+        <input type="file" id="spesenCam" accept="image/*" capture="environment" class="hidden" onchange="belegChosen()">
+        <input type="file" id="spesenBeleg" accept="application/pdf,image/*" class="hidden" onchange="belegChosen()">
       </div>
       <button class="save-btn" onclick="addSpese()">Spese speichern</button>
     </div>
@@ -918,6 +924,21 @@
         <div class="todo-count" id="spesenMonth"></div>
       </div>
       <div id="spesenList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Spesenabrechnung</div>
+      <button class="save-btn" id="btnExportOpen" onclick="openExport()">📄 Als Excel exportieren</button>
+      <div id="exportPanel" style="display:none;margin-top:14px;">
+        <div class="field">
+          <label for="exportOel">Wie hoch ist der Heizölstand? (Liter)</label>
+          <input type="number" id="exportOel" inputmode="numeric" min="0" step="10" placeholder="z. B. 16250">
+        </div>
+        <div class="field">
+          <label for="exportYear">Für das Jahr</label>
+          <select id="exportYear"></select>
+        </div>
+        <button class="save-btn" id="btnExportGo" onclick="exportSpesen()">Excel erstellen</button>
+      </div>
     </div>
   </div>
 
@@ -2109,7 +2130,7 @@
 
   let spesen = [];
   let stellen = [];
-  const DEFAULT_STELLEN = ['Migros', 'Landi', 'Ruedi Rüssel'];
+  const DEFAULT_STELLEN = ['Migros', 'Landi', 'Avia', 'Jumbo', 'Ruedi Rüssel', 'Sonstiges'];
   const MAX_BELEG = 700 * 1024;
 
   function openHauswart() {
@@ -2139,7 +2160,8 @@
     document.getElementById('spesenScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('spesenDate').value = todayISO();
-    document.getElementById('spesenBeleg').value = '';
+    resetBeleg();
+    document.getElementById('exportPanel').style.display = 'none';
     document.getElementById('stelleAddRow').style.display = 'none';
     await loadSpesen();
     renderStellen();
@@ -2210,19 +2232,20 @@
     const amount = parseFloat(document.getElementById('spesenAmount').value);
     const text = document.getElementById('spesenText').value.trim();
     const stelle = document.getElementById('spesenStelle').value || '';
-    const file = document.getElementById('spesenBeleg').files[0];
+    const file = chosenBeleg();
     if (!date) { showToast('Bitte ein Datum wählen'); return; }
     if (!(amount > 0)) { showToast('Bitte einen Betrag eingeben'); return; }
-    if (file && file.size > MAX_BELEG) { showToast('Beleg ist zu gross (max. 700 KB)'); return; }
     const item = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       date, amount: Math.round(amount * 100) / 100, text, stelle, beleg: file ? file.name : null, createdAt: Date.now()
     };
     try {
       if (file) {
-        const data = await readFileAsDataURL(file);
-        if (cloudEnabled) await withTimeout(cloudApi.saveBeleg(item.id, { name: file.name, data }), 30000);
-        else localStorage.setItem('ef-beleg-' + userKey(currentUser) + '-' + item.id, JSON.stringify({ name: file.name, data }));
+        const b = await prepareBeleg(file);
+        if (!b) return;
+        item.beleg = b.name;
+        if (cloudEnabled) await withTimeout(cloudApi.saveBeleg(item.id, b), 30000);
+        else localStorage.setItem('ef-beleg-' + userKey(currentUser) + '-' + item.id, JSON.stringify(b));
       }
       if (cloudEnabled) await withTimeout(cloudApi.addSpese(item));
       spesen.push(item);
@@ -2233,7 +2256,7 @@
     }
     document.getElementById('spesenAmount').value = '';
     document.getElementById('spesenText').value = '';
-    document.getElementById('spesenBeleg').value = '';
+    resetBeleg();
     renderSpesen();
     showToast('Spese gespeichert');
   }
@@ -2271,6 +2294,220 @@
       return;
     }
     renderSpesen();
+  }
+
+  // ---------- Beleg: Kamera / PDF ----------
+
+  function chosenBeleg() {
+    return document.getElementById('spesenCam').files[0] || document.getElementById('spesenBeleg').files[0] || null;
+  }
+  function belegChosen() {
+    const f = chosenBeleg();
+    document.getElementById('belegName').textContent = f ? '📎 ' + f.name : 'Kein Beleg gewählt';
+  }
+  function resetBeleg() {
+    document.getElementById('spesenCam').value = '';
+    document.getElementById('spesenBeleg').value = '';
+    belegChosen();
+  }
+
+  // Foto verkleinern, bis es unter das Limit passt
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let maxSide = 1600, q = 0.75, out = null;
+        for (let i = 0; i < 8; i++) {
+          const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          out = c.toDataURL('image/jpeg', q);
+          if (out.length * 0.75 <= MAX_BELEG) return resolve(out);
+          q = Math.max(0.45, q - 0.1); maxSide = Math.round(maxSide * 0.8);
+        }
+        reject(new Error('zu gross'));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Bild')); };
+      img.src = url;
+    });
+  }
+
+  async function prepareBeleg(file) {
+    if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+      if (file.size > MAX_BELEG) { showToast('PDF ist zu gross (max. 700 KB)'); return null; }
+      return { name: file.name, data: await readFileAsDataURL(file) };
+    }
+    try {
+      const data = await compressImage(file);
+      return { name: file.name.replace(/\.[^.]+$/, '') + '.jpg', data };
+    } catch (e) {
+      showToast('Foto konnte nicht verarbeitet werden');
+      return null;
+    }
+  }
+
+  // ---------- Spesen: Excel-Export nach Vorlage ----------
+
+  // Füllt die Excel-Vorlage (Spesenabrechnung Abwart) aus.
+  // data: { year, items:[{date,amount,text,stelle}], liter, name, signature:boolean }
+  async function buildSpesenWorkbook(ExcelJS, templateBuf, data) {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(templateBuf);
+    const ws = wb.worksheets[0];
+    const COLS = 8, HEAD_ROW = 13, ITEM_ROW = 14, FOOT_START = 30, FOOT_END = 43, LAST_TPL_ROW = 43;
+    const clone = o => JSON.parse(JSON.stringify(o || {}));
+
+    // Stile und Fusszeile der Vorlage merken
+    const headStyle = [], itemStyle = [];
+    for (let c = 1; c <= COLS; c++) {
+      headStyle[c] = clone(ws.getRow(HEAD_ROW).getCell(c).style);
+      itemStyle[c] = clone(ws.getRow(ITEM_ROW).getCell(c).style);
+    }
+    const foot = [];
+    for (let r = FOOT_START; r <= FOOT_END; r++) {
+      const row = ws.getRow(r), cells = [];
+      for (let c = 1; c <= COLS; c++) {
+        const cell = row.getCell(c);
+        cells[c] = { value: cell.value, style: clone(cell.style) };
+      }
+      foot.push({ height: row.height, cells });
+    }
+
+    // Bereich leeren
+    for (let r = HEAD_ROW; r <= LAST_TPL_ROW; r++) {
+      try { ws.unMergeCells(`A${r}:D${r}`); } catch (e) {}
+    }
+    try { ws.unMergeCells('C35:D35'); } catch (e) {}
+    for (let r = HEAD_ROW; r <= LAST_TPL_ROW; r++) {
+      const row = ws.getRow(r);
+      row.height = undefined;
+      for (let c = 1; c <= COLS; c++) { const cell = row.getCell(c); cell.value = null; cell.style = {}; }
+    }
+
+    // Gruppen: feste Reihenfolge der Vorlage, weitere Kostenstellen, am Schluss Sonstiges
+    const FIXED = ['Migros', 'Landi', 'Avia', 'Jumbo'];
+    const norm = s => (s || '').trim().toLowerCase();
+    const extra = [];
+    data.items.forEach(x => {
+      const n = (x.stelle || '').trim();
+      if (n && norm(n) !== 'sonstiges' && !FIXED.some(f => norm(f) === norm(n)) && !extra.some(e => norm(e) === norm(n))) extra.push(n);
+    });
+    const groups = [...FIXED, ...extra, 'Sonstiges'].map(name => ({
+      name,
+      items: data.items
+        .filter(x => norm(x.stelle) === norm(name) || (norm(name) === 'sonstiges' && !(x.stelle || '').trim()))
+        .sort((a, b) => a.date.localeCompare(b.date))
+    }));
+
+    const fmtDate = iso => iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.';
+    let r = HEAD_ROW, firstItem = null, lastItem = null;
+    groups.forEach(g => {
+      const hr = ws.getRow(r);
+      for (let c = 1; c <= COLS; c++) hr.getCell(c).style = clone(headStyle[c]);
+      hr.getCell(1).value = g.name;
+      ws.mergeCells(`A${r}:D${r}`);
+      r++;
+      const rows = Math.max(2, g.items.length);
+      for (let i = 0; i < rows; i++, r++) {
+        const row = ws.getRow(r);
+        for (let c = 1; c <= COLS; c++) row.getCell(c).style = clone(itemStyle[c]);
+        const x = g.items[i];
+        if (x) {
+          row.getCell(1).value = fmtDate(x.date) + ' ' + (x.text || 'Spese');
+          row.getCell(6).value = x.amount;
+        }
+        ws.mergeCells(`A${r}:D${r}`);
+        if (firstItem === null) firstItem = r;
+        lastItem = r;
+      }
+    });
+
+    // Fusszeile (Saldo, Ölstand, Grüsse) darunter neu aufbauen
+    const newStart = r + 2, off = newStart - FOOT_START;
+    foot.forEach((f, i) => {
+      const row = ws.getRow(FOOT_START + i + off);
+      if (f.height) row.height = f.height;
+      for (let c = 1; c <= COLS; c++) {
+        const cell = row.getCell(c);
+        cell.style = clone(f.cells[c].style);
+        cell.value = f.cells[c].value;
+      }
+    });
+    const saldoRow = FOOT_START + off, oelRow = 35 + off, nameRow = 43 + off;
+    ws.getCell(`F${saldoRow}`).value = { formula: `SUM(F${firstItem}:F${lastItem})`, result: data.items.reduce((s, x) => s + x.amount, 0) };
+    ws.mergeCells(`C${oelRow}:D${oelRow}`);
+    ws.getCell(`C${oelRow}`).value = { formula: 'TODAY()', result: new Date() };
+    ws.getCell(`F${oelRow}`).value = Number(data.liter);
+    ws.getCell(`F${nameRow}`).value = data.name;
+
+    // Kopfdaten
+    ws.getCell('C6').value = Number(data.year);
+
+    // Unterschrift (Bild) neu unter den Namen setzen, bei anderen Personen weglassen
+    const media = wb.model.media && wb.model.media[0];
+    ws._media = [];
+    if (data.signature && media) {
+      const id = wb.addImage({ buffer: media.buffer, extension: media.extension || 'png' });
+      ws.addImage(id, { tl: { col: 5.2, row: nameRow - 4.85 }, ext: { width: 100, height: 46 } });
+    }
+    ws.pageSetup = Object.assign({}, ws.pageSetup, { fitToPage: true, fitToWidth: 1, fitToHeight: 1 });
+    return wb.xlsx.writeBuffer();
+  }
+
+  let excelJsPromise = null;
+  function loadExcelJs() {
+    if (window.ExcelJS) return Promise.resolve(window.ExcelJS);
+    if (!excelJsPromise) excelJsPromise = new Promise((resolve, reject) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+      sc.onload = () => resolve(window.ExcelJS);
+      sc.onerror = () => { excelJsPromise = null; reject(new Error('ExcelJS')); };
+      document.head.appendChild(sc);
+    });
+    return excelJsPromise;
+  }
+
+  function openExport() {
+    const years = new Set([new Date().getFullYear()]);
+    spesen.forEach(x => years.add(parseInt(x.date.slice(0, 4), 10)));
+    const sel = document.getElementById('exportYear');
+    sel.innerHTML = [...years].sort((a, b) => b - a).map(y => `<option value="${y}">${y}</option>`).join('');
+    let last = '';
+    try { last = localStorage.getItem('ef-oel-last') || ''; } catch (e) {}
+    document.getElementById('exportOel').value = last;
+    document.getElementById('exportPanel').style.display = 'block';
+    document.getElementById('exportOel').focus();
+  }
+
+  async function exportSpesen() {
+    const liter = parseFloat(document.getElementById('exportOel').value);
+    const year = document.getElementById('exportYear').value;
+    if (!(liter >= 0) || isNaN(liter)) { showToast('Bitte den Heizölstand eingeben'); return; }
+    const items = spesen.filter(x => x.date.startsWith(year + '-'));
+    const btn = document.getElementById('btnExportGo');
+    btn.disabled = true;
+    try {
+      const [ExcelJS, tplRes] = await Promise.all([loadExcelJs(), fetch('spesen-vorlage.xlsx?v=' + APP_VERSION)]);
+      if (!tplRes.ok) throw new Error('Vorlage');
+      const buf = await buildSpesenWorkbook(ExcelJS, await tplRes.arrayBuffer(), {
+        year, items, liter, name: currentUser + ' Ecker', signature: currentUser === 'Tristan'
+      });
+      try { localStorage.setItem('ef-oel-last', String(liter)); } catch (e) {}
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Spesenabrechnung_${year}_${currentUser}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast('Excel erstellt');
+    } catch (e) {
+      showToast('Export fehlgeschlagen – bitte Verbindung prüfen');
+    }
+    btn.disabled = false;
   }
 
   // ---------- Stundenplan ----------
@@ -2738,7 +2975,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.4';
+  const APP_VERSION = '1.5';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
