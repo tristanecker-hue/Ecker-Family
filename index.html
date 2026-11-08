@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Zeiterfassung</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23C79A45'/%3E%3Cstop offset='1' stop-color='%233D5A3A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='24' fill='url(%23g)'/%3E%3Ccircle cx='46' cy='46' r='27' fill='none' stroke='%23FFFDF8' stroke-width='6'/%3E%3Cline x1='46' y1='46' x2='46' y2='28' stroke='%23FFFDF8' stroke-width='6' stroke-linecap='round'/%3E%3Cline x1='46' y1='46' x2='60' y2='52' stroke='%23FFFDF8' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M66 70 C74 58 88 60 92 68 C84 80 70 80 66 70 Z' fill='%237FAE6E'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zeiterfassung">
+<meta name="theme-color" content="#96692A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F5F1E8;
+    --paper: #FFFDF8;
+    --ink: #262319;
+    --ink-soft: #6b6455;
+    --line: #E4DCC9;
+
+    --garten: #3D5A3A;
+    --garten-soft: #E7EEE2;
+    --allgemein: #3E4A5C;
+    --allgemein-soft: #E6EAF0;
+    --feuerwehr: #A8352A;
+    --feuerwehr-soft: #F3E1DD;
+
+    --gold: #B8873B;
+    --gold-dark: #96692A;
+
+    --danger: #A8452F;
+
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    transition: background 0.4s ease;
+  }
+
+  body.login-bg {
+    background:
+      radial-gradient(circle at 12% 15%, rgba(199,154,69,0.38) 0%, transparent 42%),
+      radial-gradient(circle at 88% 12%, rgba(61,90,58,0.30) 0%, transparent 48%),
+      radial-gradient(circle at 20% 92%, rgba(127,174,110,0.25) 0%, transparent 45%),
+      radial-gradient(circle at 90% 85%, rgba(150,105,42,0.22) 0%, transparent 50%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+
+  .wrap {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 4px 20px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .app-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 26px;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .sub {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  /* ---------- Account picker (landing) ---------- */
+  .account-screen {
+    padding-top: 12vh;
+    text-align: center;
+  }
+
+  .account-screen h1 {
+    font-size: 30px;
+    margin-bottom: 6px;
+  }
+
+  .account-screen p {
+    color: var(--ink-soft);
+    margin-bottom: 40px;
+    font-size: 15px;
+  }
+
+  .account-grid {
+    display: grid;
+    gap: 18px;
+  }
+
+  .account-btn {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 30px 26px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--paper);
+    cursor: pointer;
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+    box-shadow: 0 4px 16px rgba(38,35,25,0.06);
+  }
+  .account-btn:active { transform: scale(0.98); }
+
+  .account-avatar {
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 26px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .avatar-claudia { background: var(--gold-dark); }
+  .avatar-tristan { background: var(--garten); }
+
+  .account-avatar-wrap { position: relative; flex-shrink: 0; }
+  .avatar-edit-btn {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .account-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 23px;
+  }
+  .account-hint {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+
+  /* ---------- Top account switch bar ---------- */
+  .switch-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 18px;
+  }
+  .switch-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .switch-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .switch-avatar-wrap { position: relative; flex-shrink: 0; }
+  .switch-avatar-wrap .avatar-edit-btn { width: 18px; height: 18px; font-size: 9px; }
+  .switch-user-name { font-weight: 600; font-size: 15px; }
+  .switch-btn {
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    padding: 6px;
+  }
+
+  /* ---------- Card ---------- */
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+
+  .card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 14px;
+  }
+
+  /* ---------- Work type buttons ---------- */
+  .type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .type-grid.three-col { grid-template-columns: 1fr 1fr 1fr; }
+
+  .type-btn {
+    padding: 20px 8px;
+    border-radius: var(--radius-sm);
+    border: 2px solid transparent;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: center;
+    transition: border-color .12s ease, transform .1s ease;
+  }
+  .type-btn:active { transform: scale(0.98); }
+
+  .type-btn.allgemein { background: var(--allgemein-soft); color: var(--allgemein); }
+  .type-btn.garten { background: var(--garten-soft); color: var(--garten); }
+  .type-btn.feuerwehr { background: var(--feuerwehr-soft); color: var(--feuerwehr); }
+
+  .type-btn.allgemein.selected { border-color: var(--allgemein); }
+  .type-btn.garten.selected { border-color: var(--garten); }
+  .type-btn.feuerwehr.selected { border-color: var(--feuerwehr); }
+
+  .type-icon { display: block; font-size: 22px; margin-bottom: 6px; }
+
+  /* ---------- Form fields ---------- */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field input[type="date"],
+  .field input[type="time"],
+  .field input[type="number"],
+  .field textarea {
+    width: 100%;
+    padding: 14px 14px;
+    font-size: 17px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+  }
+  .field textarea {
+    resize: vertical;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+
+  .time-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .pause-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .chip {
+    padding: 9px 14px;
+    border-radius: 999px;
+    border: 1.5px solid var(--line);
+    background: var(--bg);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .chip.selected {
+    border-color: var(--gold);
+    background: #FBF0DD;
+    color: var(--gold-dark);
+  }
+
+  /* ---------- Result strip ---------- */
+  .result {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 16px 18px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    margin-bottom: 18px;
+  }
+  .result-label { font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+  .result-value {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 600;
+  }
+  .result-value.err { color: var(--danger); font-size: 15px; font-family: 'Inter', sans-serif; }
+
+  .save-btn {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--gold-dark);
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .save-btn:active { transform: scale(0.99); }
+  .save-btn:disabled { background: #C9C1AE; cursor: not-allowed; }
+
+  /* ---------- Month summary ---------- */
+  .month-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .month-total {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--gold-dark);
+  }
+  .month-breakdown {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .breakdown-item { flex: 1; }
+  .breakdown-label {
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot.allgemein { background: var(--allgemein); }
+  .dot.garten { background: var(--garten); }
+  .dot.feuerwehr { background: var(--feuerwehr); }
+  .breakdown-value { font-size: 15px; font-weight: 700; }
+
+  /* ---------- Private (Feuerwehr) card ---------- */
+  .card.private {
+    border: 1.5px dashed var(--feuerwehr);
+    background: var(--feuerwehr-soft);
+  }
+  .private-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--feuerwehr);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin-left: 8px;
+  }
+
+  /* ---------- Entry list ---------- */
+  .entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .entry:last-child { border-bottom: none; }
+
+  .entry-left { display: flex; align-items: flex-start; gap: 12px; }
+
+  .entry-badge {
+    width: 8px;
+    height: 34px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .entry-badge.allgemein { background: var(--allgemein); }
+  .entry-badge.garten { background: var(--garten); }
+  .entry-badge.feuerwehr { background: var(--feuerwehr); }
+
+  .entry-date { font-weight: 600; font-size: 14.5px; }
+  .entry-time { font-size: 13px; color: var(--ink-soft); margin-top: 1px; }
+  .entry-note {
+    font-size: 13px;
+    color: var(--ink);
+    margin-top: 4px;
+    font-style: italic;
+    max-width: 260px;
+  }
+
+  .entry-right { display: flex; align-items: center; gap: 12px; }
+  .entry-hours { font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px; }
+
+  .del-btn {
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 6px;
+    line-height: 1;
+  }
+  .del-btn:hover { color: var(--danger); }
+
+  .empty {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 14px;
+    padding: 24px 0;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity .2s ease, transform .2s ease;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .hidden { display: none !important; }
+
+  /* ---------- Overview link on account screen ---------- */
+  .overview-link {
+    display: inline-block;
+    margin-top: 36px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .backup-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  .backup-btn {
+    padding: 11px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Inter', sans-serif;
+  }
+  .backup-btn:active { transform: scale(0.97); }
+  .backup-hint {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    opacity: 0.8;
+  }
+
+  /* ---------- Team summary screen ---------- */
+  .summary-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px 20px;
+  }
+  .back-btn {
+    border: none;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .month-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .month-nav-btn {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+  .month-nav-label {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 16px;
+    text-transform: capitalize;
+  }
+
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .compare-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+  }
+  .compare-person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .compare-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .compare-name { font-weight: 700; font-size: 14.5px; }
+  .compare-total {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .compare-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    padding: 6px 0;
+    border-top: 1px solid var(--line);
+  }
+  .compare-row-label { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+
+  .team-total-card {
+    background: var(--gold-dark);
+    color: white;
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .team-total-label { font-size: 13px; opacity: 0.85; font-weight: 600; }
+  .team-total-value {
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .bar-label { width: 62px; flex-shrink: 0; font-weight: 600; }
+  .bar-track {
+    flex: 1;
+    height: 10px;
+    background: var(--bg);
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+  }
+  .bar-fill.allgemein { background: var(--allgemein); }
+  .bar-fill.garten { background: var(--garten); }
+  .bar-value { width: 44px; text-align: right; font-weight: 600; flex-shrink: 0; }
+
+  #avatarFileInput { display: none; }
+</style>
+</head>
+<body class="login-bg">
+
+<div class="wrap">
+
+  <!-- Account selection screen -->
+  <div id="accountScreen" class="account-screen">
+    <h1>Zeiterfassung</h1>
+    <p>Wer erfasst gerade Arbeitszeit?</p>
+    <div class="account-grid">
+      <div class="account-btn" role="button" tabindex="0" onclick="selectAccount('Claudia')" onkeydown="if(event.key==='Enter'||event.key===' '){selectAccount('Claudia')}">
+        <div class="account-avatar-wrap">
+          <div class="account-avatar avatar-claudia" id="avatarClaudia">C</div>
+          <button class="avatar-edit-btn" onclick="openAvatarPicker('Claudia', event)" title="Profilbild ändern">✎</button>
+        </div>
+        <div>
+          <div class="account-name">Claudia</div>
+          <div class="account-hint">Konto öffnen</div>
+        </div>
+      </div>
+      <div class="account-btn" role="button" tabindex="0" onclick="selectAccount('Tristan')" onkeydown="if(event.key==='Enter'||event.key===' '){selectAccount('Tristan')}">
+        <div class="account-avatar-wrap">
+          <div class="account-avatar avatar-tristan" id="avatarTristan">T</div>
+          <button class="avatar-edit-btn" onclick="openAvatarPicker('Tristan', event)" title="Profilbild ändern">✎</button>
+        </div>
+        <div>
+          <div class="account-name">Tristan</div>
+          <div class="account-hint">Konto öffnen</div>
+        </div>
+      </div>
+    </div>
+    <button class="overview-link" onclick="openSummary()">Zusammenfassung beider Konten ansehen</button>
+
+    <div class="backup-row">
+      <button class="backup-btn" onclick="exportBackup()">📤 Backup exportieren</button>
+      <button class="backup-btn" onclick="openImportPicker()">📥 Backup importieren</button>
+    </div>
+    <div class="backup-hint">Exportiert alle Daten als Datei — diese kannst du z. B. in OneDrive ablegen und später wieder importieren.</div>
+
+    <input type="file" id="avatarFileInput" accept="image/*" onchange="handleAvatarFile(event)">
+    <input type="file" id="backupFileInput" accept=".json,application/json" onchange="handleBackupFile(event)">
+  </div>
+
+  <!-- Main app -->
+  <div id="mainScreen" class="hidden">
+
+    <header>
+      <div class="header-left">
+        <svg class="app-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#C79A45"/><stop offset="1" stop-color="#3D5A3A"/>
+          </linearGradient></defs>
+          <rect width="100" height="100" rx="24" fill="url(#logoGrad)"/>
+          <circle cx="46" cy="46" r="27" fill="none" stroke="#FFFDF8" stroke-width="6"/>
+          <line x1="46" y1="46" x2="46" y2="28" stroke="#FFFDF8" stroke-width="6" stroke-linecap="round"/>
+          <line x1="46" y1="46" x2="60" y2="52" stroke="#FFFDF8" stroke-width="6" stroke-linecap="round"/>
+          <path d="M66 70 C74 58 88 60 92 68 C84 80 70 80 66 70 Z" fill="#7FAE6E"/>
+        </svg>
+        <div>
+          <h1>Zeiterfassung</h1>
+          <div class="sub">Hauswart-Arbeitszeiten</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="switch-bar">
+      <div class="switch-user">
+        <div class="switch-avatar-wrap">
+          <div id="switchAvatar" class="switch-avatar"></div>
+          <button class="avatar-edit-btn" onclick="openAvatarPicker(currentUser, event)" title="Profilbild ändern">✎</button>
+        </div>
+        <div class="switch-user-name" id="switchName"></div>
+      </div>
+      <div>
+        <button class="switch-btn" onclick="openSummary()">Beide vergleichen</button>
+        <button class="switch-btn" onclick="logout()">Konto wechseln</button>
+      </div>
+    </div>
+
+    <!-- New entry -->
+    <div class="card">
+      <div class="card-title">Neue Erfassung</div>
+
+      <div class="type-grid" id="typeGrid">
+        <button class="type-btn allgemein" id="btnAllgemein" onclick="selectType('Allgemein')">
+          <span class="type-icon">🔧</span>Hauswart Allgemein
+        </button>
+        <button class="type-btn garten" id="btnGarten" onclick="selectType('Garten')">
+          <span class="type-icon">🌿</span>Hauswart Garten
+        </button>
+        <button class="type-btn feuerwehr hidden" id="btnFeuerwehr" onclick="selectType('Feuerwehr')">
+          <span class="type-icon">🚒</span>Feuerwehr
+        </button>
+      </div>
+
+      <div class="field">
+        <label for="dateInput">Datum</label>
+        <input type="date" id="dateInput" oninput="recalc()">
+      </div>
+
+      <div class="time-row">
+        <div class="field">
+          <label for="startInput">Startzeit</label>
+          <input type="time" id="startInput" oninput="recalc()">
+        </div>
+        <div class="field">
+          <label for="endInput">Endzeit</label>
+          <input type="time" id="endInput" oninput="recalc()">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Pause (Minuten)</label>
+        <div class="pause-chips" id="pauseChips">
+          <button class="chip" data-min="0" onclick="setPause(0)">0</button>
+          <button class="chip" data-min="5" onclick="setPause(5)">5</button>
+          <button class="chip" data-min="10" onclick="setPause(10)">10</button>
+          <button class="chip" data-min="15" onclick="setPause(15)">15</button>
+          <button class="chip" data-min="20" onclick="setPause(20)">20</button>
+          <button class="chip" data-min="30" onclick="setPause(30)">30</button>
+          <button class="chip" data-min="45" onclick="setPause(45)">45</button>
+          <button class="chip" data-min="60" onclick="setPause(60)">60</button>
+        </div>
+        <input type="number" id="pauseCustom" min="0" step="5" placeholder="oder eigene Minutenzahl" oninput="customPause()">
+      </div>
+
+      <div class="field">
+        <label for="noteInput">Bemerkung (optional)</label>
+        <textarea id="noteInput" rows="2" placeholder="z. B. ausgeführte Arbeiten, Materialverbrauch, Besonderes …"></textarea>
+      </div>
+
+      <div class="result">
+        <span class="result-label">Effektive Arbeitszeit</span>
+        <span class="result-value" id="resultValue">–</span>
+      </div>
+
+      <button class="save-btn" id="saveBtn" onclick="saveEntry()" disabled>Eintrag speichern</button>
+    </div>
+
+    <!-- Month summary -->
+    <div class="card">
+      <div class="card-title">Diesen Monat</div>
+      <div class="month-summary">
+        <span class="result-label">Total</span>
+        <span class="month-total" id="monthTotal">0 Std</span>
+      </div>
+      <div class="month-breakdown">
+        <div class="breakdown-item">
+          <div class="breakdown-label"><span class="dot allgemein"></span>Allgemein</div>
+          <div class="breakdown-value" id="monthAllgemein">0 Std</div>
+        </div>
+        <div class="breakdown-item">
+          <div class="breakdown-label"><span class="dot garten"></span>Garten</div>
+          <div class="breakdown-value" id="monthGarten">0 Std</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feuerwehr (privat, nur Tristan) -->
+    <div class="card private hidden" id="feuerwehrCard">
+      <div class="card-title">🚒 Feuerwehr <span class="private-label">Nur für dich sichtbar</span></div>
+      <div class="month-summary">
+        <span class="result-label">Diesen Monat</span>
+        <span class="month-total" id="feuerwehrMonthTotal" style="color:var(--feuerwehr)">0 Std</span>
+      </div>
+    </div>
+
+    <!-- Entry list -->
+    <div class="card">
+      <div class="card-title">Letzte Einträge</div>
+      <div id="entryList"></div>
+    </div>
+
+  </div>
+
+  <!-- Team summary -->
+  <div id="summaryScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="closeSummary()">←</button>
+      <div>
+        <h1>Zusammenfassung</h1>
+        <div class="sub">Claudia &amp; Tristan im Vergleich</div>
+      </div>
+    </div>
+
+    <div class="month-nav">
+      <button class="month-nav-btn" onclick="shiftMonth(-1)">‹</button>
+      <span class="month-nav-label" id="summaryMonthLabel"></span>
+      <button class="month-nav-btn" onclick="shiftMonth(1)">›</button>
+    </div>
+
+    <div class="team-total-card">
+      <div class="team-total-label">Total beider Konten diesen Monat</div>
+      <div class="team-total-value" id="teamTotal">0 Std</div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="compare-person">
+          <div class="compare-avatar" id="compareAvatarClaudia" style="background:var(--gold-dark)">C</div>
+          <div class="compare-name">Claudia</div>
+        </div>
+        <div class="compare-total" id="claudiaTotal">0 Std</div>
+        <div class="compare-row">
+          <span class="compare-row-label"><span class="dot allgemein"></span>Allgemein</span>
+          <span id="claudiaAllgemein">0 Std</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-row-label"><span class="dot garten"></span>Garten</span>
+          <span id="claudiaGarten">0 Std</span>
+        </div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-person">
+          <div class="compare-avatar" id="compareAvatarTristan" style="background:var(--garten)">T</div>
+          <div class="compare-name">Tristan</div>
+        </div>
+        <div class="compare-total" id="tristanTotal">0 Std</div>
+        <div class="compare-row">
+          <span class="compare-row-label"><span class="dot allgemein"></span>Allgemein</span>
+          <span id="tristanAllgemein">0 Std</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-row-label"><span class="dot garten"></span>Garten</span>
+          <span id="tristanGarten">0 Std</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Verteilung nach Arbeitsart</div>
+      <div class="bar-row">
+        <span class="bar-label">Claudia</span>
+        <div class="bar-track" id="claudiaBar"></div>
+        <span class="bar-value" id="claudiaBarValue">0 Std</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Tristan</span>
+        <div class="bar-track" id="tristanBar"></div>
+        <span class="bar-value" id="tristanBarValue">0 Std</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Alle Einträge diesen Monat</div>
+      <div id="summaryList"></div>
+    </div>
+
+    <!-- Feuerwehr: separate, private Zusammenfassung (nur Tristan) -->
+    <div class="card private hidden" id="feuerwehrSummaryCard">
+      <div class="card-title">🚒 Feuerwehr <span class="private-label">Nur für dich sichtbar</span></div>
+      <div class="month-summary">
+        <span class="result-label">Total diesen Monat</span>
+        <span class="month-total" id="feuerwehrSummaryTotal" style="color:var(--feuerwehr)">0 Std</span>
+      </div>
+      <div id="feuerwehrList" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const STORAGE_KEY = 'zeiterfassung-entries';
+  const AVATAR_KEY = 'zeiterfassung-avatars';
+  let currentUser = null;
+  let selectedType = null;
+  let selectedPause = 0;
+  let entries = [];
+  let avatars = {};
+  let pendingAvatarUser = null;
+  let summaryYearMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  let cameFromMain = false;
+
+  function canSeeFeuerwehr() {
+    return currentUser === 'Tristan';
+  }
+
+  function setLoginBackground(active) {
+    document.body.classList.toggle('login-bg', active);
+  }
+
+  function badgeClass(type) {
+    if (type === 'Garten') return 'garten';
+    if (type === 'Feuerwehr') return 'feuerwehr';
+    return 'allgemein';
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function todayISO() {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  }
+
+  // Läuft die App innerhalb von Claude (window.storage vorhanden) oder eigenständig
+  // (z.B. via GitHub Pages / iPhone-Homescreen)? Im zweiten Fall wird auf
+  // localStorage zurückgegriffen — das speichert lokal auf diesem Gerät/Browser.
+  const hasClaudeStorage = (typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function');
+
+  async function storageGet(key) {
+    if (hasClaudeStorage) {
+      try {
+        const res = await window.storage.get(key, true);
+        return res && res.value ? res.value : null;
+      } catch (e) {
+        return null;
+      }
+    }
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function storageSet(key, value) {
+    if (hasClaudeStorage) {
+      try {
+        await window.storage.set(key, value, true);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function loadEntries() {
+    const val = await storageGet(STORAGE_KEY);
+    entries = val ? JSON.parse(val) : [];
+  }
+
+  async function persistEntries() {
+    const ok = await storageSet(STORAGE_KEY, JSON.stringify(entries));
+    if (!ok) showToast('Speichern fehlgeschlagen');
+  }
+
+  async function loadAvatars() {
+    const val = await storageGet(AVATAR_KEY);
+    avatars = val ? JSON.parse(val) : {};
+  }
+
+  async function persistAvatars() {
+    const ok = await storageSet(AVATAR_KEY, JSON.stringify(avatars));
+    if (!ok) showToast('Profilbild konnte nicht gespeichert werden');
+  }
+
+  // ---------- Backup: Export / Import ----------
+
+  async function exportBackup() {
+    await loadEntries();
+    await loadAvatars();
+
+    const payload = {
+      app: 'zeiterfassung-hauswart',
+      exportedAt: new Date().toISOString(),
+      entries,
+      avatars
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zeiterfassung-backup-${todayISO()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup heruntergeladen');
+  }
+
+  function openImportPicker() {
+    document.getElementById('backupFileInput').click();
+  }
+
+  async function handleBackupFile(event) {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (!data || !Array.isArray(data.entries)) {
+        throw new Error('Ungültiges Format');
+      }
+
+      await loadEntries();
+      await loadAvatars();
+
+      const existingIds = new Set(entries.map(e => e.id));
+      let added = 0;
+      data.entries.forEach(e => {
+        if (e && e.id && !existingIds.has(e.id)) {
+          entries.push(e);
+          existingIds.add(e.id);
+          added++;
+        }
+      });
+      await persistEntries();
+
+      if (data.avatars && typeof data.avatars === 'object') {
+        avatars = { ...avatars, ...data.avatars };
+        await persistAvatars();
+        applyAvatars();
+      }
+
+      if (currentUser) {
+        renderList();
+        renderMonthSummary();
+      }
+
+      showToast(added > 0 ? `Backup importiert (${added} neue Einträge)` : 'Backup importiert (keine neuen Einträge)');
+    } catch (e) {
+      showToast('Backup-Datei konnte nicht gelesen werden');
+    }
+  }
+
+  function setAvatarElement(el, user, letter, fallbackBg) {
+    if (!el) return;
+    const img = avatars[user];
+    if (img) {
+      el.style.backgroundImage = `url(${img})`;
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundPosition = 'center';
+      el.textContent = '';
+    } else {
+      el.style.backgroundImage = 'none';
+      el.style.background = fallbackBg;
+      el.textContent = letter;
+    }
+  }
+
+  function applyAvatars() {
+    setAvatarElement(document.getElementById('avatarClaudia'), 'Claudia', 'C', 'var(--gold-dark)');
+    setAvatarElement(document.getElementById('avatarTristan'), 'Tristan', 'T', 'var(--garten)');
+    setAvatarElement(document.getElementById('compareAvatarClaudia'), 'Claudia', 'C', 'var(--gold-dark)');
+    setAvatarElement(document.getElementById('compareAvatarTristan'), 'Tristan', 'T', 'var(--garten)');
+    if (currentUser) {
+      setAvatarElement(
+        document.getElementById('switchAvatar'),
+        currentUser,
+        currentUser[0],
+        currentUser === 'Claudia' ? 'var(--gold-dark)' : 'var(--garten)'
+      );
+    }
+  }
+
+  function openAvatarPicker(user, evt) {
+    if (evt) evt.stopPropagation();
+    if (!user) return;
+    pendingAvatarUser = user;
+    document.getElementById('avatarFileInput').click();
+  }
+
+  function resizeImageFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const size = 200;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => reject(new Error('Bild konnte nicht geladen werden'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('Datei konnte nicht gelesen werden'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleAvatarFile(event) {
+    const file = event.target.files[0];
+    const user = pendingAvatarUser;
+    event.target.value = '';
+    if (!file || !user) return;
+    try {
+      const dataUrl = await resizeImageFile(file);
+      avatars[user] = dataUrl;
+      await persistAvatars();
+      applyAvatars();
+      showToast('Profilbild aktualisiert');
+    } catch (e) {
+      showToast('Bild konnte nicht verarbeitet werden');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  async function selectAccount(name) {
+    currentUser = name;
+    setLoginBackground(false);
+    document.getElementById('accountScreen').classList.add('hidden');
+    document.getElementById('mainScreen').classList.remove('hidden');
+
+    document.getElementById('switchName').textContent = name;
+    applyAvatars();
+
+    document.getElementById('btnFeuerwehr').classList.toggle('hidden', !canSeeFeuerwehr());
+    document.getElementById('typeGrid').classList.toggle('three-col', canSeeFeuerwehr());
+
+    document.getElementById('dateInput').value = todayISO();
+
+    await loadEntries();
+    renderList();
+    renderMonthSummary();
+  }
+
+  function logout() {
+    currentUser = null;
+    selectedType = null;
+    selectedPause = 0;
+    document.getElementById('btnAllgemein').classList.remove('selected');
+    document.getElementById('btnGarten').classList.remove('selected');
+    document.getElementById('btnFeuerwehr').classList.remove('selected');
+    document.getElementById('startInput').value = '';
+    document.getElementById('endInput').value = '';
+    document.getElementById('pauseCustom').value = '';
+    document.getElementById('noteInput').value = '';
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+    document.getElementById('resultValue').textContent = '–';
+    document.getElementById('resultValue').classList.remove('err');
+    document.getElementById('saveBtn').disabled = true;
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('accountScreen').classList.remove('hidden');
+    setLoginBackground(true);
+  }
+
+  function selectType(type) {
+    selectedType = type;
+    document.getElementById('btnAllgemein').classList.toggle('selected', type === 'Allgemein');
+    document.getElementById('btnGarten').classList.toggle('selected', type === 'Garten');
+    document.getElementById('btnFeuerwehr').classList.toggle('selected', type === 'Feuerwehr');
+    recalc();
+  }
+
+  function setPause(min) {
+    selectedPause = min;
+    document.getElementById('pauseCustom').value = '';
+    document.querySelectorAll('.chip').forEach(c => {
+      c.classList.toggle('selected', parseInt(c.dataset.min) === min);
+    });
+    recalc();
+  }
+
+  function customPause() {
+    const val = document.getElementById('pauseCustom').value;
+    selectedPause = val === '' ? 0 : parseInt(val);
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+    recalc();
+  }
+
+  function minutesFromTimes(start, end) {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    let total = (eh * 60 + em) - (sh * 60 + sm);
+    if (total < 0) total += 24 * 60; // overnight shift
+    return total;
+  }
+
+  function formatHours(minutes) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m === 0 ? `${h} Std` : `${h} Std ${m} Min`;
+  }
+
+  function recalc() {
+    const start = document.getElementById('startInput').value;
+    const end = document.getElementById('endInput').value;
+    const resultEl = document.getElementById('resultValue');
+    const saveBtn = document.getElementById('saveBtn');
+
+    if (!selectedType || !start || !end) {
+      resultEl.textContent = '–';
+      resultEl.classList.remove('err');
+      saveBtn.disabled = true;
+      return;
+    }
+
+    const worked = minutesFromTimes(start, end) - (selectedPause || 0);
+
+    if (worked <= 0) {
+      resultEl.textContent = 'Prüfe Zeiten / Pause';
+      resultEl.classList.add('err');
+      saveBtn.disabled = true;
+      return;
+    }
+
+    resultEl.classList.remove('err');
+    resultEl.textContent = formatHours(worked);
+    saveBtn.disabled = false;
+  }
+
+  async function saveEntry() {
+    const date = document.getElementById('dateInput').value || todayISO();
+    const start = document.getElementById('startInput').value;
+    const end = document.getElementById('endInput').value;
+    const note = document.getElementById('noteInput').value.trim();
+    const worked = minutesFromTimes(start, end) - (selectedPause || 0);
+
+    if (!selectedType || !start || !end || worked <= 0) return;
+
+    const entry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      user: currentUser,
+      type: selectedType,
+      date,
+      start,
+      end,
+      pause: selectedPause || 0,
+      minutes: worked,
+      note
+    };
+
+    entries.push(entry);
+    await persistEntries();
+
+    // reset form (keep date)
+    selectedType = null;
+    selectedPause = 0;
+    document.getElementById('btnAllgemein').classList.remove('selected');
+    document.getElementById('btnGarten').classList.remove('selected');
+    document.getElementById('btnFeuerwehr').classList.remove('selected');
+    document.getElementById('startInput').value = '';
+    document.getElementById('endInput').value = '';
+    document.getElementById('pauseCustom').value = '';
+    document.getElementById('noteInput').value = '';
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+    document.getElementById('resultValue').textContent = '–';
+    document.getElementById('saveBtn').disabled = true;
+
+    renderList();
+    renderMonthSummary();
+    showToast('Eintrag gespeichert');
+  }
+
+  async function deleteEntry(id) {
+    entries = entries.filter(e => e.id !== id);
+    await persistEntries();
+    renderList();
+    renderMonthSummary();
+  }
+
+  function formatDateDisplay(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function renderList() {
+    const list = document.getElementById('entryList');
+    const userEntries = entries
+      .filter(e => e.user === currentUser)
+      .sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start))
+      .slice(0, 25);
+
+    if (userEntries.length === 0) {
+      list.innerHTML = '<div class="empty">Noch keine Einträge vorhanden.</div>';
+      return;
+    }
+
+    list.innerHTML = userEntries.map(e => `
+      <div class="entry">
+        <div class="entry-left">
+          <div class="entry-badge ${badgeClass(e.type)}"></div>
+          <div>
+            <div class="entry-date">${formatDateDisplay(e.date)} · ${e.type}</div>
+            <div class="entry-time">${e.start}–${e.end} · Pause ${e.pause} Min</div>
+            ${e.note ? `<div class="entry-note">${escapeHtml(e.note)}</div>` : ''}
+          </div>
+        </div>
+        <div class="entry-right">
+          <span class="entry-hours">${formatHours(e.minutes)}</span>
+          <button class="del-btn" onclick="deleteEntry('${e.id}')" title="Löschen">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderMonthSummary() {
+    const now = new Date();
+    const ym = now.toISOString().slice(0, 7);
+
+    const monthEntries = entries.filter(e => e.user === currentUser && e.date.startsWith(ym));
+    const allgemeinMin = monthEntries.filter(e => e.type === 'Allgemein').reduce((s, e) => s + e.minutes, 0);
+    const gartenMin = monthEntries.filter(e => e.type === 'Garten').reduce((s, e) => s + e.minutes, 0);
+    const feuerwehrMin = monthEntries.filter(e => e.type === 'Feuerwehr').reduce((s, e) => s + e.minutes, 0);
+
+    document.getElementById('monthTotal').textContent = formatHours(allgemeinMin + gartenMin);
+    document.getElementById('monthAllgemein').textContent = formatHours(allgemeinMin);
+    document.getElementById('monthGarten').textContent = formatHours(gartenMin);
+
+    const feuerwehrCard = document.getElementById('feuerwehrCard');
+    if (canSeeFeuerwehr()) {
+      feuerwehrCard.classList.remove('hidden');
+      document.getElementById('feuerwehrMonthTotal').textContent = formatHours(feuerwehrMin);
+    } else {
+      feuerwehrCard.classList.add('hidden');
+    }
+  }
+
+  // ---------- Team summary ----------
+
+  async function openSummary() {
+    cameFromMain = !document.getElementById('mainScreen').classList.contains('hidden');
+    if (entries.length === 0 || cameFromMain === false) {
+      await loadEntries();
+    }
+    if (Object.keys(avatars).length === 0) {
+      await loadAvatars();
+    }
+    summaryYearMonth = new Date().toISOString().slice(0, 7);
+    setLoginBackground(false);
+    document.getElementById('accountScreen').classList.add('hidden');
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('summaryScreen').classList.remove('hidden');
+    applyAvatars();
+    renderSummary();
+  }
+
+  function closeSummary() {
+    document.getElementById('summaryScreen').classList.add('hidden');
+    if (cameFromMain && currentUser) {
+      document.getElementById('mainScreen').classList.remove('hidden');
+    } else {
+      document.getElementById('accountScreen').classList.remove('hidden');
+      setLoginBackground(true);
+    }
+  }
+
+  function shiftMonth(delta) {
+    const [y, m] = summaryYearMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    summaryYearMonth = d.toISOString().slice(0, 7);
+    renderSummary();
+  }
+
+  function personTotals(user, ym) {
+    const list = entries.filter(e => e.user === user && e.date.startsWith(ym));
+    const allgemein = list.filter(e => e.type === 'Allgemein').reduce((s, e) => s + e.minutes, 0);
+    const garten = list.filter(e => e.type === 'Garten').reduce((s, e) => s + e.minutes, 0);
+    const feuerwehr = list.filter(e => e.type === 'Feuerwehr').reduce((s, e) => s + e.minutes, 0);
+    return { total: allgemein + garten, allgemein, garten, feuerwehr };
+  }
+
+  function renderSummary() {
+    const [y, m] = summaryYearMonth.split('-').map(Number);
+    const label = new Date(y, m - 1, 1).toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
+    document.getElementById('summaryMonthLabel').textContent = label;
+
+    const claudia = personTotals('Claudia', summaryYearMonth);
+    const tristan = personTotals('Tristan', summaryYearMonth);
+
+    document.getElementById('teamTotal').textContent = formatHours(claudia.total + tristan.total);
+
+    document.getElementById('claudiaTotal').textContent = formatHours(claudia.total);
+    document.getElementById('claudiaAllgemein').textContent = formatHours(claudia.allgemein);
+    document.getElementById('claudiaGarten').textContent = formatHours(claudia.garten);
+
+    document.getElementById('tristanTotal').textContent = formatHours(tristan.total);
+    document.getElementById('tristanAllgemein').textContent = formatHours(tristan.allgemein);
+    document.getElementById('tristanGarten').textContent = formatHours(tristan.garten);
+
+    renderBar('claudiaBar', 'claudiaBarValue', claudia);
+    renderBar('tristanBar', 'tristanBarValue', tristan);
+
+    renderSummaryList(summaryYearMonth);
+    renderFeuerwehrSummary(summaryYearMonth, tristan.feuerwehr);
+  }
+
+  function renderFeuerwehrSummary(ym, feuerwehrMin) {
+    const card = document.getElementById('feuerwehrSummaryCard');
+    if (!canSeeFeuerwehr()) {
+      card.classList.add('hidden');
+      return;
+    }
+    card.classList.remove('hidden');
+    document.getElementById('feuerwehrSummaryTotal').textContent = formatHours(feuerwehrMin);
+
+    const list = document.getElementById('feuerwehrList');
+    const feuerwehrEntries = entries
+      .filter(e => e.user === 'Tristan' && e.type === 'Feuerwehr' && e.date.startsWith(ym))
+      .sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start));
+
+    if (feuerwehrEntries.length === 0) {
+      list.innerHTML = '<div class="empty">Keine Feuerwehr-Einträge in diesem Monat.</div>';
+      return;
+    }
+
+    list.innerHTML = feuerwehrEntries.map(e => `
+      <div class="entry">
+        <div class="entry-left">
+          <div class="entry-badge feuerwehr"></div>
+          <div>
+            <div class="entry-date">${formatDateDisplay(e.date)}</div>
+            <div class="entry-time">${e.start}–${e.end} · Pause ${e.pause} Min</div>
+            ${e.note ? `<div class="entry-note">${escapeHtml(e.note)}</div>` : ''}
+          </div>
+        </div>
+        <div class="entry-right">
+          <span class="entry-hours">${formatHours(e.minutes)}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderBar(trackId, valueId, totals) {
+    const track = document.getElementById(trackId);
+    const valueEl = document.getElementById(valueId);
+    valueEl.textContent = formatHours(totals.total);
+
+    if (totals.total === 0) {
+      track.innerHTML = '';
+      return;
+    }
+    const allgemeinPct = (totals.allgemein / totals.total) * 100;
+    const gartenPct = (totals.garten / totals.total) * 100;
+    track.innerHTML = `
+      <div class="bar-fill allgemein" style="width:${allgemeinPct}%"></div>
+      <div class="bar-fill garten" style="width:${gartenPct}%"></div>
+    `;
+  }
+
+  function renderSummaryList(ym) {
+    const list = document.getElementById('summaryList');
+    const monthEntries = entries
+      .filter(e => e.date.startsWith(ym) && e.type !== 'Feuerwehr')
+      .sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start));
+
+    if (monthEntries.length === 0) {
+      list.innerHTML = '<div class="empty">Keine Einträge in diesem Monat.</div>';
+      return;
+    }
+
+    list.innerHTML = monthEntries.map(e => `
+      <div class="entry">
+        <div class="entry-left">
+          <div class="entry-badge ${badgeClass(e.type)}"></div>
+          <div>
+            <div class="entry-date">${formatDateDisplay(e.date)} · ${e.user} · ${e.type}</div>
+            <div class="entry-time">${e.start}–${e.end} · Pause ${e.pause} Min</div>
+            ${e.note ? `<div class="entry-note">${escapeHtml(e.note)}</div>` : ''}
+          </div>
+        </div>
+        <div class="entry-right">
+          <span class="entry-hours">${formatHours(e.minutes)}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Initial: gespeicherte Profilbilder laden und anzeigen
+  loadAvatars().then(applyAvatars);
+</script>
+
+</body>
+</html>
