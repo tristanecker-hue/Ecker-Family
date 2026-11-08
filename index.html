@@ -665,6 +665,29 @@
   }
   .field input[type="text"]:focus, .field select:focus { outline: none; border-color: var(--gold); }
 
+  /* ---------- Spruch ---------- */
+  .home-quote {
+    margin-top: 14px;
+    padding: 10px 0 2px 14px;
+    border-left: 3px solid var(--gold);
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 16.5px;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+
+  /* ---------- Einstellungen ---------- */
+  .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 2px; border-top: 1px solid var(--line); font-size: 15px; }
+  .set-note { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
+  .switch { position: relative; width: 52px; height: 30px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #D8D0BC; border-radius: 999px; transition: .15s; cursor: pointer; }
+  .slider::before { content: ''; position: absolute; width: 24px; height: 24px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .15s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .switch input:checked + .slider { background: var(--garten); }
+  .switch input:checked + .slider::before { transform: translateX(22px); }
+  .switch input:disabled + .slider { opacity: .55; cursor: default; }
+
   /* ---------- To-Do's ---------- */
   .todo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
   .todo-count { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
@@ -749,7 +772,7 @@
     </form>
 
     <div class="account-grid" id="accountGrid"></div>
-    <button class="overview-link local-only" onclick="openSummary()">Zusammenfassung beider Konten ansehen</button>
+    <button class="overview-link local-only" onclick="openSummary()">Zusammenfassung ansehen</button>
 
     <div class="backup-row local-only">
       <button class="backup-btn" onclick="exportBackup()">📤 Backup exportieren</button>
@@ -785,6 +808,7 @@
         <div class="switch-user-name" id="homeSwitchName"></div>
       </div>
       <div>
+        <button class="switch-btn hidden" id="btnSettings" onclick="openSettings()">⚙ Einstellungen</button>
         <button class="switch-btn" onclick="logout()">Abmelden</button>
       </div>
     </div>
@@ -792,6 +816,7 @@
     <div class="card">
       <div class="card-title">Hallo <span id="homeName"></span> 👋</div>
       <div class="sub" id="homeHint" style="font-size:14px;">Was möchtest du öffnen?</div>
+      <div class="home-quote" id="homeQuote"></div>
     </div>
 
     <div class="account-grid" id="homeTiles">
@@ -799,11 +824,26 @@
         <div class="account-avatar" style="background:var(--gold-dark);">⏱</div>
         <div class="account-name">Zeiterfassung</div>
       </div>
-      <div class="account-btn" id="tileTodo" role="button" tabindex="0" onclick="openTodos()" onkeydown="if(event.key==='Enter'||event.key===' '){openTodos()}">
+      <div class="account-btn hidden" id="tileTodo" role="button" tabindex="0" onclick="openTodos()" onkeydown="if(event.key==='Enter'||event.key===' '){openTodos()}">
         <div class="account-avatar" style="background:var(--garten);">✅</div>
         <div class="account-name">To-Do's</div>
         <div class="account-hint" id="todoBadge"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Einstellungen (nur Tristan) -->
+  <div id="settingsScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>Einstellungen</h1>
+        <div class="sub">Wer sieht und darf was</div>
+      </div>
+    </div>
+    <div id="settingsList"></div>
+    <div class="card">
+      <div class="set-note" style="margin-top:0;">Änderungen werden sofort gespeichert und gelten beim nächsten Öffnen der App der jeweiligen Person. Feuerwehr bleibt immer nur für Tristan sichtbar.</div>
     </div>
   </div>
 
@@ -866,7 +906,7 @@
       </div>
       <div>
         <button class="switch-btn" onclick="goHome()">🏠 Startseite</button>
-        <button class="switch-btn hidden" id="btnCompare" onclick="openSummary()">Beide vergleichen</button>
+        <button class="switch-btn hidden" id="btnCompare" onclick="openSummary()">Vergleichen</button>
         <button class="switch-btn" onclick="logout()">Abmelden</button>
       </div>
     </div>
@@ -983,7 +1023,7 @@
       <button class="back-btn" onclick="closeSummary()">←</button>
       <div>
         <h1>Zusammenfassung</h1>
-        <div class="sub">Claudia &amp; Tristan im Vergleich</div>
+        <div class="sub" id="summarySub">Im Vergleich</div>
       </div>
     </div>
 
@@ -994,7 +1034,7 @@
     </div>
 
     <div class="team-total-card">
-      <div class="team-total-label">Total beider Konten diesen Monat</div>
+      <div class="team-total-label">Total aller Konten diesen Monat</div>
       <div class="team-total-value" id="teamTotal">0 Std</div>
     </div>
 
@@ -1035,14 +1075,14 @@
   const cloudEnabled = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
   const ACCOUNTS = APP.accounts || { tristan: 'Tristan', claudia: 'Claudia', lina: 'Lina', florian: 'Florian' };
   const USERS = Object.values(ACCOUNTS);
-  const TIME_USERS = APP.timeUsers || ['Tristan', 'Claudia'];   // nur diese haben die Zeiterfassung
+  let TIME_USERS = APP.timeUsers || ['Tristan', 'Claudia'];   // wird aus den Einstellungen berechnet
   let loginTarget = null;
   const AV_CACHE = 'ef-avatar-cache';
   function loadAvatarCache() { try { return JSON.parse(localStorage.getItem(AV_CACHE) || '{}'); } catch (e) { return {}; } }
   function saveAvatarCache() { try { localStorage.setItem(AV_CACHE, JSON.stringify(avatars)); } catch (e) {} }
   const EMAIL_DOMAIN = APP.emailDomain || 'ecker-family.example';
   const FEUERWEHR_USER = 'Tristan';
-  const COMPARE_USER = 'Tristan';   // nur diese Person sieht den Vergleich beider Konten
+  const ADMIN_USER = 'Tristan';   // nur diese Person sieht die Einstellungen
   const USER_COLORS = ['var(--garten)', 'var(--gold-dark)', 'var(--allgemein)', '#8A4F7D'];
   let cloudApi = null;
 
@@ -1397,17 +1437,16 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
     document.getElementById('todoScreen').classList.add('hidden');
+    document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
-    const hasTime = TIME_USERS.includes(name);
-    document.getElementById('tileZeit').classList.toggle('hidden', !hasTime);
     document.getElementById('switchName').textContent = name;
     document.getElementById('homeSwitchName').textContent = name;
     document.getElementById('homeName').textContent = name;
-    if (cloudEnabled) {
-      cloudApi.saveProfile(name).catch(() => {});
-      await loadAvatars();
-    }
+    if (cloudEnabled) cloudApi.saveProfile(name).catch(() => {});
+    await loadSettings();
+    applyHomeTiles();
+    if (cloudEnabled) await loadAvatars();
     applyAvatars();
     updateTodoBadge();
   }
@@ -1417,13 +1456,14 @@
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
     document.getElementById('todoScreen').classList.add('hidden');
+    document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
 
     document.getElementById('btnFeuerwehr').classList.toggle('hidden', !canSeeFeuerwehr());
     document.getElementById('typeGrid').classList.toggle('three-col', canSeeFeuerwehr());
     document.getElementById('dateInput').value = todayISO();
-    document.getElementById('btnCompare').classList.toggle('hidden', currentUser !== COMPARE_USER);
+    document.getElementById('btnCompare').classList.toggle('hidden', !hasFeature('compare'));
 
     await loadEntries();
     renderList();
@@ -1434,8 +1474,10 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
     document.getElementById('todoScreen').classList.add('hidden');
+    document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
+    showSaying();
     updateTodoBadge();
   }
 
@@ -1458,6 +1500,7 @@
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
     document.getElementById('todoScreen').classList.add('hidden');
+    document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
     todos = [];
@@ -1652,7 +1695,7 @@
   // ---------- Team summary ----------
 
   async function openSummary() {
-    if (currentUser && currentUser !== COMPARE_USER) return;
+    if (currentUser && !hasFeature('compare')) return;
     cameFromMain = !document.getElementById('mainScreen').classList.contains('hidden');
     if (cloudEnabled || entries.length === 0 || cameFromMain === false) {
       await loadEntries();
@@ -1699,6 +1742,7 @@
     const label = new Date(y, m - 1, 1).toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
     document.getElementById('summaryMonthLabel').textContent = label;
 
+    document.getElementById('summarySub').textContent = TIME_USERS.join(' & ') + ' im Vergleich';
     const totals = {};
     TIME_USERS.forEach(u => { totals[u] = personTotals(u, summaryYearMonth); });
     const teamMin = TIME_USERS.reduce((sum, u) => sum + totals[u].total, 0);
@@ -1805,6 +1849,165 @@
     `).join('');
   }
 
+  // ---------- Spruch des Moments ----------
+
+  const SAYINGS = [
+    'Jeder Tag ist eine neue Chance, etwas Gutes zu tun.',
+    'Kleine Schritte führen auch zum Ziel.',
+    'Heute ist ein guter Tag für einen guten Tag.',
+    'Du schaffst mehr, als du denkst.',
+    'Wer anpackt, kommt voran.',
+    'Ein Lächeln kostet nichts und hilft allen.',
+    'Der beste Zeitpunkt anzufangen ist jetzt.',
+    'Gemeinsam sind wir stärker.',
+    'Stück für Stück wird aus Arbeit ein Ergebnis.',
+    'Gute Arbeit beginnt mit einem guten Gefühl.',
+    'Dranbleiben lohnt sich.',
+    'Auch ein langer Weg beginnt mit dem ersten Schritt.',
+    'Mut steht am Anfang, Glück am Ende.',
+    'Was du heute tust, danken dir die Tage danach.',
+    'Freu dich über das, was schon geschafft ist.',
+    'Ordnung im Kleinen, Ruhe im Grossen.',
+    'Mit guter Laune geht alles leichter.',
+    'Jede erledigte Aufgabe ist ein kleiner Sieg.',
+    'Heute etwas besser als gestern – das reicht.',
+    'Zusammen packen wir das.',
+    'Pausen gehören zum Erfolg.',
+    'Gib dein Bestes, der Rest ergibt sich.',
+    'Vertrau dir, du kannst das.',
+    'Aus vielen kleinen Dingen wird etwas Grosses.',
+    'Wer lacht, hat mehr vom Tag.',
+    'Bleib neugierig, bleib freundlich, bleib dran.',
+    'Geduld bringt Rosen.',
+    'Ohne Fleiss kein Preis.',
+    'Probieren geht über Studieren.',
+    'Morgenstund hat Gold im Mund.',
+    'Gut Ding will Weile haben.',
+    'Der Weg ist das Ziel.',
+    'Wo ein Wille ist, ist auch ein Weg.',
+    'Aller Anfang ist leicht, wenn man gute Leute an der Seite hat.',
+    'Du bist wichtig – für dich und für uns.'
+  ];
+  let lastSaying = -1;
+
+  function showSaying() {
+    const el = document.getElementById('homeQuote');
+    if (!el) return;
+    let i;
+    do { i = Math.floor(Math.random() * SAYINGS.length); } while (SAYINGS.length > 1 && i === lastSaying);
+    lastSaying = i;
+    el.textContent = SAYINGS[i];
+  }
+
+  // ---------- Einstellungen (nur Tristan) ----------
+
+  const SETTINGS_KEY = 'ef-settings';
+  const FEATURES = [
+    { key: 'zeit', label: 'Kachel Zeiterfassung' },
+    { key: 'todo', label: "Kachel To-Do's" },
+    { key: 'assign', label: "To-Do's zuordnen und löschen" },
+    { key: 'compare', label: 'Zeiten vergleichen' }
+  ];
+  let settings = null;
+
+  function defaultSettings() {
+    return {
+      zeit: ['Tristan', 'Claudia'].map(userKey),
+      todo: USERS.map(userKey),
+      assign: ['Tristan', 'Claudia'].map(userKey),
+      compare: ['Tristan'].map(userKey)
+    };
+  }
+
+  function applySettingsData(d) {
+    const base = defaultSettings();
+    const out = {};
+    Object.keys(base).forEach(k => { out[k] = Array.isArray(d && d[k]) ? d[k] : base[k]; });
+    settings = out;
+    TIME_USERS = USERS.filter(n => settings.zeit.includes(userKey(n)));
+  }
+
+  function hasFeature(f, user) {
+    if (!settings) applySettingsData(null);
+    return (settings[f] || []).includes(userKey(user || currentUser));
+  }
+
+  function isAdmin() { return currentUser === ADMIN_USER; }
+
+  async function loadSettings() {
+    let d = null;
+    if (cloudEnabled) {
+      try { d = await withTimeout(cloudApi.getSettings()); } catch (e) { /* Standardwerte */ }
+    } else {
+      try { d = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); } catch (e) { d = null; }
+    }
+    applySettingsData(d);
+  }
+
+  async function saveSettings() {
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.saveSettings(settings));
+      else localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      showToast('Gespeichert');
+    } catch (e) {
+      showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen');
+    }
+  }
+
+  function applyHomeTiles() {
+    const z = hasFeature('zeit');
+    const t = hasFeature('todo');
+    document.getElementById('tileZeit').classList.toggle('hidden', !z);
+    document.getElementById('tileTodo').classList.toggle('hidden', !t);
+    document.getElementById('btnSettings').classList.toggle('hidden', !isAdmin());
+    const hint = document.getElementById('homeHint');
+    hint.textContent = (z || t) ? 'Was möchtest du öffnen?' : 'Für dich ist noch nichts freigeschaltet.';
+    showSaying();
+  }
+
+  function openSettings() {
+    if (!isAdmin()) return;
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    document.getElementById('settingsScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    renderSettings();
+  }
+
+  function renderSettings() {
+    document.getElementById('settingsList').innerHTML = USERS.map(n => {
+      const key = userKey(n);
+      const locked = (n === ADMIN_USER);
+      const rows = FEATURES.map(f => `
+        <label class="set-row">
+          <span>${escapeHtml(f.label)}</span>
+          <span class="switch">
+            <input type="checkbox" ${locked || hasFeature(f.key, n) ? 'checked' : ''} ${locked ? 'disabled' : ''}
+                   onchange="toggleSetting('${f.key}', '${escapeHtml(key)}', this.checked)">
+            <span class="slider"></span>
+          </span>
+        </label>`).join('');
+      return `
+        <div class="card">
+          <div class="todo-head">
+            <div class="compare-avatar" data-avatar="${escapeHtml(n)}"></div>
+            <div class="compare-name">${escapeHtml(n)}</div>
+          </div>
+          ${rows}
+          ${locked ? '<div class="set-note">Du hast immer Zugriff auf alles.</div>' : ''}
+        </div>`;
+    }).join('');
+    applyAvatars();
+  }
+
+  async function toggleSetting(feature, key, on) {
+    if (!isAdmin()) return;
+    const set = new Set(settings[feature] || []);
+    if (on) set.add(key); else set.delete(key);
+    settings[feature] = [...set];
+    TIME_USERS = USERS.filter(n => settings.zeit.includes(userKey(n)));
+    await saveSettings();
+  }
+
   // ---------- To-Do's ----------
 
   const TODO_KEY = 'ef-todos';
@@ -1813,7 +2016,7 @@
   function userKey(name) {
     return Object.keys(ACCOUNTS).find(k => ACCOUNTS[k] === name) || String(name).toLowerCase();
   }
-  function canAssignTodos() { return TIME_USERS.includes(currentUser); }
+  function canAssignTodos() { return hasFeature('assign'); }
 
   async function loadTodos() {
     if (cloudEnabled) {
@@ -1829,7 +2032,7 @@
   }
 
   async function updateTodoBadge() {
-    if (!currentUser) return;
+    if (!currentUser || !hasFeature('todo')) return;
     await loadTodos();
     const mine = todos.filter(t => t.assigneeKey === userKey(currentUser) && !t.done).length;
     const el = document.getElementById('todoBadge');
@@ -2112,6 +2315,12 @@
           if (avatar) data.avatar = avatar;
           return F.setDoc(F.doc(db, 'profiles', uid()), data, { merge: true });
         },
+
+        getSettings: async () => {
+          const d = await F.getDoc(F.doc(db, 'settings', 'app'));
+          return d.exists() ? d.data() : null;
+        },
+        saveSettings: st => F.setDoc(F.doc(db, 'settings', 'app'), st),
 
         listTodos: async () => {
           const sn = await F.getDocs(F.collection(db, 'todos'));

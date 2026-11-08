@@ -8,6 +8,12 @@ service cloud.firestore {
     function mail() {
       return request.auth.token.email;
     }
+    function uname() {
+      return mail().split('@')[0];
+    }
+    function isTristan() {
+      return signedIn() && mail() == 'tristan@ecker.ch';
+    }
     function isFamily() {
       return signedIn() && mail() in [
         'tristan@ecker.ch',
@@ -16,17 +22,28 @@ service cloud.firestore {
         'florian@ecker.ch'
       ];
     }
-    function isTimeUser() {
-      return signedIn() && mail() in [
-        'tristan@ecker.ch',
-        'claudia@ecker.ch'
-      ];
+
+    // Freigaben aus den Einstellungen (Dokument settings/app).
+    // Fehlt das Dokument noch, gelten die Standardwerte.
+    function featureOn(feature, defaults) {
+      return isFamily() && (
+        isTristan() ||
+        (exists(/databases/$(database)/documents/settings/app)
+          ? uname() in get(/databases/$(database)/documents/settings/app).data.get(feature, defaults)
+          : uname() in defaults)
+      );
     }
-    function isTristan() {
-      return signedIn() && mail() == 'tristan@ecker.ch';
+    function isTimeUser() { return featureOn('zeit', ['tristan', 'claudia']); }
+    function canTodo()    { return featureOn('todo', ['tristan', 'claudia', 'lina', 'florian']); }
+    function canAssign()  { return featureOn('assign', ['tristan', 'claudia']); }
+
+    // Einstellungen: alle lesen, nur Tristan ändert
+    match /settings/{id} {
+      allow read: if isFamily();
+      allow write: if isTristan();
     }
 
-    // Zeiterfassung: Claudia und Tristan sehen alle Einträge, ändern aber nur ihre eigenen
+    // Zeiterfassung: wer freigeschaltet ist, sieht alle Einträge, ändert aber nur die eigenen
     match /entries/{id} {
       allow read: if isTimeUser();
       allow create: if isTimeUser() && request.resource.data.uid == request.auth.uid;
@@ -38,17 +55,17 @@ service cloud.firestore {
       allow read, write: if isTristan();
     }
 
-    // To-Do's: alle vier lesen. Claudia und Tristan legen an, ändern und löschen.
+    // To-Do's: Freigeschaltete lesen. Wer zuordnen darf, legt an, ändert und löscht.
     // Die zugeordnete Person darf nur "erledigt" ein- und ausschalten.
     match /todos/{id} {
-      allow read: if isFamily();
-      allow create: if isTimeUser();
-      allow update: if isTimeUser() || (
-        isFamily()
+      allow read: if canTodo();
+      allow create: if canAssign();
+      allow update: if canAssign() || (
+        canTodo()
         && mail() == resource.data.assigneeKey + '@ecker.ch'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt'])
       );
-      allow delete: if isTimeUser();
+      allow delete: if canAssign();
     }
 
     // Profile (Name + Profilbild): alle vier lesen, jeder schreibt nur sein eigenes
