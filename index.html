@@ -846,7 +846,7 @@
       </div>
       <div class="account-btn" id="tilePlan" role="button" tabindex="0" onclick="openPlan()" onkeydown="if(event.key==='Enter'||event.key===' '){openPlan()}">
         <div class="account-avatar" style="background:#6C7FD8;">📚</div>
-        <div class="account-name">Stundenplan</div>
+        <div class="account-name" id="tilePlanName">Stundenplan</div>
       </div>
     </div>
   </div>
@@ -856,7 +856,7 @@
     <div class="summary-header">
       <button class="back-btn" onclick="goHome()">←</button>
       <div>
-        <h1>Stundenplan</h1>
+        <h1 id="planTitle">Stundenplan</h1>
         <div class="sub" id="planSub"></div>
       </div>
     </div>
@@ -1987,6 +1987,7 @@
     document.getElementById('btnSettings').classList.toggle('hidden', !isAdmin());
     const hint = document.getElementById('homeHint');
     hint.textContent = '';
+    document.getElementById('tilePlanName').textContent = canEditPlan() ? 'Stundenplan Kinder' : 'Stundenplan';
     showSaying();
   }
 
@@ -2061,6 +2062,7 @@
     ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'settingsScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('planScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
+    document.getElementById('planTitle').textContent = canEditPlan() ? 'Stundenplan Kinder' : 'Stundenplan';
     document.getElementById('planSub').textContent = canEditPlan() ? 'Lina & Florian – tippen zum Bearbeiten' : 'Dein Plan für die Woche';
     await loadPlans();
     renderPlans();
@@ -2479,7 +2481,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.0';
+  const APP_VERSION = '1.1';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
