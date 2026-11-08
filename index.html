@@ -866,7 +866,7 @@
       </div>
       <div>
         <button class="switch-btn" onclick="goHome()">🏠 Startseite</button>
-        <button class="switch-btn" onclick="openSummary()">Beide vergleichen</button>
+        <button class="switch-btn hidden" id="btnCompare" onclick="openSummary()">Beide vergleichen</button>
         <button class="switch-btn" onclick="logout()">Abmelden</button>
       </div>
     </div>
@@ -1042,6 +1042,7 @@
   function saveAvatarCache() { try { localStorage.setItem(AV_CACHE, JSON.stringify(avatars)); } catch (e) {} }
   const EMAIL_DOMAIN = APP.emailDomain || 'ecker-family.example';
   const FEUERWEHR_USER = 'Tristan';
+  const COMPARE_USER = 'Tristan';   // nur diese Person sieht den Vergleich beider Konten
   const USER_COLORS = ['var(--garten)', 'var(--gold-dark)', 'var(--allgemein)', '#8A4F7D'];
   let cloudApi = null;
 
@@ -1422,6 +1423,7 @@
     document.getElementById('btnFeuerwehr').classList.toggle('hidden', !canSeeFeuerwehr());
     document.getElementById('typeGrid').classList.toggle('three-col', canSeeFeuerwehr());
     document.getElementById('dateInput').value = todayISO();
+    document.getElementById('btnCompare').classList.toggle('hidden', currentUser !== COMPARE_USER);
 
     await loadEntries();
     renderList();
@@ -1650,6 +1652,7 @@
   // ---------- Team summary ----------
 
   async function openSummary() {
+    if (currentUser && currentUser !== COMPARE_USER) return;
     cameFromMain = !document.getElementById('mainScreen').classList.contains('hidden');
     if (cloudEnabled || entries.length === 0 || cameFromMain === false) {
       await loadEntries();
