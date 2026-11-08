@@ -10,20 +10,20 @@ service cloud.firestore {
     }
     function isFamily() {
       return signedIn() && mail() in [
-        'tristan@ecker-family.example',
-        'claudia@ecker-family.example',
-        'lina@ecker-family.example',
-        'florian@ecker-family.example'
+        'tristan@ecker.ch',
+        'claudia@ecker.ch',
+        'lina@ecker.ch',
+        'florian@ecker.ch'
       ];
     }
     function isTimeUser() {
       return signedIn() && mail() in [
-        'tristan@ecker-family.example',
-        'claudia@ecker-family.example'
+        'tristan@ecker.ch',
+        'claudia@ecker.ch'
       ];
     }
     function isTristan() {
-      return signedIn() && mail() == 'tristan@ecker-family.example';
+      return signedIn() && mail() == 'tristan@ecker.ch';
     }
 
     // Zeiterfassung: Claudia und Tristan sehen alle Einträge, ändern aber nur ihre eigenen

@@ -15,10 +15,10 @@ Solange nichts eingetragen ist, läuft die App wie bisher im lokalen Modus.
 ## 3. Die vier Benutzer anlegen
 Im Tab **Users** → **Nutzer hinzufügen**. Diese vier Adressen genau so eingeben (sie müssen nicht echt sein), und je ein eigenes Passwort wählen (mind. 6 Zeichen):
 
-- `tristan@ecker-family.example`
-- `claudia@ecker-family.example`
-- `lina@ecker-family.example`
-- `florian@ecker-family.example`
+- `tristan@ecker.ch`
+- `claudia@ecker.ch`
+- `lina@ecker.ch`
+- `florian@ecker.ch`
 
 In der App tippt man nur auf die Kachel und gibt das Passwort ein.
 

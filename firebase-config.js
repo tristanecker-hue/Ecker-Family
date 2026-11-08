@@ -13,9 +13,9 @@ window.FIREBASE_CONFIG = {
 
 // 2) Benutzer. Der Schlüssel (links) ist der Benutzername im Firebase-Konto,
 //    der Wert (rechts) der angezeigte Name. Die Anmelde-Adresse lautet
-//    <benutzername>@<emailDomain>, z. B. tristan@ecker-family.example
+//    <benutzername>@<emailDomain>, z. B. tristan@ecker.ch
 window.APP_CONFIG = {
-  emailDomain: "ecker-family.example",
+  emailDomain: "ecker.ch",
   accounts: {
     tristan: "Tristan",
     claudia: "Claudia",
