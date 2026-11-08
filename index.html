@@ -821,7 +821,7 @@
 
     <div class="card">
       <div class="card-title">Hallo <span id="homeName"></span> 👋</div>
-      <div class="sub" id="homeHint" style="font-size:14px;">Was möchtest du öffnen?</div>
+      <div class="sub" id="homeHint" style="font-size:14px;"></div>
       <div class="home-quote" id="homeQuote"></div>
     </div>
 
@@ -1961,7 +1961,7 @@
     document.getElementById('tileTodo').classList.toggle('hidden', !t);
     document.getElementById('btnSettings').classList.toggle('hidden', !isAdmin());
     const hint = document.getElementById('homeHint');
-    hint.textContent = (z || t) ? 'Was möchtest du öffnen?' : 'Für dich ist noch nichts freigeschaltet.';
+    hint.textContent = (z || t) ? '' : 'Für dich ist noch nichts freigeschaltet.';
     showSaying();
   }
 
