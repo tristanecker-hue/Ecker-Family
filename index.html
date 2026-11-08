@@ -718,6 +718,13 @@
   .todo-banner .b-cloud { position: absolute; font-size: 26px; opacity: .85; }
   .banner-lina { background: linear-gradient(135deg, #FFD6E8 0%, #E7D4FF 55%, #CFE8FF 100%); }
   .banner-florian { background: linear-gradient(135deg, #CDEBFF 0%, #D4F5D0 60%, #FFF2B8 100%); }
+  .plan-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
+  .plan-table th { padding: 6px 2px; font-weight: 700; color: var(--ink-soft); font-size: 12px; }
+  .plan-table th.today, .plan-table td.today { background: rgba(176,125,54,.13); }
+  .plan-table th:first-child, .plan-table td:first-child { width: 22px; text-align: center; color: var(--ink-soft); font-weight: 700; }
+  .plan-table td { border-top: 1px solid var(--line); padding: 3px 2px; text-align: center; height: 38px; word-wrap: break-word; line-height: 1.2; }
+  .plan-in { width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 6px 2px; font: inherit; font-size: 12px; text-align: center; background: #fff; color: var(--ink); min-width: 0; }
+  .plan-save { margin-top: 12px; }
   .todo-empty { font-size: 13.5px; color: var(--ink-soft); padding: 6px 2px 2px; }
 
   /* ---------- Login form (Cloud-Modus) ---------- */
@@ -835,7 +842,23 @@
         <div class="account-name">To-Do's</div>
         <div class="account-hint" id="todoBadge"></div>
       </div>
+      <div class="account-btn" id="tilePlan" role="button" tabindex="0" onclick="openPlan()" onkeydown="if(event.key==='Enter'||event.key===' '){openPlan()}">
+        <div class="account-avatar" style="background:#6C7FD8;">📚</div>
+        <div class="account-name">Stundenplan</div>
+      </div>
     </div>
+  </div>
+
+  <!-- Stundenplan -->
+  <div id="planScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>Stundenplan</h1>
+        <div class="sub" id="planSub"></div>
+      </div>
+    </div>
+    <div id="planLists"></div>
   </div>
 
   <!-- Einstellungen (nur Tristan) -->
@@ -1436,7 +1459,7 @@
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
@@ -1455,7 +1478,7 @@
     if (!currentUser || !TIME_USERS.includes(currentUser)) return;
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -1473,7 +1496,7 @@
   function goHome() {
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -1499,7 +1522,7 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
@@ -1961,13 +1984,13 @@
     document.getElementById('tileTodo').classList.toggle('hidden', !t);
     document.getElementById('btnSettings').classList.toggle('hidden', !isAdmin());
     const hint = document.getElementById('homeHint');
-    hint.textContent = (z || t) ? '' : 'Für dich ist noch nichts freigeschaltet.';
+    hint.textContent = '';
     showSaying();
   }
 
   function openSettings() {
     if (!isAdmin()) return;
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     renderSettings();
@@ -2006,6 +2029,89 @@
     settings[feature] = [...set];
     TIME_USERS = USERS.filter(n => settings.zeit.includes(userKey(n)));
     await saveSettings();
+  }
+
+  // ---------- Stundenplan ----------
+
+  const PLAN_KEY = 'ef-plans';
+  const PLAN_KIDS = ['Lina', 'Florian'];
+  const PLAN_EDITORS = ['Tristan', 'Claudia'];
+  const PLAN_DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
+  const PLAN_ROWS = 8;
+  let plans = {};
+
+  function canEditPlan() { return PLAN_EDITORS.includes(currentUser); }
+  function visibleKids() { return canEditPlan() ? PLAN_KIDS : PLAN_KIDS.filter(n => n === currentUser); }
+
+  async function loadPlans() {
+    plans = {};
+    if (cloudEnabled) {
+      for (const n of visibleKids()) {
+        try { plans[userKey(n)] = (await withTimeout(cloudApi.getPlan(userKey(n)))) || {}; } catch (e) { plans[userKey(n)] = {}; }
+      }
+      return;
+    }
+    try { plans = JSON.parse(localStorage.getItem(PLAN_KEY) || '{}'); } catch (e) { plans = {}; }
+  }
+
+  async function openPlan() {
+    if (!currentUser) return;
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'settingsScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    document.getElementById('planScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    document.getElementById('planSub').textContent = canEditPlan() ? 'Lina & Florian – tippen zum Bearbeiten' : 'Dein Plan für die Woche';
+    await loadPlans();
+    renderPlans();
+  }
+
+  function renderPlans() {
+    const edit = canEditPlan();
+    const wd = new Date().getDay();            // 1 = Montag
+    const todayCol = (wd >= 1 && wd <= 5) ? wd - 1 : -1;
+    document.getElementById('planLists').innerHTML = visibleKids().map(n => {
+      const key = userKey(n);
+      const cells = (plans[key] && plans[key].cells) || {};
+      const head = '<th></th>' + PLAN_DAYS.map((d, i) => `<th class="${i === todayCol ? 'today' : ''}">${d}</th>`).join('');
+      let body = '';
+      for (let r = 0; r < PLAN_ROWS; r++) {
+        body += `<tr><td>${r + 1}</td>` + PLAN_DAYS.map((d, i) => {
+          const v = cells[i + '-' + r] || '';
+          const inner = edit
+            ? `<input class="plan-in" maxlength="14" data-d="${i}" data-r="${r}" value="${escapeHtml(v)}">`
+            : escapeHtml(v);
+          return `<td class="${i === todayCol ? 'today' : ''}">${inner}</td>`;
+        }).join('') + '</tr>';
+      }
+      return `
+        <div class="card" data-plan="${escapeHtml(key)}">
+          ${BANNERS[key] || ''}
+          <div class="todo-head">
+            <div class="compare-avatar" data-avatar="${escapeHtml(n)}"></div>
+            <div class="compare-name">${escapeHtml(n)}</div>
+          </div>
+          <table class="plan-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+          ${edit ? `<button class="save-btn plan-save" onclick="savePlan('${escapeHtml(key)}')">Stundenplan speichern</button>` : ''}
+        </div>`;
+    }).join('');
+    applyAvatars();
+  }
+
+  async function savePlan(key) {
+    if (!canEditPlan()) return;
+    const cells = {};
+    document.querySelectorAll(`[data-plan="${key}"] .plan-in`).forEach(inp => {
+      const v = inp.value.trim();
+      if (v) cells[inp.dataset.d + '-' + inp.dataset.r] = v;
+    });
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.savePlan(key, { cells }));
+      plans[key] = { cells };
+      if (!cloudEnabled) { try { localStorage.setItem(PLAN_KEY, JSON.stringify(plans)); } catch (e) { showToast('Speichern fehlgeschlagen'); return; } }
+    } catch (e) {
+      showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen');
+      return;
+    }
+    showToast('Stundenplan gespeichert');
   }
 
   // ---------- To-Do's ----------
@@ -2341,6 +2447,12 @@
           return d.exists() ? d.data() : null;
         },
         saveSettings: st => F.setDoc(F.doc(db, 'settings', 'app'), st),
+
+        getPlan: async key => {
+          const d = await F.getDoc(F.doc(db, 'plans', key));
+          return d.exists() ? d.data() : null;
+        },
+        savePlan: (key, data) => F.setDoc(F.doc(db, 'plans', key), data),
 
         listTodos: async () => {
           const sn = await F.getDocs(F.collection(db, 'todos'));
