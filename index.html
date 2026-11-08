@@ -2180,7 +2180,7 @@
       todo: USERS.map(userKey),
       assign: ['Tristan', 'Claudia'].map(userKey),
       compare: ['Tristan'].map(userKey),
-      spiele: ['Lina', 'Florian'].map(userKey)
+      spiele: USERS.map(userKey)
     };
   }
 
@@ -2773,6 +2773,7 @@
 
   async function deleteSpese(id) {
     const x = spesen.find(v => v.id === id);
+    if (!window.confirm('Diese Spese' + (x && x.beleg ? ' samt Beleg' : '') + ' wirklich löschen?')) return;
     try {
       if (cloudEnabled) {
         await withTimeout(cloudApi.deleteSpese(id));
@@ -4064,7 +4065,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.05';
+  const APP_VERSION = '1.06';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
