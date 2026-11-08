@@ -1060,14 +1060,16 @@
       <details id="abrBox">
         <summary style="cursor:pointer;font-weight:700;">📁 Spesenabrechnung erledigt (<span id="abrCount">0</span>)</summary>
         <div id="abrList" style="margin-top:8px;"></div>
+        <button class="switch-btn" id="btnBackupAbr" style="margin-top:10px;width:100%;" onclick="backupSpesenFiles('abr')">💾 Sichern</button>
+        <div class="set-note">Speichert alle exportierten Abrechnungen (PDF und Excel), z. B. in OneDrive.</div>
       </details>
     </div>
     <div class="card">
       <details id="doneBox">
         <summary style="cursor:pointer;font-weight:700;">📁 Belege verrechnet (<span id="doneCount">0</span>)</summary>
         <div id="spesenDoneList" style="margin-top:8px;"></div>
-        <button class="switch-btn" id="btnBackupFiles" style="margin-top:10px;width:100%;" onclick="backupSpesenFiles()">💾 Sichern</button>
-        <div class="set-note">Speichert die verrechneten Belege und alle exportierten Abrechnungen (PDF und Excel), z. B. in OneDrive.</div>
+        <button class="switch-btn" id="btnBackupFiles" style="margin-top:10px;width:100%;" onclick="backupSpesenFiles('belege')">💾 Sichern</button>
+        <div class="set-note">Speichert die verrechneten Belege, z. B. in OneDrive.</div>
       </details>
     </div>
   </div>
@@ -3485,11 +3487,11 @@
   }
 
   // Sammelt alle Dateien der Sicherung: [{path:'Ordner/Datei.ext', data: Uint8Array|Blob|string}]
-  async function collectBackupFiles(btn) {
+  async function collectBackupFiles(btn, what) {
     const safe = t => String(t || '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 60);
     const files = []; let missing = 0, n = 0;
     const billed = spesen.filter(x => x.verrechnet);
-    for (const x of billed) {
+    for (const x of (what === 'abr' ? [] : billed)) {
       if (!x.beleg) continue;
       const bd = await getBelegData(x);
       if (!bd || !bd.data) { missing++; continue; }
@@ -3500,7 +3502,7 @@
       n++; btn.textContent = 'Belege ' + n + ' …';
     }
     let k = 0;
-    for (const r of abrechnungen) {
+    for (const r of (what === 'belege' ? [] : abrechnungen)) {
       k++; btn.textContent = 'Abrechnung ' + k + '/' + abrechnungen.length + ' …';
       try {
         const f = await buildAbrechnungFiles(r, true, true);
@@ -3515,11 +3517,11 @@
 
   // Dateien einzeln speichern (Teilen-Menü am Handy, sonst nacheinander herunterladen)
   let pendingBackup = null;
-  async function backupSpesenFiles() {
-    const btn = document.getElementById('btnBackupFiles');
+  async function backupSpesenFiles(what) {
+    const btn = document.getElementById(what === 'abr' ? 'btnBackupAbr' : 'btnBackupFiles');
     if (btn.disabled) return;
-    if (pendingBackup) {                                   // zweiter Tipp = frische Benutzeraktion für das Teilen-Menü
-      const list = pendingBackup; pendingBackup = null;
+    if (pendingBackup && pendingBackup.what === what) {                                   // zweiter Tipp = frische Benutzeraktion für das Teilen-Menü
+      const list = pendingBackup.files; pendingBackup = null;
       btn.textContent = '💾 Sichern';
       const flat = n => n.replace(/\//g, ' - ');
       const fl = list.map(f => new File([f.data], flat(f.path), { type: f.mime || 'application/octet-stream' }));
@@ -3533,8 +3535,10 @@
     btn.disabled = true; const label = btn.textContent;
     try {
       btn.textContent = 'Wird gesammelt …';
-      const { files, missing } = await collectBackupFiles(btn);
-      pendingBackup = files;
+      pendingBackup = null;
+      const { files, missing } = await collectBackupFiles(btn, what);
+      if (!files.length) { showToast('Nichts zu sichern'); btn.textContent = label; btn.disabled = false; return; }
+      pendingBackup = { what, files };
       btn.textContent = 'Jetzt speichern (' + files.length + ' Dateien)';
       if (missing) showToast(missing + ' Datei(en) fehlten');
     } catch (e) { showToast('Sichern fehlgeschlagen'); btn.textContent = label; }
@@ -4153,7 +4157,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.14';
+  const APP_VERSION = '1.15';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
