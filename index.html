@@ -888,12 +888,27 @@
         <input type="date" id="spesenDate">
       </div>
       <div class="field">
+        <label for="spesenStelle">Kostenstelle</label>
+        <div style="display:flex;gap:8px;">
+          <select id="spesenStelle" style="flex:1;min-width:0;"></select>
+          <button class="switch-btn" type="button" onclick="toggleStelleAdd()">+ Neue</button>
+        </div>
+        <div id="stelleAddRow" class="hidden" style="display:none;gap:8px;margin-top:8px;">
+          <input type="text" id="stelleNew" maxlength="40" placeholder="Name, z. B. Coop" style="flex:1;min-width:0;" onkeydown="if(event.key==='Enter'){addStelle()}">
+          <button class="switch-btn" type="button" onclick="addStelle()">Hinzufügen</button>
+        </div>
+      </div>
+      <div class="field">
         <label for="spesenAmount">Betrag (CHF)</label>
         <input type="number" id="spesenAmount" inputmode="decimal" step="0.05" min="0" placeholder="0.00">
       </div>
       <div class="field">
         <label for="spesenText">Beschreibung</label>
         <input type="text" id="spesenText" maxlength="120" placeholder="z. B. Putzmittel, Material Baumarkt" onkeydown="if(event.key==='Enter'){addSpese()}">
+      </div>
+      <div class="field">
+        <label for="spesenBeleg">Beleg (PDF oder Foto, max. 700 KB)</label>
+        <input type="file" id="spesenBeleg" accept="application/pdf,image/*">
       </div>
       <button class="save-btn" onclick="addSpese()">Spese speichern</button>
     </div>
@@ -2093,6 +2108,9 @@
   // ---------- Hauswart / Spesen ----------
 
   let spesen = [];
+  let stellen = [];
+  const DEFAULT_STELLEN = ['Migros', 'Landi', 'Ruedi Rüssel'];
+  const MAX_BELEG = 700 * 1024;
 
   function openHauswart() {
     if (!currentUser || !TIME_USERS.includes(currentUser)) return;
@@ -2104,9 +2122,12 @@
   async function loadSpesen() {
     if (cloudEnabled) {
       try { spesen = await withTimeout(cloudApi.listSpesen()); } catch (e) { spesen = []; showToast('Laden fehlgeschlagen'); }
-      return;
+      try { stellen = (await withTimeout(cloudApi.getStellen())) || []; } catch (e) { stellen = []; }
+    } else {
+      try { spesen = JSON.parse(localStorage.getItem('ef-spesen-' + userKey(currentUser)) || '[]'); } catch (e) { spesen = []; }
+      try { stellen = JSON.parse(localStorage.getItem('ef-stellen-' + userKey(currentUser)) || '[]'); } catch (e) { stellen = []; }
     }
-    try { spesen = JSON.parse(localStorage.getItem('ef-spesen-' + userKey(currentUser)) || '[]'); } catch (e) { spesen = []; }
+    if (!stellen.length) stellen = [...DEFAULT_STELLEN];
   }
   function persistSpesenLocal() {
     try { localStorage.setItem('ef-spesen-' + userKey(currentUser), JSON.stringify(spesen)); } catch (e) { showToast('Speichern fehlgeschlagen'); }
@@ -2118,8 +2139,41 @@
     document.getElementById('spesenScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('spesenDate').value = todayISO();
+    document.getElementById('spesenBeleg').value = '';
+    document.getElementById('stelleAddRow').style.display = 'none';
     await loadSpesen();
+    renderStellen();
     renderSpesen();
+  }
+
+  function renderStellen(selected) {
+    const sel = document.getElementById('spesenStelle');
+    const cur = selected || sel.value;
+    sel.innerHTML = stellen.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    if (cur && stellen.includes(cur)) sel.value = cur;
+  }
+
+  function toggleStelleAdd() {
+    const row = document.getElementById('stelleAddRow');
+    const open = row.style.display === 'none';
+    row.style.display = open ? 'flex' : 'none';
+    if (open) document.getElementById('stelleNew').focus();
+  }
+
+  async function addStelle() {
+    const input = document.getElementById('stelleNew');
+    const name = input.value.trim();
+    if (!name) return;
+    if (stellen.some(n => n.toLowerCase() === name.toLowerCase())) { showToast('Gibt es schon'); return; }
+    const next = [...stellen, name];
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.saveStellen(next));
+      else localStorage.setItem('ef-stellen-' + userKey(currentUser), JSON.stringify(next));
+    } catch (e) { showToast('Speichern fehlgeschlagen'); return; }
+    stellen = next;
+    input.value = '';
+    document.getElementById('stelleAddRow').style.display = 'none';
+    renderStellen(name);
   }
 
   function chf(n) { return 'CHF ' + n.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -2135,24 +2189,41 @@
           <div class="todo-item">
             <div class="todo-body">
               <div class="todo-text">${escapeHtml(x.text || 'Spese')}</div>
-              <div class="todo-meta">${escapeHtml(formatDateDisplay(x.date))}</div>
+              <div class="todo-meta">${escapeHtml(formatDateDisplay(x.date))}${x.stelle ? ' · ' + escapeHtml(x.stelle) : ''}${x.beleg ? ` · <a href="#" onclick="openBeleg('${x.id}');return false;">📎 Beleg</a>` : ''}</div>
             </div>
             <div class="todo-count" style="margin-left:0;">${chf(x.amount)}</div>
             <button class="del-btn" onclick="deleteSpese('${x.id}')" title="Löschen">✕</button>
           </div>`).join('');
   }
 
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
   async function addSpese() {
     const date = document.getElementById('spesenDate').value;
     const amount = parseFloat(document.getElementById('spesenAmount').value);
     const text = document.getElementById('spesenText').value.trim();
+    const stelle = document.getElementById('spesenStelle').value || '';
+    const file = document.getElementById('spesenBeleg').files[0];
     if (!date) { showToast('Bitte ein Datum wählen'); return; }
     if (!(amount > 0)) { showToast('Bitte einen Betrag eingeben'); return; }
+    if (file && file.size > MAX_BELEG) { showToast('Beleg ist zu gross (max. 700 KB)'); return; }
     const item = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      date, amount: Math.round(amount * 100) / 100, text, createdAt: Date.now()
+      date, amount: Math.round(amount * 100) / 100, text, stelle, beleg: file ? file.name : null, createdAt: Date.now()
     };
     try {
+      if (file) {
+        const data = await readFileAsDataURL(file);
+        if (cloudEnabled) await withTimeout(cloudApi.saveBeleg(item.id, { name: file.name, data }), 30000);
+        else localStorage.setItem('ef-beleg-' + userKey(currentUser) + '-' + item.id, JSON.stringify({ name: file.name, data }));
+      }
       if (cloudEnabled) await withTimeout(cloudApi.addSpese(item));
       spesen.push(item);
       if (!cloudEnabled) persistSpesenLocal();
@@ -2162,14 +2233,38 @@
     }
     document.getElementById('spesenAmount').value = '';
     document.getElementById('spesenText').value = '';
+    document.getElementById('spesenBeleg').value = '';
     renderSpesen();
     showToast('Spese gespeichert');
   }
 
-  async function deleteSpese(id) {
+  async function openBeleg(id) {
     try {
-      if (cloudEnabled) await withTimeout(cloudApi.deleteSpese(id));
-      spesen = spesen.filter(x => x.id !== id);
+      let b;
+      if (cloudEnabled) b = await withTimeout(cloudApi.getBeleg(id), 20000);
+      else b = JSON.parse(localStorage.getItem('ef-beleg-' + userKey(currentUser) + '-' + id) || 'null');
+      if (!b) { showToast('Beleg nicht gefunden'); return; }
+      const blob = await (await fetch(b.data)).blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) { showToast('Beleg konnte nicht geöffnet werden'); }
+  }
+
+  async function deleteSpese(id) {
+    const x = spesen.find(v => v.id === id);
+    try {
+      if (cloudEnabled) {
+        await withTimeout(cloudApi.deleteSpese(id));
+        if (x && x.beleg) cloudApi.deleteBeleg(id).catch(() => {});
+      } else {
+        if (x && x.beleg) localStorage.removeItem('ef-beleg-' + userKey(currentUser) + '-' + id);
+      }
+      spesen = spesen.filter(v => v.id !== id);
       if (!cloudEnabled) persistSpesenLocal();
     } catch (e) {
       showToast('Löschen fehlgeschlagen');
@@ -2602,6 +2697,17 @@
         },
         addSpese: x => F.setDoc(F.doc(db, 'spesen', uid(), 'items', x.id), x),
         deleteSpese: id => F.deleteDoc(F.doc(db, 'spesen', uid(), 'items', id)),
+        getStellen: async () => {
+          const d = await F.getDoc(F.doc(db, 'spesen', uid(), 'meta', 'stellen'));
+          return d.exists() ? d.data().list : null;
+        },
+        saveStellen: list => F.setDoc(F.doc(db, 'spesen', uid(), 'meta', 'stellen'), { list }),
+        saveBeleg: (id, b) => F.setDoc(F.doc(db, 'spesen', uid(), 'belege', id), b),
+        getBeleg: async id => {
+          const d = await F.getDoc(F.doc(db, 'spesen', uid(), 'belege', id));
+          return d.exists() ? d.data() : null;
+        },
+        deleteBeleg: id => F.deleteDoc(F.doc(db, 'spesen', uid(), 'belege', id)),
 
         getPlan: async key => {
           const d = await F.getDoc(F.doc(db, 'plans', key));
@@ -2632,7 +2738,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.3';
+  const APP_VERSION = '1.4';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {

@@ -68,12 +68,12 @@ service cloud.firestore {
       allow delete: if canAssign();
     }
 
-    // Stundenpläne: Tristan und Claudia lesen und ändern alle, Kinder sehen nur den eigenen
-    // Spesen: privat, nur die eigene Person (mit Zugriff auf Hauswart)
-    match /spesen/{userId}/items/{id} {
+    // Spesen (Einträge, Belege, Kostenstellen): privat, nur die eigene Person (mit Zugriff auf Hauswart)
+    match /spesen/{userId}/{sub}/{id} {
       allow read, write: if isTimeUser() && request.auth.uid == userId;
     }
 
+    // Stundenpläne: Tristan und Claudia lesen und ändern alle, Kinder sehen nur den eigenen
     match /plans/{kid} {
       allow read: if isFamily() && (uname() in ['tristan', 'claudia'] || uname() == kid);
       allow write: if isFamily() && uname() in ['tristan', 'claudia'];
