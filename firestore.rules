@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function mail() {
+      return request.auth.token.email;
+    }
+    function isFamily() {
+      return signedIn() && mail() in [
+        'tristan@ecker-family.example',
+        'claudia@ecker-family.example',
+        'lina@ecker-family.example',
+        'florian@ecker-family.example'
+      ];
+    }
+    function isTimeUser() {
+      return signedIn() && mail() in [
+        'tristan@ecker-family.example',
+        'claudia@ecker-family.example'
+      ];
+    }
+    function isTristan() {
+      return signedIn() && mail() == 'tristan@ecker-family.example';
+    }
+
+    // Zeiterfassung: Claudia und Tristan sehen alle Einträge, ändern aber nur ihre eigenen
+    match /entries/{id} {
+      allow read: if isTimeUser();
+      allow create: if isTimeUser() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isTimeUser() && resource.data.uid == request.auth.uid;
+    }
+
+    // Feuerwehr: nur Tristan
+    match /feuerwehr/{id} {
+      allow read, write: if isTristan();
+    }
+
+    // Profile (Name + Profilbild): alle vier lesen, jeder schreibt nur sein eigenes
+    match /profiles/{userId} {
+      allow read: if isFamily();
+      allow write: if isFamily() && request.auth.uid == userId;
+    }
+  }
+}

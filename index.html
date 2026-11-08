@@ -120,40 +120,41 @@
 
   .account-grid {
     display: grid;
-    gap: 18px;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
 
   .account-btn {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 20px;
-    padding: 30px 26px;
+    justify-content: center;
+    gap: 14px;
+    padding: 30px 12px 26px;
     border-radius: var(--radius);
     border: 1px solid var(--line);
     background: var(--paper);
     cursor: pointer;
-    text-align: left;
+    text-align: center;
     font-family: 'Inter', sans-serif;
-    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+    transition: transform .12s ease, box-shadow .12s ease;
     box-shadow: 0 4px 16px rgba(38,35,25,0.06);
   }
-  .account-btn:active { transform: scale(0.98); }
+  .account-btn:active { transform: scale(0.97); }
 
   .account-avatar {
-    width: 66px;
-    height: 66px;
+    width: 88px;
+    height: 88px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'Fraunces', serif;
     font-weight: 600;
-    font-size: 26px;
+    font-size: 34px;
     color: white;
     flex-shrink: 0;
   }
-  .avatar-claudia { background: var(--gold-dark); }
-  .avatar-tristan { background: var(--garten); }
 
   .account-avatar-wrap { position: relative; flex-shrink: 0; }
   .avatar-edit-btn {
@@ -176,7 +177,7 @@
   .account-name {
     font-family: 'Fraunces', serif;
     font-weight: 600;
-    font-size: 23px;
+    font-size: 21px;
   }
   .account-hint {
     font-size: 14px;
@@ -647,9 +648,54 @@
   }
   .bar-fill.allgemein { background: var(--allgemein); }
   .bar-fill.garten { background: var(--garten); }
-  .bar-value { width: 44px; text-align: right; font-weight: 600; flex-shrink: 0; }
+  .bar-value { min-width: 44px; white-space: nowrap; text-align: right; font-weight: 600; flex-shrink: 0; }
 
-  #avatarFileInput { display: none; }
+  #avatarFileInput, #backupFileInput { display: none; }
+
+  /* ---------- Login form (Cloud-Modus) ---------- */
+  body.cloud-mode .local-only { display: none !important; }
+
+  .login-form {
+    display: grid;
+    gap: 12px;
+    text-align: left;
+  }
+  .login-form input {
+    width: 100%;
+    padding: 18px 16px;
+    font-size: 17px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+  }
+  .login-form input:focus { outline: none; border-color: var(--gold); }
+  .login-form .save-btn { margin-top: 4px; padding: 20px; font-size: 17px; }
+  .login-back {
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    font-size: 14px;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    padding: 10px;
+  }
+  .login-who {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 22px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .login-error {
+    min-height: 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--danger);
+    text-align: center;
+  }
 </style>
 </head>
 <body class="login-bg">
@@ -659,39 +705,62 @@
   <!-- Account selection screen -->
   <div id="accountScreen" class="account-screen">
     <h1>Ecker's Family</h1>
-    <p>Wer erfasst gerade Arbeitszeit?</p>
-    <div class="account-grid">
-      <div class="account-btn" role="button" tabindex="0" onclick="selectAccount('Claudia')" onkeydown="if(event.key==='Enter'||event.key===' '){selectAccount('Claudia')}">
-        <div class="account-avatar-wrap">
-          <div class="account-avatar avatar-claudia" id="avatarClaudia">C</div>
-          <button class="avatar-edit-btn" onclick="openAvatarPicker('Claudia', event)" title="Profilbild ändern">✎</button>
-        </div>
-        <div>
-          <div class="account-name">Claudia</div>
-          <div class="account-hint">Konto öffnen</div>
-        </div>
-      </div>
-      <div class="account-btn" role="button" tabindex="0" onclick="selectAccount('Tristan')" onkeydown="if(event.key==='Enter'||event.key===' '){selectAccount('Tristan')}">
-        <div class="account-avatar-wrap">
-          <div class="account-avatar avatar-tristan" id="avatarTristan">T</div>
-          <button class="avatar-edit-btn" onclick="openAvatarPicker('Tristan', event)" title="Profilbild ändern">✎</button>
-        </div>
-        <div>
-          <div class="account-name">Tristan</div>
-          <div class="account-hint">Konto öffnen</div>
-        </div>
-      </div>
-    </div>
-    <button class="overview-link" onclick="openSummary()">Zusammenfassung beider Konten ansehen</button>
+    <p id="loginSubtitle">Wer bist du?</p>
 
-    <div class="backup-row">
+    <form id="loginForm" class="login-form hidden" onsubmit="return doLogin(event)">
+      <div class="login-who" id="loginWho"></div>
+      <input type="hidden" id="loginUser" autocomplete="username">
+      <input type="password" id="loginPassword" placeholder="Passwort" autocomplete="current-password" required>
+      <button type="submit" class="save-btn" id="loginBtn">Anmelden</button>
+      <div class="login-error" id="loginError"></div>
+      <button type="button" class="login-back" onclick="backToTiles()">← Andere Person wählen</button>
+    </form>
+
+    <div class="account-grid" id="accountGrid"></div>
+    <button class="overview-link local-only" onclick="openSummary()">Zusammenfassung beider Konten ansehen</button>
+
+    <div class="backup-row local-only">
       <button class="backup-btn" onclick="exportBackup()">📤 Backup exportieren</button>
       <button class="backup-btn" onclick="openImportPicker()">📥 Backup importieren</button>
     </div>
-    <div class="backup-hint">Exportiert alle Daten als Datei — diese kannst du z. B. in OneDrive ablegen und später wieder importieren.</div>
+    <div class="backup-hint local-only">Exportiert alle Daten als Datei — diese kannst du z. B. in OneDrive ablegen und später wieder importieren.</div>
+  </div>
 
-    <input type="file" id="avatarFileInput" accept="image/*" onchange="handleAvatarFile(event)">
-    <input type="file" id="backupFileInput" accept=".json,application/json" onchange="handleBackupFile(event)">
+  <!-- Persönliche Startansicht (Personen ohne Zeiterfassung) -->
+  <div id="homeScreen" class="hidden">
+    <header>
+      <div class="header-left">
+        <svg class="app-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="24" fill="url(#logoGrad)"/>
+          <circle cx="46" cy="46" r="27" fill="none" stroke="#FFFDF8" stroke-width="6"/>
+          <line x1="46" y1="46" x2="46" y2="28" stroke="#FFFDF8" stroke-width="6" stroke-linecap="round"/>
+          <line x1="46" y1="46" x2="60" y2="52" stroke="#FFFDF8" stroke-width="6" stroke-linecap="round"/>
+          <path d="M66 70 C74 58 88 60 92 68 C84 80 70 80 66 70 Z" fill="#7FAE6E"/>
+        </svg>
+        <div>
+          <h1>Ecker's Family</h1>
+          <div class="sub">Familien-App</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="switch-bar">
+      <div class="switch-user">
+        <div class="switch-avatar-wrap">
+          <div id="homeAvatar" class="switch-avatar"></div>
+          <button class="avatar-edit-btn" onclick="openAvatarPicker(currentUser, event)" title="Profilbild ändern">✎</button>
+        </div>
+        <div class="switch-user-name" id="homeSwitchName"></div>
+      </div>
+      <div>
+        <button class="switch-btn" onclick="logout()">Abmelden</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Hallo <span id="homeName"></span> 👋</div>
+      <div class="sub" style="font-size:14px;">Schön, dass du da bist. Hier kommen bald weitere Funktionen für dich dazu.</div>
+    </div>
   </div>
 
   <!-- Main app -->
@@ -824,6 +893,16 @@
       <div id="entryList"></div>
     </div>
 
+    <!-- Backup -->
+    <div class="card">
+      <div class="card-title">Datensicherung</div>
+      <div class="backup-row" style="margin-top:0;">
+        <button class="backup-btn" onclick="exportBackup()">📤 Backup exportieren</button>
+        <button class="backup-btn" onclick="openImportPicker()">📥 Backup importieren</button>
+      </div>
+      <div class="backup-hint" style="text-align:center;">Die Datei kannst du z. B. in OneDrive ablegen und später wieder importieren.</div>
+    </div>
+
   </div>
 
   <!-- Team summary -->
@@ -847,51 +926,11 @@
       <div class="team-total-value" id="teamTotal">0 Std</div>
     </div>
 
-    <div class="compare-grid">
-      <div class="compare-card">
-        <div class="compare-person">
-          <div class="compare-avatar" id="compareAvatarClaudia" style="background:var(--gold-dark)">C</div>
-          <div class="compare-name">Claudia</div>
-        </div>
-        <div class="compare-total" id="claudiaTotal">0 Std</div>
-        <div class="compare-row">
-          <span class="compare-row-label"><span class="dot allgemein"></span>Allgemein</span>
-          <span id="claudiaAllgemein">0 Std</span>
-        </div>
-        <div class="compare-row">
-          <span class="compare-row-label"><span class="dot garten"></span>Garten</span>
-          <span id="claudiaGarten">0 Std</span>
-        </div>
-      </div>
-      <div class="compare-card">
-        <div class="compare-person">
-          <div class="compare-avatar" id="compareAvatarTristan" style="background:var(--garten)">T</div>
-          <div class="compare-name">Tristan</div>
-        </div>
-        <div class="compare-total" id="tristanTotal">0 Std</div>
-        <div class="compare-row">
-          <span class="compare-row-label"><span class="dot allgemein"></span>Allgemein</span>
-          <span id="tristanAllgemein">0 Std</span>
-        </div>
-        <div class="compare-row">
-          <span class="compare-row-label"><span class="dot garten"></span>Garten</span>
-          <span id="tristanGarten">0 Std</span>
-        </div>
-      </div>
-    </div>
+    <div class="compare-grid" id="compareGrid"></div>
 
     <div class="card">
       <div class="card-title">Verteilung nach Arbeitsart</div>
-      <div class="bar-row">
-        <span class="bar-label">Claudia</span>
-        <div class="bar-track" id="claudiaBar"></div>
-        <span class="bar-value" id="claudiaBarValue">0 Std</span>
-      </div>
-      <div class="bar-row">
-        <span class="bar-label">Tristan</span>
-        <div class="bar-track" id="tristanBar"></div>
-        <span class="bar-value" id="tristanBarValue">0 Std</span>
-      </div>
+      <div id="barsList"></div>
     </div>
 
     <div class="card">
@@ -912,9 +951,40 @@
 
 </div>
 
+<input type="file" id="avatarFileInput" accept="image/*" onchange="handleAvatarFile(event)">
+<input type="file" id="backupFileInput" accept=".json,application/json" onchange="handleBackupFile(event)">
+
 <div class="toast" id="toast"></div>
 
+<script src="firebase-config.js"></script>
+<script>window.cloudReady = new Promise((res, rej) => { window.__cloudResolve = res; window.__cloudReject = rej; });</script>
 <script>
+  const APP = window.APP_CONFIG || {};
+  const cloudEnabled = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
+  const ACCOUNTS = APP.accounts || { tristan: 'Tristan', claudia: 'Claudia', lina: 'Lina', florian: 'Florian' };
+  const USERS = Object.values(ACCOUNTS);
+  const TIME_USERS = APP.timeUsers || ['Tristan', 'Claudia'];   // nur diese haben die Zeiterfassung
+  let loginTarget = null;
+  const AV_CACHE = 'ef-avatar-cache';
+  function loadAvatarCache() { try { return JSON.parse(localStorage.getItem(AV_CACHE) || '{}'); } catch (e) { return {}; } }
+  function saveAvatarCache() { try { localStorage.setItem(AV_CACHE, JSON.stringify(avatars)); } catch (e) {} }
+  const EMAIL_DOMAIN = APP.emailDomain || 'ecker-family.example';
+  const FEUERWEHR_USER = 'Tristan';
+  const USER_COLORS = ['var(--garten)', 'var(--gold-dark)', 'var(--allgemein)', '#8A4F7D'];
+  let cloudApi = null;
+
+  function userColor(name) {
+    const i = USERS.indexOf(name);
+    return USER_COLORS[(i < 0 ? 0 : i) % USER_COLORS.length];
+  }
+  function userInitial(name) { return (name || '?')[0].toUpperCase(); }
+  function withTimeout(promise, ms) {
+    return Promise.race([
+      promise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms || 12000))
+    ]);
+  }
+
   const STORAGE_KEY = 'zeiterfassung-entries';
   const AVATAR_KEY = 'zeiterfassung-avatars';
   let currentUser = null;
@@ -927,7 +997,7 @@
   let cameFromMain = false;
 
   function canSeeFeuerwehr() {
-    return currentUser === 'Tristan';
+    return currentUser === FEUERWEHR_USER;
   }
 
   function setLoginBackground(active) {
@@ -990,6 +1060,14 @@
   }
 
   async function loadEntries() {
+    if (cloudEnabled) {
+      try {
+        entries = await withTimeout(cloudApi.listEntries(canSeeFeuerwehr()));
+      } catch (e) {
+        showToast('Daten konnten nicht geladen werden');
+      }
+      return;
+    }
     const val = await storageGet(STORAGE_KEY);
     entries = val ? JSON.parse(val) : [];
   }
@@ -999,12 +1077,47 @@
     if (!ok) showToast('Speichern fehlgeschlagen');
   }
 
+  async function addEntryStore(entry) {
+    if (cloudEnabled) {
+      await withTimeout(cloudApi.addEntry(entry));
+      entries.push(entry);
+      return;
+    }
+    entries.push(entry);
+    await persistEntries();
+  }
+
+  async function deleteEntryStore(id) {
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+    if (cloudEnabled) {
+      await withTimeout(cloudApi.deleteEntry(entry));
+      entries = entries.filter(e => e.id !== id);
+      return;
+    }
+    entries = entries.filter(e => e.id !== id);
+    await persistEntries();
+  }
+
   async function loadAvatars() {
+    if (cloudEnabled) {
+      try { avatars = await withTimeout(cloudApi.listAvatars()); saveAvatarCache(); } catch (e) { /* alte Bilder behalten */ }
+      return;
+    }
     const val = await storageGet(AVATAR_KEY);
     avatars = val ? JSON.parse(val) : {};
   }
 
   async function persistAvatars() {
+    if (cloudEnabled) {
+      try {
+        await withTimeout(cloudApi.saveProfile(currentUser, avatars[currentUser]));
+        saveAvatarCache();
+      } catch (e) {
+        showToast('Profilbild konnte nicht gespeichert werden');
+      }
+      return;
+    }
     const ok = await storageSet(AVATAR_KEY, JSON.stringify(avatars));
     if (!ok) showToast('Profilbild konnte nicht gespeichert werden');
   }
@@ -1049,6 +1162,26 @@
 
       if (!data || !Array.isArray(data.entries)) {
         throw new Error('Ungültiges Format');
+      }
+
+      if (cloudEnabled) {
+        await loadEntries();
+        const existing = new Set(entries.map(e => e.id));
+        const mine = data.entries.filter(e => e && e.id && e.user === currentUser && !existing.has(e.id) &&
+          (e.type !== 'Feuerwehr' || canSeeFeuerwehr()));
+        const skipped = data.entries.filter(e => e && e.user !== currentUser).length;
+        if (mine.length) await withTimeout(cloudApi.addEntries(mine), 60000);
+        if (data.avatars && data.avatars[currentUser]) {
+          avatars[currentUser] = data.avatars[currentUser];
+          await persistAvatars();
+        }
+        await loadEntries();
+        await loadAvatars();
+        applyAvatars();
+        renderList();
+        renderMonthSummary();
+        showToast(`${mine.length} Einträge importiert` + (skipped ? ` (${skipped} von anderen Konten übersprungen)` : ''));
+        return;
       }
 
       await loadEntries();
@@ -1098,18 +1231,35 @@
   }
 
   function applyAvatars() {
-    setAvatarElement(document.getElementById('avatarClaudia'), 'Claudia', 'C', 'var(--gold-dark)');
-    setAvatarElement(document.getElementById('avatarTristan'), 'Tristan', 'T', 'var(--garten)');
-    setAvatarElement(document.getElementById('compareAvatarClaudia'), 'Claudia', 'C', 'var(--gold-dark)');
-    setAvatarElement(document.getElementById('compareAvatarTristan'), 'Tristan', 'T', 'var(--garten)');
+    document.querySelectorAll('[data-avatar]').forEach(el => {
+      const n = el.dataset.avatar;
+      setAvatarElement(el, n, userInitial(n), userColor(n));
+    });
     if (currentUser) {
-      setAvatarElement(
-        document.getElementById('switchAvatar'),
-        currentUser,
-        currentUser[0],
-        currentUser === 'Claudia' ? 'var(--gold-dark)' : 'var(--garten)'
-      );
+      setAvatarElement(document.getElementById('switchAvatar'), currentUser, userInitial(currentUser), userColor(currentUser));
+      setAvatarElement(document.getElementById('homeAvatar'), currentUser, userInitial(currentUser), userColor(currentUser));
     }
+  }
+
+  function renderAccountCards() {
+    const grid = document.getElementById('accountGrid');
+    if (!grid) return;
+    grid.innerHTML = USERS.map(n => `
+      <div class="account-btn" role="button" tabindex="0" data-user="${escapeHtml(n)}">
+        <div class="account-avatar-wrap">
+          <div class="account-avatar" data-avatar="${escapeHtml(n)}"></div>
+          ${cloudEnabled ? '' : `<button class="avatar-edit-btn" data-edit="${escapeHtml(n)}" title="Profilbild ändern">✎</button>`}
+        </div>
+        <div class="account-name">${escapeHtml(n)}</div>
+      </div>`).join('');
+    const open = n => (cloudEnabled ? chooseUser(n) : selectAccount(n));
+    grid.querySelectorAll('.account-btn').forEach(el => {
+      el.addEventListener('click', () => open(el.dataset.user));
+      el.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') open(el.dataset.user); });
+    });
+    grid.querySelectorAll('[data-edit]').forEach(b => {
+      b.addEventListener('click', ev => openAvatarPicker(b.dataset.edit, ev));
+    });
   }
 
   function openAvatarPicker(user, evt) {
@@ -1171,10 +1321,18 @@
     currentUser = name;
     setLoginBackground(false);
     document.getElementById('accountScreen').classList.add('hidden');
-    document.getElementById('mainScreen').classList.remove('hidden');
+    const hasTime = TIME_USERS.includes(name);
+    document.getElementById(hasTime ? 'mainScreen' : 'homeScreen').classList.remove('hidden');
 
     document.getElementById('switchName').textContent = name;
+    document.getElementById('homeSwitchName').textContent = name;
+    document.getElementById('homeName').textContent = name;
+    if (cloudEnabled) {
+      cloudApi.saveProfile(name).catch(() => {});
+      await loadAvatars();
+    }
     applyAvatars();
+    if (!hasTime) return;
 
     document.getElementById('btnFeuerwehr').classList.toggle('hidden', !canSeeFeuerwehr());
     document.getElementById('typeGrid').classList.toggle('three-col', canSeeFeuerwehr());
@@ -1202,8 +1360,15 @@
     document.getElementById('resultValue').classList.remove('err');
     document.getElementById('saveBtn').disabled = true;
     document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
+    if (cloudEnabled) {
+      entries = [];
+      backToTiles();
+      document.getElementById('loginPassword').value = '';
+      cloudApi.logout();
+    }
   }
 
   function selectType(type) {
@@ -1292,8 +1457,12 @@
       note
     };
 
-    entries.push(entry);
-    await persistEntries();
+    try {
+      await addEntryStore(entry);
+    } catch (e) {
+      showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen');
+      return;
+    }
 
     // reset form (keep date)
     selectedType = null;
@@ -1315,8 +1484,12 @@
   }
 
   async function deleteEntry(id) {
-    entries = entries.filter(e => e.id !== id);
-    await persistEntries();
+    try {
+      await deleteEntryStore(id);
+    } catch (e) {
+      showToast('Löschen fehlgeschlagen – bitte Verbindung prüfen');
+      return;
+    }
     renderList();
     renderMonthSummary();
   }
@@ -1382,10 +1555,10 @@
 
   async function openSummary() {
     cameFromMain = !document.getElementById('mainScreen').classList.contains('hidden');
-    if (entries.length === 0 || cameFromMain === false) {
+    if (cloudEnabled || entries.length === 0 || cameFromMain === false) {
       await loadEntries();
     }
-    if (Object.keys(avatars).length === 0) {
+    if (cloudEnabled || Object.keys(avatars).length === 0) {
       await loadAvatars();
     }
     summaryYearMonth = new Date().toISOString().slice(0, 7);
@@ -1427,24 +1600,38 @@
     const label = new Date(y, m - 1, 1).toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
     document.getElementById('summaryMonthLabel').textContent = label;
 
-    const claudia = personTotals('Claudia', summaryYearMonth);
-    const tristan = personTotals('Tristan', summaryYearMonth);
+    const totals = {};
+    TIME_USERS.forEach(u => { totals[u] = personTotals(u, summaryYearMonth); });
+    const teamMin = TIME_USERS.reduce((sum, u) => sum + totals[u].total, 0);
+    document.getElementById('teamTotal').textContent = formatHours(teamMin);
 
-    document.getElementById('teamTotal').textContent = formatHours(claudia.total + tristan.total);
+    document.getElementById('compareGrid').innerHTML = TIME_USERS.map(u => `
+      <div class="compare-card">
+        <div class="compare-person">
+          <div class="compare-avatar" data-avatar="${escapeHtml(u)}"></div>
+          <div class="compare-name">${escapeHtml(u)}</div>
+        </div>
+        <div class="compare-total">${formatHours(totals[u].total)}</div>
+        <div class="compare-row">
+          <span class="compare-row-label"><span class="dot allgemein"></span>Allgemein</span>
+          <span>${formatHours(totals[u].allgemein)}</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-row-label"><span class="dot garten"></span>Garten</span>
+          <span>${formatHours(totals[u].garten)}</span>
+        </div>
+      </div>`).join('');
 
-    document.getElementById('claudiaTotal').textContent = formatHours(claudia.total);
-    document.getElementById('claudiaAllgemein').textContent = formatHours(claudia.allgemein);
-    document.getElementById('claudiaGarten').textContent = formatHours(claudia.garten);
+    document.getElementById('barsList').innerHTML = TIME_USERS.map(u => `
+      <div class="bar-row">
+        <span class="bar-label">${escapeHtml(u)}</span>
+        <div class="bar-track">${barHtml(totals[u])}</div>
+        <span class="bar-value">${formatHours(totals[u].total)}</span>
+      </div>`).join('');
 
-    document.getElementById('tristanTotal').textContent = formatHours(tristan.total);
-    document.getElementById('tristanAllgemein').textContent = formatHours(tristan.allgemein);
-    document.getElementById('tristanGarten').textContent = formatHours(tristan.garten);
-
-    renderBar('claudiaBar', 'claudiaBarValue', claudia);
-    renderBar('tristanBar', 'tristanBarValue', tristan);
-
+    applyAvatars();
     renderSummaryList(summaryYearMonth);
-    renderFeuerwehrSummary(summaryYearMonth, tristan.feuerwehr);
+    renderFeuerwehrSummary(summaryYearMonth, personTotals(FEUERWEHR_USER, summaryYearMonth).feuerwehr);
   }
 
   function renderFeuerwehrSummary(ym, feuerwehrMin) {
@@ -1458,7 +1645,7 @@
 
     const list = document.getElementById('feuerwehrList');
     const feuerwehrEntries = entries
-      .filter(e => e.user === 'Tristan' && e.type === 'Feuerwehr' && e.date.startsWith(ym))
+      .filter(e => e.user === FEUERWEHR_USER && e.type === 'Feuerwehr' && e.date.startsWith(ym))
       .sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start));
 
     if (feuerwehrEntries.length === 0) {
@@ -1483,21 +1670,12 @@
     `).join('');
   }
 
-  function renderBar(trackId, valueId, totals) {
-    const track = document.getElementById(trackId);
-    const valueEl = document.getElementById(valueId);
-    valueEl.textContent = formatHours(totals.total);
-
-    if (totals.total === 0) {
-      track.innerHTML = '';
-      return;
-    }
+  function barHtml(totals) {
+    if (totals.total === 0) return '';
     const allgemeinPct = (totals.allgemein / totals.total) * 100;
     const gartenPct = (totals.garten / totals.total) * 100;
-    track.innerHTML = `
-      <div class="bar-fill allgemein" style="width:${allgemeinPct}%"></div>
-      <div class="bar-fill garten" style="width:${gartenPct}%"></div>
-    `;
+    return `<div class="bar-fill allgemein" style="width:${allgemeinPct}%"></div>` +
+           `<div class="bar-fill garten" style="width:${gartenPct}%"></div>`;
   }
 
   function renderSummaryList(ym) {
@@ -1528,8 +1706,169 @@
     `).join('');
   }
 
-  // Initial: gespeicherte Profilbilder laden und anzeigen
-  loadAvatars().then(applyAvatars);
+  // ---------- Login (Cloud-Modus) ----------
+
+  function showLoginForm() {
+    // Startseite: vier Kacheln, Passwortfeld erst nach Auswahl
+    document.getElementById('accountScreen').classList.remove('hidden');
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('homeScreen').classList.add('hidden');
+    document.getElementById('summaryScreen').classList.add('hidden');
+    setLoginBackground(true);
+    if (!loginTarget) backToTiles();
+  }
+
+  function chooseUser(name) {
+    loginTarget = name;
+    const key = Object.keys(ACCOUNTS).find(k => ACCOUNTS[k] === name) || name.toLowerCase();
+    document.getElementById('loginUser').value = key;
+    document.getElementById('loginWho').textContent = name;
+    document.getElementById('loginSubtitle').textContent = 'Bitte gib dein Passwort ein.';
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('accountGrid').classList.add('hidden');
+    document.getElementById('loginForm').classList.remove('hidden');
+    setTimeout(() => document.getElementById('loginPassword').focus(), 50);
+  }
+
+  function backToTiles() {
+    loginTarget = null;
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('loginSubtitle').textContent = 'Wer bist du?';
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('accountGrid').classList.remove('hidden');
+  }
+
+  function loginErrorText(e) {
+    const c = (e && e.code) || '';
+    if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-email'].includes(c)) {
+      return 'Benutzername oder Passwort falsch.';
+    }
+    if (c === 'auth/too-many-requests') return 'Zu viele Versuche. Bitte kurz warten.';
+    if (c === 'auth/network-request-failed') return 'Keine Verbindung.';
+    return 'Anmeldung fehlgeschlagen.';
+  }
+
+  async function doLogin(ev) {
+    ev.preventDefault();
+    const raw = document.getElementById('loginUser').value.trim().toLowerCase();
+    const pw = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+    errEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Anmelden …';
+    const email = raw.includes('@') ? raw : `${raw}@${EMAIL_DOMAIN}`;
+    try {
+      await cloudApi.login(email, pw);
+    } catch (e) {
+      errEl.textContent = loginErrorText(e);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Anmelden';
+    return false;
+  }
+
+  async function initCloud() {
+    document.body.classList.add('cloud-mode');
+    const sub = document.getElementById('loginSubtitle');
+    sub.textContent = 'Wird geladen …';
+    document.getElementById('accountGrid').classList.add('hidden');
+    try {
+      cloudApi = await withTimeout(window.cloudReady, 15000);
+    } catch (e) {
+      sub.textContent = 'Keine Verbindung. Bitte Seite neu laden.';
+      return;
+    }
+    cloudApi.onAuth(async user => {
+      if (!user) {
+        showLoginForm();
+        return;
+      }
+      const uname = (user.email || '').split('@')[0].toLowerCase();
+      const name = ACCOUNTS[uname];
+      if (!name) {
+        await cloudApi.logout();
+        showLoginForm();
+        document.getElementById('loginSubtitle').textContent = 'Dieses Konto ist nicht freigegeben.';
+        return;
+      }
+      await selectAccount(name);
+    });
+  }
+
+  renderAccountCards();
+  if (cloudEnabled) {
+    avatars = loadAvatarCache();
+    applyAvatars();
+    initCloud();
+  } else {
+    // Lokaler Modus: gespeicherte Profilbilder laden und anzeigen
+    loadAvatars().then(applyAvatars);
+  }
+</script>
+
+<script type="module">
+  // Firebase wird nur geladen, wenn in firebase-config.js eine Konfiguration eingetragen ist.
+  if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
+    try {
+      const V = '10.12.2';
+      const base = `https://www.gstatic.com/firebasejs/${V}/`;
+      const [{ initializeApp }, A, F] = await Promise.all([
+        import(base + 'firebase-app.js'),
+        import(base + 'firebase-auth.js'),
+        import(base + 'firebase-firestore.js')
+      ]);
+
+      const app = initializeApp(window.FIREBASE_CONFIG);
+      const auth = A.getAuth(app);
+      const db = F.getFirestore(app);
+      const colFor = type => (type === 'Feuerwehr' ? 'feuerwehr' : 'entries');
+      const uid = () => auth.currentUser.uid;
+
+      window.__cloudResolve({
+        onAuth: cb => A.onAuthStateChanged(auth, cb),
+        login: (email, pw) => A.signInWithEmailAndPassword(auth, email, pw),
+        logout: () => A.signOut(auth),
+
+        addEntry: e => F.setDoc(F.doc(db, colFor(e.type), e.id), { ...e, uid: uid() }),
+
+        addEntries: async list => {
+          for (let i = 0; i < list.length; i += 400) {
+            const batch = F.writeBatch(db);
+            list.slice(i, i + 400).forEach(e => {
+              batch.set(F.doc(db, colFor(e.type), e.id), { ...e, uid: uid() });
+            });
+            await batch.commit();
+          }
+        },
+
+        deleteEntry: e => F.deleteDoc(F.doc(db, colFor(e.type), e.id)),
+
+        listEntries: async withFeuerwehr => {
+          const jobs = [F.getDocs(F.collection(db, 'entries'))];
+          if (withFeuerwehr) jobs.push(F.getDocs(F.collection(db, 'feuerwehr')));
+          const snaps = await Promise.all(jobs);
+          return snaps.flatMap(sn => sn.docs.map(d => d.data()));
+        },
+
+        saveProfile: (name, avatar) => {
+          const data = { name };
+          if (avatar) data.avatar = avatar;
+          return F.setDoc(F.doc(db, 'profiles', uid()), data, { merge: true });
+        },
+
+        listAvatars: async () => {
+          const sn = await F.getDocs(F.collection(db, 'profiles'));
+          const out = {};
+          sn.forEach(d => { const v = d.data(); if (v.name && v.avatar) out[v.name] = v.avatar; });
+          return out;
+        }
+      });
+    } catch (err) {
+      window.__cloudReject(err);
+    }
+  }
 </script>
 
 </body>
