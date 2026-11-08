@@ -5,10 +5,10 @@
 //    im lokalen Modus ohne Login (Daten nur auf dem jeweiligen Gerät).
 //    Diese Werte sind keine Geheimnisse – der Schutz kommt von den Datenbankregeln.
 window.FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  appId: ""
+  apiKey: "AIzaSyAEUivDH4qAa07UQFHzJZVFTlFtovIdDNc",
+  authDomain: "ecker-s-family-app.firebaseapp.com",
+  projectId: "ecker-s-family-app",
+  appId: "1:607539029616:web:407caafd1384e25d35b6b5"
 };
 
 // 2) Benutzer. Der Schlüssel (links) ist der Benutzername im Firebase-Konto,
