@@ -136,12 +136,37 @@
   .rew-name { font-weight: 600; }
   .rew-bar { height: 6px; background: #eee6d3; border-radius: 99px; margin-top: 6px; overflow: hidden; }
   .rew-bar > i { display: block; height: 100%; background: #E5A823; border-radius: 99px; }
-  .meal-day { display: grid; grid-template-columns: 62px 1fr; gap: 6px 10px; align-items: center; }
-  .meal-day .dn { font-weight: 700; font-family: 'Fraunces', Georgia, serif; }
-  .meal-day .dd { font-size: 12px; color: var(--ink-soft); font-weight: 400; }
-  .meal-day input { width: 100%; }
-  .meal-lbl { font-size: 12px; color: var(--ink-soft); }
-  .meal-today { border-color: #D9693B !important; box-shadow: 0 0 0 2px rgba(217,105,59,.18); }
+  .wk-nav { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .wk-nav .wk-arrow { width:42px; height:42px; border-radius:50%; border:1px solid var(--line); background:var(--paper); font-size:22px; line-height:1; color:var(--ink); cursor:pointer; flex:none; }
+  .wk-nav .wk-arrow:active { transform:scale(.94); }
+  .wk-nav .wk-mid { flex:1; text-align:center; }
+  .wk-nav .wk-title { font-family:'Fraunces', Georgia, serif; font-weight:700; font-size:18px; }
+  .wk-nav .wk-range { font-size:12px; color:var(--ink-soft); }
+  .wk-nav .wk-now { border:1px solid #D9693B; color:#D9693B; background:transparent; border-radius:999px; padding:6px 12px; font-size:13px; font-weight:600; cursor:pointer; flex:none; }
+  .meal-hero { background:linear-gradient(135deg,#D9693B,#E8924F); color:#fff; border-radius:var(--radius); padding:16px 18px; margin-bottom:14px; box-shadow:0 6px 18px rgba(217,105,59,.28); }
+  .meal-hero .hh { font-size:12px; letter-spacing:.06em; text-transform:uppercase; opacity:.85; }
+  .meal-hero .hr { display:flex; gap:12px; margin-top:8px; }
+  .meal-hero .hc { flex:1; background:rgba(255,255,255,.18); border-radius:12px; padding:10px 12px; min-width:0; }
+  .meal-hero .hl { font-size:12px; opacity:.85; }
+  .meal-hero .hm { font-family:'Fraunces', Georgia, serif; font-size:17px; font-weight:700; margin-top:2px; overflow-wrap:anywhere; }
+  .meal-hero .hm.none { opacity:.6; font-weight:400; font-style:italic; }
+  .meal-card { background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:12px; margin-bottom:10px; }
+  .meal-card.meal-today { border-color:#D9693B; box-shadow:0 0 0 2px rgba(217,105,59,.18); }
+  .meal-card.meal-past { opacity:.55; }
+  .meal-head { display:flex; align-items:baseline; gap:8px; margin:0 2px 8px; }
+  .meal-head .dn { font-family:'Fraunces', Georgia, serif; font-weight:700; font-size:16px; }
+  .meal-head .dd { font-size:12px; color:var(--ink-soft); }
+  .meal-head .tg { margin-left:auto; font-size:11px; font-weight:700; color:#fff; background:#D9693B; border-radius:999px; padding:2px 9px; }
+  .meal-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .meal-tile { background:var(--bg); border:1px solid transparent; border-radius:12px; padding:8px 10px; min-width:0; transition:border-color .2s, background .2s; }
+  .meal-tile .ml { font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:4px; }
+  .meal-tile .mv { font-size:15px; margin-top:3px; min-height:22px; overflow-wrap:anywhere; }
+  .meal-tile .mv.none { color:var(--ink-soft); opacity:.6; }
+  .meal-tile input { width:100%; border:0; background:transparent; padding:3px 0 2px; margin:0; font:inherit; font-size:15px; color:var(--ink); outline:none; min-height:24px; box-shadow:none; }
+  .meal-tile input::-webkit-calendar-picker-indicator { display:none !important; }
+  .meal-tile.editable { border-color:var(--line); background:#fff; }
+  .meal-tile.editable:focus-within { border-color:#D9693B; box-shadow:0 0 0 2px rgba(217,105,59,.15); }
+  .meal-tile.saved { border-color:#3D8B4F !important; background:#EAF5EC; }
   .navbar { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 14px; padding: 2px 0 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .navbar::-webkit-scrollbar { display: none; }
   #spesenScreen .back-btn, #planScreen .back-btn, #todoScreen .back-btn, #hauswartScreen .back-btn { display: none; }
@@ -1150,12 +1175,15 @@
       </div>
     </div>
     <div class="navbar" data-nav="essen"></div>
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <button class="switch-btn" onclick="essenShift(-1)">‹</button>
-      <div style="text-align:center;font-weight:700;" id="essenWeekLabel"></div>
-      <button class="switch-btn" onclick="essenShift(1)">›</button>
+    <div class="wk-nav">
+      <button class="wk-arrow" onclick="essenShift(-1)" aria-label="Vorwoche">‹</button>
+      <div class="wk-mid"><div class="wk-title" id="essenWeekLabel"></div><div class="wk-range" id="essenWeekRange"></div></div>
+      <button class="wk-now hidden" id="essenNow" onclick="essenToday()">Heute</button>
+      <button class="wk-arrow" onclick="essenShift(1)" aria-label="Nächste Woche">›</button>
     </div>
+    <div id="essenHint" class="sub" style="margin:-4px 2px 12px;display:none;">Tippe auf ein Feld, um ein Essen einzutragen. Es wird automatisch gespeichert.</div>
     <div id="essenBody"></div>
+    <datalist id="essenSuggest"></datalist>
   </div>
 
   <!-- Stundenplan -->
@@ -2611,6 +2639,7 @@
   const isoDate = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   function isoWeek(d) { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y0) / 86400000 + 1) / 7); }
 
+  let essenSeen = new Set();
   async function openEssen() {
     if (!currentUser) return;
     hideAllScreens(); refreshNavs();
@@ -2620,30 +2649,48 @@
     await renderEssen();
   }
   async function essenShift(delta) { essenMonday.setDate(essenMonday.getDate() + 7 * delta); await renderEssen(); }
+  async function essenToday() { essenMonday = mondayOf(new Date()); await renderEssen(); window.scrollTo(0, 0); }
 
   async function renderEssen() {
     const id = isoDate(essenMonday), sun = new Date(essenMonday); sun.setDate(sun.getDate() + 6);
     const fmt = d => d.getDate() + '. ' + d.toLocaleDateString('de-CH', { month: 'short' });
-    document.getElementById('essenWeekLabel').textContent = 'KW ' + isoWeek(essenMonday) + ' · ' + fmt(essenMonday) + ' – ' + fmt(sun);
+    document.getElementById('essenWeekLabel').textContent = 'Woche ' + isoWeek(essenMonday);
+    document.getElementById('essenWeekRange').textContent = fmt(essenMonday) + ' – ' + fmt(sun);
+    const isThisWeek = id === isoDate(mondayOf(new Date()));
+    document.getElementById('essenNow').classList.toggle('hidden', isThisWeek);
     try { const d = await kvGet('meals', id); essenData = (d && d.days) || {}; } catch (e) { essenData = {}; showToast('Plan konnte nicht geladen werden'); }
-    const edit = canAssignTodos(), today = isoDate(new Date());
-    document.getElementById('essenBody').innerHTML = DAYS.map(([k, name], i) => {
+    Object.values(essenData).forEach(v => { if (v) { if (v.m) essenSeen.add(v.m); if (v.a) essenSeen.add(v.a); } });
+    const edit = canAssignTodos(), todayD = new Date(), today = isoDate(todayD);
+    document.getElementById('essenHint').style.display = edit ? '' : 'none';
+    document.getElementById('essenSuggest').innerHTML = [...essenSeen].slice(-60).map(x => `<option value="${escapeHtml(x)}">`).join('');
+    const tile = (k, f, icon, label, v) => edit
+      ? `<label class="meal-tile editable"><div class="ml">${icon} ${label}</div><input type="text" list="essenSuggest" value="${escapeHtml(v[f] || '')}" maxlength="80" placeholder="Eintragen …" enterkeyhint="done" onchange="saveMeal('${k}','${f}',this.value,this)"></label>`
+      : `<div class="meal-tile"><div class="ml">${icon} ${label}</div><div class="mv ${v[f] ? '' : 'none'}">${v[f] ? escapeHtml(v[f]) : 'Noch offen'}</div></div>`;
+    let hero = '';
+    if (isThisWeek) {
+      const tk = DAYS[(todayD.getDay() + 6) % 7][0], tv = essenData[tk] || {};
+      const hc = (icon, label, val) => `<div class="hc"><div class="hl">${icon} ${label}</div><div class="hm ${val ? '' : 'none'}">${val ? escapeHtml(val) : 'Noch offen'}</div></div>`;
+      hero = `<div class="meal-hero"><div class="hh">Heute auf dem Tisch</div><div class="hr">${hc('☀️', 'Mittag', tv.m)}${hc('🌙', 'Abend', tv.a)}</div></div>`;
+    }
+    document.getElementById('essenBody').innerHTML = hero + DAYS.map(([k, name], i) => {
       const dd = new Date(essenMonday); dd.setDate(dd.getDate() + i);
-      const v = essenData[k] || {};
-      const cell = (f, label) => edit
-        ? `<div class="meal-lbl">${label}</div><input type="text" value="${escapeHtml(v[f] || '')}" maxlength="80" placeholder="–" onchange="saveMeal('${k}','${f}',this.value)">`
-        : `<div class="meal-lbl">${label}</div><div>${escapeHtml(v[f] || '–')}</div>`;
-      return `<div class="card ${isoDate(dd) === today ? 'meal-today' : ''}" style="padding:12px 16px;"><div class="meal-day">
-        <div class="dn">${name.slice(0, 2)}<div class="dd">${dd.getDate()}.${dd.getMonth() + 1}.</div></div>
-        <div style="display:grid;grid-template-columns:50px 1fr;gap:6px 8px;align-items:center;">${cell('m', 'Mittag')}${cell('a', 'Abend')}</div></div></div>`;
+      const v = essenData[k] || {}, iso = isoDate(dd);
+      return `<div class="meal-card ${iso === today ? 'meal-today' : iso < today ? 'meal-past' : ''}"><div class="meal-head"><span class="dn">${name}</span><span class="dd">${dd.getDate()}.${dd.getMonth() + 1}.</span>${iso === today ? '<span class="tg">Heute</span>' : ''}</div>
+        <div class="meal-row">${tile(k, 'm', '☀️', 'Mittag', v)}${tile(k, 'a', '🌙', 'Abend', v)}</div></div>`;
     }).join('');
   }
 
-  async function saveMeal(day, field, value) {
+  async function saveMeal(day, field, value, el) {
     const id = isoDate(essenMonday);
     essenData[day] = { ...(essenData[day] || {}), [field]: value.trim() };
-    try { await kvMerge('meals', id, { days: { [day]: essenData[day] } }); showToast('Gespeichert'); }
-    catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); }
+    if (value.trim()) essenSeen.add(value.trim());
+    try {
+      await kvMerge('meals', id, { days: { [day]: essenData[day] } });
+      showToast('Gespeichert');
+      const t = el && el.closest('.meal-tile');
+      if (t) { t.classList.add('saved'); setTimeout(() => t.classList.remove('saved'), 1200); }
+      if (id === isoDate(mondayOf(new Date()))) { loadEssenSub(); }
+    } catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); }
   }
 
   async function loadEssenSub() {
@@ -4822,7 +4869,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.24';
+  const APP_VERSION = '1.25';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
