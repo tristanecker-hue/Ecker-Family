@@ -970,12 +970,22 @@
           <div id="exportPick"></div>
         </div>
         <label class="set-row">
+          <span>Auch schon verrechnete Belege anzeigen</span>
+          <input type="checkbox" id="exportInclDone" onchange="renderExportPick()" style="width:22px;height:22px;">
+        </label>
+        <label class="set-row">
           <span>Zusätzlich als PDF mit allen Belegen</span>
           <input type="checkbox" id="exportPdf" checked style="width:22px;height:22px;">
         </label>
         <button class="save-btn" id="btnExportGo" onclick="exportSpesen()">Excel erstellen und Belege verrechnen</button>
         <div class="set-note">Die gewählten Belege wandern danach in den Ordner «Belege verrechnet».</div>
       </div>
+    </div>
+    <div class="card">
+      <details id="abrBox">
+        <summary style="cursor:pointer;font-weight:700;">📁 Spesenabrechnung erledigt (<span id="abrCount">0</span>)</summary>
+        <div id="abrList" style="margin-top:8px;"></div>
+      </details>
     </div>
     <div class="card">
       <details id="doneBox">
@@ -2207,8 +2217,10 @@
     document.getElementById('exportPanel').style.display = 'none';
     document.getElementById('stelleAddRow').style.display = 'none';
     await loadSpesen();
+    await loadAbrechnungen();
     renderStellen();
     renderSpesen();
+    renderAbrechnungen();
   }
 
   function renderStellen(selected) {
@@ -2515,7 +2527,7 @@
     const saldoRow = FOOT_START + off, oelRow = 35 + off, nameRow = 43 + off;
     ws.getCell(`F${saldoRow}`).value = { formula: `SUM(F${firstItem}:F${lastItem})`, result: data.items.reduce((s, x) => s + x.amount, 0) };
     ws.mergeCells(`C${oelRow}:D${oelRow}`);
-    ws.getCell(`C${oelRow}`).value = { formula: 'TODAY()', result: new Date() };
+    ws.getCell(`C${oelRow}`).value = data.date ? new Date(data.date) : { formula: 'TODAY()', result: new Date() };
     ws.getCell(`F${oelRow}`).value = Number(data.liter);
     ws.getCell(`F${nameRow}`).value = data.name;
 
@@ -2626,7 +2638,7 @@
     text("Tankgrösse 17'000 Liter", AMT, 10.5, bold);
     y -= 28;
     text('Am:', L, 10);
-    text(new Date().toLocaleDateString('de-CH'), L + 100, 10);
+    text(new Date(data.date || Date.now()).toLocaleDateString('de-CH'), L + 100, 10);
     const lit = Number(data.liter).toLocaleString('de-CH', { maximumFractionDigits: 0 }).replace(/[’']/g, "'");
     text(lit, AMT + 20, 10.5, bold); text('Liter', AMT + 20 + bold.widthOfTextAtSize(lit, 10.5) + 4, 10);
     line(L, RIGHT, y - 4);
@@ -2688,6 +2700,7 @@
     let last = '';
     try { last = localStorage.getItem('ef-oel-last') || ''; } catch (e) {}
     document.getElementById('exportOel').value = last;
+    document.getElementById('exportInclDone').checked = false;
     document.getElementById('exportPanel').style.display = 'block';
     renderExportPick();
     document.getElementById('exportOel').focus();
@@ -2695,15 +2708,47 @@
 
   function renderExportPick() {
     const year = document.getElementById('exportYear').value;
-    const open = spesen.filter(x => !x.verrechnet && x.date.startsWith(year + '-')).sort((a, b) => a.date.localeCompare(b.date));
-    document.getElementById('exportPick').innerHTML = open.length === 0
-      ? '<div class="todo-empty">Keine offenen Belege in diesem Jahr.</div>'
-      : open.map(x => `
+    const incl = document.getElementById('exportInclDone').checked;
+    const list = spesen.filter(x => (incl || !x.verrechnet) && x.date.startsWith(year + '-')).sort((a, b) => a.date.localeCompare(b.date));
+    document.getElementById('exportPick').innerHTML = list.length === 0
+      ? '<div class="todo-empty">Keine Belege in diesem Jahr.</div>'
+      : list.map(x => `
           <label class="set-row">
-            <span style="flex:1;min-width:0;">${escapeHtml(formatDateDisplay(x.date))} · ${escapeHtml(x.stelle || 'Sonstiges')}<br><small>${escapeHtml(x.text || 'Spese')}</small></span>
+            <span style="flex:1;min-width:0;">${escapeHtml(formatDateDisplay(x.date))} · ${escapeHtml(x.stelle || 'Sonstiges')}${x.verrechnet ? ' <small>(schon verrechnet)</small>' : ''}<br><small>${escapeHtml(x.text || 'Spese')}</small></span>
             <span style="margin-right:10px;white-space:nowrap;">${chf(x.amount)}</span>
-            <input type="checkbox" class="pick-spese" value="${x.id}" checked style="width:22px;height:22px;">
+            <input type="checkbox" class="pick-spese" value="${x.id}" ${x.verrechnet ? '' : 'checked'} style="width:22px;height:22px;">
           </label>`).join('');
+  }
+
+  function abrFileBase(ts) {
+    const d = new Date(ts);
+    return d.getFullYear() + '_' + String(d.getMonth() + 1).padStart(2, '0') + '_' + String(d.getDate()).padStart(2, '0') + ' Spesenabrechnung Abwart Narzissenweg 2-6';
+  }
+
+  // Erzeugt Excel und/oder PDF aus einer gespeicherten Abrechnung
+  async function buildAbrechnungFiles(rec, wantXlsx, wantPdf) {
+    const out = {};
+    const person = rec.person;
+    const common = { year: rec.year, items: rec.items, liter: rec.liter, name: person + ' Ecker', date: rec.createdAt };
+    if (wantXlsx) {
+      const [ExcelJS, tplRes] = await Promise.all([loadExcelJs(), fetch('spesen-vorlage.xlsx?v=' + APP_VERSION)]);
+      if (!tplRes.ok) throw new Error('Vorlage');
+      const buf = await buildSpesenWorkbook(ExcelJS, await tplRes.arrayBuffer(), { ...common, signature: person === 'Tristan' });
+      out.xlsx = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    }
+    if (wantPdf) {
+      const PDFLib = await loadPdfLib();
+      const sorted = [...rec.items].sort((a, b) => a.date.localeCompare(b.date));
+      const belege = [];
+      for (const x of sorted) {
+        const bd = await getBelegData(x);
+        if (bd) belege.push({ label: `Beleg ${belege.length + 1}: ${x.date.slice(8, 10)}.${x.date.slice(5, 7)}.${x.date.slice(0, 4)} · ${x.stelle || 'Sonstiges'} · ${x.text || 'Spese'} · ${chf(x.amount)}`.replace(/[^\x20-\xFF]/g, '-'), data: bd.data });
+      }
+      let sig = null;
+      if (person === 'Tristan') { try { sig = new Uint8Array(await (await fetch('unterschrift.png')).arrayBuffer()); } catch (e) {} }
+      out.pdf = new Blob([await buildSpesenPdf(PDFLib, { ...common, signatureBytes: sig, belege })], { type: 'application/pdf' });
+    }
+    return out;
   }
 
   async function exportSpesen() {
@@ -2716,34 +2761,69 @@
     const btn = document.getElementById('btnExportGo');
     btn.disabled = true;
     try {
-      const [ExcelJS, tplRes] = await Promise.all([loadExcelJs(), fetch('spesen-vorlage.xlsx?v=' + APP_VERSION)]);
-      if (!tplRes.ok) throw new Error('Vorlage');
-      const buf = await buildSpesenWorkbook(ExcelJS, await tplRes.arrayBuffer(), {
-        year, items, liter, name: currentUser + ' Ecker', signature: currentUser === 'Tristan'
-      });
+      const wantPdf = document.getElementById('exportPdf').checked;
+      const rec = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        createdAt: Date.now(), year, liter, person: currentUser,
+        total: Math.round(items.reduce((sum, x) => sum + x.amount, 0) * 100) / 100,
+        items: items.map(x => ({ id: x.id, date: x.date, amount: x.amount, text: x.text || '', stelle: x.stelle || '', beleg: x.beleg || null }))
+      };
+      const files = await buildAbrechnungFiles(rec, true, wantPdf);
       try { localStorage.setItem('ef-oel-last', String(liter)); } catch (e) {}
-      const dn = new Date();
-      const fileBase = dn.getFullYear() + '_' + String(dn.getMonth() + 1).padStart(2, '0') + '_' + String(dn.getDate()).padStart(2, '0') + ' Spesenabrechnung Abwart Narzissenweg 2-6';
-      downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fileBase + '.xlsx');
-      if (document.getElementById('exportPdf').checked) {
-        const PDFLib = await loadPdfLib();
-        const sorted = [...items].sort((a, b) => a.date.localeCompare(b.date));
-        const belege = [];
-        for (const x of sorted) {
-          const bd = await getBelegData(x);
-          if (bd) belege.push({ label: `Beleg ${belege.length + 1}: ${x.date.slice(8, 10)}.${x.date.slice(5, 7)}.${x.date.slice(0, 4)} · ${x.stelle || 'Sonstiges'} · ${x.text || 'Spese'} · ${chf(x.amount)}`.replace(/[^\x20-\xFF]/g, '-'), data: bd.data });
-        }
-        let sig = null;
-        if (currentUser === 'Tristan') { try { sig = new Uint8Array(await (await fetch('unterschrift.png')).arrayBuffer()); } catch (e) {} }
-        const pdfBytes = await buildSpesenPdf(PDFLib, { year, items, liter, name: currentUser + ' Ecker', signatureBytes: sig, belege });
-        setTimeout(() => downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), fileBase + '.pdf'), 600);
-      }
-      await setVerrechnet(items.map(x => x.id), true);
-      showToast('Excel erstellt – Belege verrechnet');
+      const base = abrFileBase(rec.createdAt);
+      downloadBlob(files.xlsx, base + '.xlsx');
+      if (files.pdf) setTimeout(() => downloadBlob(files.pdf, base + '.pdf'), 600);
+      // Abrechnung im Ordner «Spesenabrechnung erledigt» ablegen
+      try {
+        if (cloudEnabled) await withTimeout(cloudApi.saveAbrechnung(rec));
+        else { abrechnungen.push(rec); localStorage.setItem('ef-abr-' + userKey(currentUser), JSON.stringify(abrechnungen)); }
+        if (cloudEnabled) abrechnungen.push(rec);
+      } catch (e) { showToast('Abrechnung konnte nicht im Ordner abgelegt werden'); }
+      await setVerrechnet(items.filter(x => !x.verrechnet).map(x => x.id), true);
+      renderAbrechnungen();
+      showToast('Spesen verrechnet – Abrechnung abgelegt');
     } catch (e) {
       showToast('Export fehlgeschlagen – bitte Verbindung prüfen');
     }
     btn.disabled = false;
+  }
+
+  // ---------- Ordner «Spesenabrechnung erledigt» ----------
+
+  let abrechnungen = [];
+
+  async function loadAbrechnungen() {
+    if (cloudEnabled) {
+      try { abrechnungen = await withTimeout(cloudApi.listAbrechnungen()); } catch (e) { abrechnungen = []; }
+    } else {
+      try { abrechnungen = JSON.parse(localStorage.getItem('ef-abr-' + userKey(currentUser)) || '[]'); } catch (e) { abrechnungen = []; }
+    }
+  }
+
+  function renderAbrechnungen() {
+    const list = [...abrechnungen].sort((a, b) => b.createdAt - a.createdAt);
+    document.getElementById('abrCount').textContent = list.length;
+    document.getElementById('abrList').innerHTML = list.length === 0
+      ? '<div class="todo-empty">Noch keine Abrechnung exportiert.</div>'
+      : list.map(r => `
+          <div class="todo-item">
+            <div class="todo-body">
+              <div class="todo-text">${escapeHtml(new Date(r.createdAt).toLocaleDateString('de-CH'))} · ${r.items.length} Beleg${r.items.length === 1 ? '' : 'e'}</div>
+              <div class="todo-meta">${chf(r.total)} · Heizöl ${escapeHtml(String(r.liter))} Liter</div>
+            </div>
+            <button class="switch-btn" onclick="downloadAbrechnung('${r.id}', 'pdf')">PDF</button>
+            <button class="switch-btn" onclick="downloadAbrechnung('${r.id}', 'xlsx')">Excel</button>
+          </div>`).join('');
+  }
+
+  async function downloadAbrechnung(id, kind) {
+    const rec = abrechnungen.find(r => r.id === id);
+    if (!rec) return;
+    try {
+      showToast('Wird erstellt …');
+      const files = await buildAbrechnungFiles(rec, kind === 'xlsx', kind === 'pdf');
+      downloadBlob(files[kind], abrFileBase(rec.createdAt) + '.' + kind);
+    } catch (e) { showToast('Download fehlgeschlagen'); }
   }
 
   // ---------- Stundenplan ----------
@@ -3224,6 +3304,11 @@
         addSpese: x => F.setDoc(F.doc(db, 'spesen', uid(), 'items', x.id), x),
         updateSpese: (id, patch) => F.updateDoc(F.doc(db, 'spesen', uid(), 'items', id), patch),
         deleteSpese: id => F.deleteDoc(F.doc(db, 'spesen', uid(), 'items', id)),
+        listAbrechnungen: async () => {
+          const sn = await F.getDocs(F.collection(db, 'spesen', uid(), 'abrechnungen'));
+          return sn.docs.map(d => d.data());
+        },
+        saveAbrechnung: r => F.setDoc(F.doc(db, 'spesen', uid(), 'abrechnungen', r.id), r),
         getStellen: async () => {
           const d = await F.getDoc(F.doc(db, 'spesen', uid(), 'meta', 'stellen'));
           return d.exists() ? d.data().list : null;
@@ -3265,7 +3350,7 @@
 
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.3';
+  const APP_VERSION = '2.4';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
