@@ -13,7 +13,7 @@ Solange nichts eingetragen ist, läuft die App wie bisher im lokalen Modus.
 2. Bei **Anmeldemethode** auf **E-Mail/Passwort** → aktivieren → **Speichern**.
 
 ## 3. Die vier Benutzer anlegen
-Im Tab **Users** → **Nutzer hinzufügen**. Diese vier Adressen genau so eingeben (sie müssen nicht echt sein), und je ein eigenes Passwort wählen (mind. 6 Zeichen):
+Im Tab **Users** → **Nutzer hinzufügen**. Diese vier Adressen genau so eingeben und je ein eigenes Passwort wählen (mind. 6 Zeichen):
 
 - `tristan@ecker.ch`
 - `claudia@ecker.ch`
@@ -48,4 +48,4 @@ Nach 1–2 Minuten zeigt die Startseite die vier Kacheln mit Passwortabfrage.
 Wer schon Zeiten im lokalen Modus erfasst hat, exportiert dort vorher mit **Backup exportieren** eine Datei. Nach der Anmeldung importiert jede Person ihr eigenes Backup unter **Datensicherung → Backup importieren**. Es werden nur Einträge des eigenen Kontos übernommen.
 
 ## Passwort vergessen
-Die Adressen sind nicht echt, deshalb gibt es keine Reset-Mail. Bei einem vergessenen Passwort löschst du die Person in der Firebase-Konsole unter **Authentication → Users** und legst sie mit derselben Adresse und neuem Passwort wieder an. Ihre Einträge bleiben erhalten.
+In der Firebase-Konsole unter **Authentication → Users** beim Menü der Person (drei Punkte) **Passwort zurücksetzen** wählen. Die Person bekommt dann eine E-Mail an ihre Adresse, sofern das Postfach existiert. Sonst löschst du die Person und legst sie mit derselben Adresse und neuem Passwort wieder an. Ihre Einträge bleiben erhalten.
