@@ -2903,7 +2903,7 @@
 
   // ---------- Google Kalender (nur lesen, pro Person) ----------
   const GOOGLE_CLIENT_ID = '607539029616-bfek2vohk1vajomsj63das384bs05fht.apps.googleusercontent.com';
-  let gcalLines = [], gcalNeedsLogin = false, gcalToken = null, gcalExp = 0, gcalClient = null;
+  let gcalErr = '', gcalLines = [], gcalNeedsLogin = false, gcalToken = null, gcalExp = 0, gcalClient = null;
   const gcalKey = () => 'ef-gcal-' + userKey(currentUser);
   const gcalOn = () => { try { return localStorage.getItem(gcalKey()) === '1'; } catch (e) { return false; } };
   function gcalRender() {
@@ -2929,8 +2929,8 @@
       gcalClient = google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        callback: (r) => { if (r && r.access_token) { gcalToken = r.access_token; gcalExp = Date.now() + (r.expires_in - 60) * 1000; resolve(gcalToken); } else resolve(null); },
-        error_callback: () => resolve(null)
+        callback: (r) => { if (r && r.error) gcalErr = r.error; if (r && r.access_token) { gcalToken = r.access_token; gcalExp = Date.now() + (r.expires_in - 60) * 1000; resolve(gcalToken); } else resolve(null); },
+        error_callback: (e) => { gcalErr = (e && (e.type || e.message)) || 'unbekannt'; resolve(null); }
       });
       gcalClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
       if (!interactive) setTimeout(() => resolve(null), 6000);
@@ -2938,7 +2938,7 @@
   }
   async function gcalConnect() {
     const t = await gcalAuth(true).catch(() => null);
-    if (!t) { showToast('Verbinden fehlgeschlagen'); return; }
+    if (!t) { showToast('Verbinden fehlgeschlagen: ' + (gcalErr || 'keine Antwort')); return; }
     try { localStorage.setItem(gcalKey(), '1'); } catch (e) {}
     gcalRender(); showToast('Kalender verbunden'); gcalLoad();
   }
@@ -5443,7 +5443,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.43';
+  const APP_VERSION = '1.44';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
