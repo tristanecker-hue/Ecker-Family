@@ -113,6 +113,15 @@
   .star-field { position: relative; height: 340px; border-radius: 18px; background: linear-gradient(180deg, #1B2A6B, #3E1F7A); overflow: hidden; touch-action: manipulation; }
   .star-item { position: absolute; font-size: 40px; border: 0; background: none; cursor: pointer; padding: 0; line-height: 1; animation: pop .15s ease-out; }
   @keyframes pop { from { transform: scale(.3); } to { transform: scale(1); } }
+  .snake-canvas { display:block; width:100%; max-width:340px; aspect-ratio:1; margin:0 auto; border-radius:16px; background:#1f3a2a; touch-action:none; }
+  .snake-pad { display:grid; grid-template-columns:repeat(3,64px); gap:8px; justify-content:center; margin:14px auto 4px; }
+  .snake-pad button { height:56px; font-size:22px; border-radius:14px; border:1px solid var(--line); background:#fff; cursor:pointer; touch-action:manipulation; }
+  .simon-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:320px; margin:14px auto; }
+  .simon-pad { aspect-ratio:1; border-radius:22px; border:0; opacity:.45; cursor:pointer; transition:opacity .1s, transform .1s; }
+  .simon-pad.lit { opacity:1; transform:scale(.96); box-shadow:0 0 22px rgba(255,255,255,.7); }
+  .mole-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; max-width:340px; margin:12px auto; }
+  .mole-hole { aspect-ratio:1; border-radius:50%; border:0; background:radial-gradient(circle at 50% 60%,#4b3320 0,#6b4a2e 60%,#8a6a45 100%); font-size:46px; cursor:pointer; touch-action:manipulation; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 6px 10px rgba(0,0,0,.35); }
+  .reflex-box { height:260px; border-radius:20px; display:flex; align-items:center; justify-content:center; text-align:center; font-size:24px; font-weight:800; color:#fff; cursor:pointer; user-select:none; touch-action:manipulation; padding:16px; }
   .ttt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 320px; margin: 12px auto; }
   .ttt-cell { aspect-ratio: 1; font-size: 46px; border-radius: 14px; border: 1px solid var(--line); background: #fff; cursor: pointer; font-family: inherit; }
   .game-msg { text-align: center; font-size: 18px; font-weight: 700; margin: 10px 0; min-height: 26px; }
@@ -2721,7 +2730,11 @@
     { k: 'memory', e: '🃏', n: 'Memory' },
     { k: 'mathe', e: '🧮', n: 'Kopfrechnen' },
     { k: 'sterne', e: '⭐', n: 'Sterne fangen' },
-    { k: 'tictac', e: '❌', n: 'Drei gewinnt' }
+    { k: 'tictac', e: '❌', n: 'Drei gewinnt' },
+    { k: 'snake', e: '🐍', n: 'Schlange' },
+    { k: 'simon', e: '🎵', n: 'Farben merken' },
+    { k: 'mole', e: '🐹', n: 'Maulwurf' },
+    { k: 'reflex', e: '⚡', n: 'Blitzreaktion' }
   ];
 
   function scoresKey() { return 'ef-spiele-' + userKey(currentUser); }
@@ -2755,6 +2768,10 @@
       if (k === 'memory') { const v = ['leicht', 'mittel', 'schwer'].map(l => sc['memory-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.min(...v) + ' Züge' : ''; }
       if (k === 'mathe') { const v = ['leicht', 'mittel', 'schwer'].map(l => sc['mathe-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.max(...v) + ' Punkte' : ''; }
       if (k === 'sterne') return sc.sterne !== undefined ? 'Beste: ' + sc.sterne + ' Punkte' : '';
+      if (k === 'snake') return sc.snake !== undefined ? 'Beste: ' + sc.snake + ' Äpfel' : '';
+      if (k === 'simon') return sc.simon !== undefined ? 'Beste: Runde ' + sc.simon : '';
+      if (k === 'mole') return sc.mole !== undefined ? 'Beste: ' + sc.mole + ' Treffer' : '';
+      if (k === 'reflex') return sc.reflex !== undefined ? 'Beste: ' + sc.reflex + ' ms' : '';
       return sc['tictac-wins'] ? sc['tictac-wins'] + ' Siege' : '';
     };
     const menu = document.getElementById('spieleMenu');
@@ -2782,7 +2799,7 @@
   }
 
   function startGame(kind) {
-    ({ memory: gameMemory, mathe: gameMathe, sterne: gameSterne, tictac: gameTicTac })[kind]();
+    ({ memory: gameMemory, mathe: gameMathe, sterne: gameSterne, tictac: gameTicTac, snake: gameSnake, simon: gameSimon, mole: gameMole, reflex: gameReflex })[kind]();
   }
 
   const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -2954,6 +2971,144 @@
       };
       render();
     });
+  }
+
+  // 5) Schlange
+  function gameSnake() {
+    const body = gameArea('Schlange');
+    body.innerHTML = `<div class="card"><div class="game-msg">Steuere die Schlange 🐍 zu den Äpfeln 🍎. Wische oder nutze die Pfeile. Wände und dein eigener Schwanz sind tabu!</div><div style="text-align:center"><button class="save-btn" id="snGo">Los geht's!</button></div></div>`;
+    document.getElementById('snGo').onclick = () => {
+      body.innerHTML = `<canvas id="snC" class="snake-canvas" width="300" height="300"></canvas><div class="snake-pad"><span></span><button data-d="u">▲</button><span></span><button data-d="l">◀</button><button data-d="d">▼</button><button data-d="r">▶</button></div>`;
+      const cv = document.getElementById('snC'), ctx = cv.getContext('2d'), N = 15, C = 20, info = document.getElementById('gameInfo');
+      let snake = [{ x: 7, y: 7 }, { x: 6, y: 7 }, { x: 5, y: 7 }], dir = { x: 1, y: 0 }, queued = null, score = 0, apple = null, dead = false;
+      const placeApple = () => { do { apple = { x: Math.floor(Math.random() * N), y: Math.floor(Math.random() * N) }; } while (snake.some(q => q.x === apple.x && q.y === apple.y)); };
+      placeApple(); info.textContent = '🍎 0';
+      const draw = () => {
+        ctx.fillStyle = '#1f3a2a'; ctx.fillRect(0, 0, 300, 300);
+        ctx.fillStyle = 'rgba(255,255,255,.04)';
+        for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if ((x + y) % 2) ctx.fillRect(x * C, y * C, C, C);
+        ctx.fillStyle = '#fff'; ctx.font = '17px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🍎', apple.x * C + C / 2, apple.y * C + C / 2 + 1);
+        snake.forEach((q, i) => { ctx.fillStyle = i === 0 ? '#9BE564' : '#6CC24A'; ctx.beginPath(); ctx.roundRect(q.x * C + 1, q.y * C + 1, C - 2, C - 2, 6); ctx.fill(); });
+        const h = snake[0]; ctx.fillStyle = '#1f3a2a'; ctx.fillRect(h.x * C + 5 + dir.x * 3, h.y * C + 6 + dir.y * 3, 3, 3); ctx.fillRect(h.x * C + 12 + dir.x * 3, h.y * C + 6 + dir.y * 3, 3, 3);
+      };
+      const turn = d => {
+        const m = { u: { x: 0, y: -1 }, d: { x: 0, y: 1 }, l: { x: -1, y: 0 }, r: { x: 1, y: 0 } }[d], cur = queued || dir;
+        if (m.x === -cur.x && m.y === -cur.y) return;
+        queued = m;
+      };
+      body.querySelectorAll('.snake-pad button').forEach(b => b.onclick = () => turn(b.dataset.d));
+      const keys = e => { const k = { ArrowUp: 'u', ArrowDown: 'd', ArrowLeft: 'l', ArrowRight: 'r' }[e.key]; if (k) { e.preventDefault(); turn(k); } };
+      document.addEventListener('keydown', keys);
+      let tx = 0, ty = 0;
+      cv.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+      cv.addEventListener('touchend', e => { const t = e.changedTouches[0], dx = t.clientX - tx, dy = t.clientY - ty; if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return; turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'r' : 'l') : (dy > 0 ? 'd' : 'u')); }, { passive: true });
+      gameCleanup = () => { dead = true; document.removeEventListener('keydown', keys); };
+      const over = () => {
+        stopGame();
+        const rec = score > 0 && saveScore('snake', score, true);
+        body.innerHTML = `<div class="card"><div class="game-msg">💥 Aus!<br>${score} Äpfel${rec && score > 0 ? '<br>⭐ Neuer Rekord!' : ''}</div><div style="text-align:center"><button class="switch-btn" onclick="gameSnake()">Nochmal</button></div></div>`;
+      };
+      const tick = () => {
+        if (dead) return;
+        if (queued) { dir = queued; queued = null; }
+        const h = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+        if (h.x < 0 || h.y < 0 || h.x >= N || h.y >= N || snake.some(q => q.x === h.x && q.y === h.y)) { draw(); over(); return; }
+        snake.unshift(h);
+        if (h.x === apple.x && h.y === apple.y) { score++; info.textContent = '🍎 ' + score; placeApple(); } else snake.pop();
+        draw();
+        gameTimer = setTimeout(tick, Math.max(70, 190 - score * 6));
+      };
+      draw(); gameTimer = setTimeout(tick, 400);
+    };
+  }
+
+  // 6) Farben merken (Simon)
+  function gameSimon() {
+    const body = gameArea('Farben merken');
+    const COL = ['#E8564A', '#4A9BE8', '#F2C744', '#4CB86B'];
+    body.innerHTML = `<div class="game-msg" id="simMsg">Schau genau hin …</div><div class="simon-grid">${COL.map((c, i) => `<button class="simon-pad" data-i="${i}" style="background:${c}"></button>`).join('')}</div>`;
+    const pads = [...body.querySelectorAll('.simon-pad')], msg = document.getElementById('simMsg'), info = document.getElementById('gameInfo');
+    const ts = []; const t = (fn, ms) => ts.push(setTimeout(fn, ms));
+    gameCleanup = () => ts.forEach(clearTimeout);
+    let seq = [], pos = 0, busy = true;
+    const flash = (i, ms) => { pads[i].classList.add('lit'); t(() => pads[i].classList.remove('lit'), ms || 350); };
+    const next = () => {
+      seq.push(Math.floor(Math.random() * 4)); busy = true; pos = 0;
+      info.textContent = 'Runde ' + seq.length; msg.textContent = 'Schau genau hin …';
+      seq.forEach((v, k) => t(() => flash(v), 600 + k * Math.max(380, 650 - seq.length * 20)));
+      t(() => { busy = false; msg.textContent = 'Du bist dran!'; }, 600 + seq.length * Math.max(380, 650 - seq.length * 20));
+    };
+    pads.forEach(p => p.onclick = () => {
+      if (busy) return;
+      const i = +p.dataset.i; flash(i, 180);
+      if (i !== seq[pos]) {
+        busy = true;
+        const score = seq.length - 1, rec = score > 0 && saveScore('simon', score, true);
+        t(() => { body.innerHTML = `<div class="card"><div class="game-msg">❌ Falsch!<br>Du hast ${score} Runde${score === 1 ? '' : 'n'} geschafft${rec && score > 0 ? '<br>⭐ Neuer Rekord!' : ''}</div><div style="text-align:center"><button class="switch-btn" onclick="gameSimon()">Nochmal</button></div></div>`; }, 500);
+        return;
+      }
+      pos++;
+      if (pos === seq.length) { busy = true; msg.textContent = '👍 Super!'; t(next, 900); }
+    });
+    t(next, 500);
+  }
+
+  // 7) Maulwurf
+  function gameMole() {
+    const body = gameArea('Maulwurf');
+    body.innerHTML = `<div class="card"><div class="game-msg">Tippe auf die Maulwürfe 🐹, bevor sie verschwinden! 30 Sekunden.</div><div style="text-align:center"><button class="save-btn" id="moGo">Los geht's!</button></div></div>`;
+    document.getElementById('moGo').onclick = () => {
+      body.innerHTML = `<div class="mole-grid">${Array.from({ length: 9 }, (_, i) => `<button class="mole-hole" data-i="${i}"></button>`).join('')}</div>`;
+      const holes = [...body.querySelectorAll('.mole-hole')], info = document.getElementById('gameInfo');
+      let score = 0, left = 30, up = -1, hideT = null, spawnT = null;
+      info.textContent = `⏱ ${left} · 🐹 0`;
+      const hide = () => { if (up >= 0) holes[up].textContent = ''; up = -1; };
+      const show = () => {
+        hide(); clearTimeout(hideT);
+        let i; do { i = Math.floor(Math.random() * 9); } while (i === up);
+        up = i; holes[i].textContent = '🐹';
+        const vis = Math.max(450, 850 - (30 - left) * 12);
+        hideT = setTimeout(hide, vis);
+        spawnT = setTimeout(show, vis + 250);
+      };
+      holes.forEach((h, i) => h.onclick = () => {
+        if (i === up) { score++; info.textContent = `⏱ ${left} · 🐹 ${score}`; hide(); clearTimeout(hideT); clearTimeout(spawnT); spawnT = setTimeout(show, 250); }
+      });
+      gameCleanup = () => { clearTimeout(hideT); clearTimeout(spawnT); };
+      spawnT = setTimeout(show, 400);
+      gameTimer = setInterval(() => {
+        left--; info.textContent = `⏱ ${Math.max(0, left)} · 🐹 ${score}`;
+        if (left <= 0) {
+          stopGame();
+          const rec = score > 0 && saveScore('mole', score, true);
+          body.innerHTML = `<div class="card"><div class="game-msg">🎉 Fertig!<br>${score} Treffer${rec && score > 0 ? '<br>⭐ Neuer Rekord!' : ''}</div><div style="text-align:center"><button class="switch-btn" onclick="gameMole()">Nochmal</button></div></div>`;
+        }
+      }, 1000);
+    };
+  }
+
+  // 8) Blitzreaktion
+  function gameReflex() {
+    const body = gameArea('Blitzreaktion');
+    const ts = []; gameCleanup = () => ts.forEach(clearTimeout);
+    const times = [], info = document.getElementById('gameInfo');
+    const round = () => {
+      info.textContent = `Runde ${times.length + 1}/5`;
+      body.innerHTML = '<div class="reflex-box" id="rfBox" style="background:#D9534F">Warte auf Grün …</div>';
+      const box = document.getElementById('rfBox');
+      let green = false, t0 = 0;
+      const tm = setTimeout(() => { green = true; t0 = performance.now(); box.style.background = '#2FA45B'; box.textContent = 'JETZT TIPPEN!'; }, 1500 + Math.random() * 2500);
+      ts.push(tm);
+      box.onclick = () => {
+        if (!green) { clearTimeout(tm); box.style.background = '#E89B2D'; box.innerHTML = 'Zu früh! 🙈<br><span style="font-size:15px;font-weight:600">Tippe zum Wiederholen</span>'; box.onclick = round; return; }
+        const ms = Math.round(performance.now() - t0); times.push(ms);
+        if (times.length < 5) { box.style.background = '#3E7BD9'; box.innerHTML = `${ms} ms<br><span style="font-size:15px;font-weight:600">Tippe für die nächste Runde</span>`; box.onclick = round; return; }
+        const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length), rec = saveScore('reflex', avg, false);
+        body.innerHTML = `<div class="card"><div class="game-msg">⚡ Durchschnitt: ${avg} ms${rec ? '<br>⭐ Neuer Rekord!' : ''}</div><div style="text-align:center;color:var(--ink-soft);font-size:14px;margin-bottom:10px">${times.join(' · ')} ms</div><div style="text-align:center"><button class="switch-btn" onclick="gameReflex()">Nochmal</button></div></div>`;
+      };
+    };
+    body.innerHTML = `<div class="card"><div class="game-msg">Tippe so schnell wie möglich, sobald das Feld grün wird! 5 Runden.</div><div style="text-align:center"><button class="save-btn" id="rfGo">Los geht's!</button></div></div>`;
+    document.getElementById('rfGo').onclick = round;
   }
 
   // ---------- Zeiterfassung: Monatsabrechnung als PDF ----------
@@ -4869,7 +5024,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.26';
+  const APP_VERSION = '1.27';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
