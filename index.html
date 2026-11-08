@@ -759,7 +759,14 @@
 
     <div class="card">
       <div class="card-title">Hallo <span id="homeName"></span> 👋</div>
-      <div class="sub" style="font-size:14px;">Schön, dass du da bist. Hier kommen bald weitere Funktionen für dich dazu.</div>
+      <div class="sub" id="homeHint" style="font-size:14px;">Schön, dass du da bist. Hier kommen bald weitere Funktionen für dich dazu.</div>
+    </div>
+
+    <div class="account-grid" id="homeTiles">
+      <div class="account-btn hidden" id="tileZeit" role="button" tabindex="0" onclick="openTimeTracking()" onkeydown="if(event.key==='Enter'||event.key===' '){openTimeTracking()}">
+        <div class="account-avatar" style="background:var(--gold-dark);">⏱</div>
+        <div class="account-name">Zeiterfassung</div>
+      </div>
     </div>
   </div>
 
@@ -794,8 +801,9 @@
         <div class="switch-user-name" id="switchName"></div>
       </div>
       <div>
+        <button class="switch-btn" onclick="goHome()">🏠 Startseite</button>
         <button class="switch-btn" onclick="openSummary()">Beide vergleichen</button>
-        <button class="switch-btn" onclick="logout()">Konto wechseln</button>
+        <button class="switch-btn" onclick="logout()">Abmelden</button>
       </div>
     </div>
 
@@ -1321,9 +1329,13 @@
     currentUser = name;
     setLoginBackground(false);
     document.getElementById('accountScreen').classList.add('hidden');
-    const hasTime = TIME_USERS.includes(name);
-    document.getElementById(hasTime ? 'mainScreen' : 'homeScreen').classList.remove('hidden');
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('summaryScreen').classList.add('hidden');
+    document.getElementById('homeScreen').classList.remove('hidden');
 
+    const hasTime = TIME_USERS.includes(name);
+    document.getElementById('tileZeit').classList.toggle('hidden', !hasTime);
+    document.getElementById('homeHint').classList.toggle('hidden', hasTime);
     document.getElementById('switchName').textContent = name;
     document.getElementById('homeSwitchName').textContent = name;
     document.getElementById('homeName').textContent = name;
@@ -1332,16 +1344,29 @@
       await loadAvatars();
     }
     applyAvatars();
-    if (!hasTime) return;
+  }
+
+  async function openTimeTracking() {
+    if (!currentUser || !TIME_USERS.includes(currentUser)) return;
+    document.getElementById('homeScreen').classList.add('hidden');
+    document.getElementById('summaryScreen').classList.add('hidden');
+    document.getElementById('mainScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
 
     document.getElementById('btnFeuerwehr').classList.toggle('hidden', !canSeeFeuerwehr());
     document.getElementById('typeGrid').classList.toggle('three-col', canSeeFeuerwehr());
-
     document.getElementById('dateInput').value = todayISO();
 
     await loadEntries();
     renderList();
     renderMonthSummary();
+  }
+
+  function goHome() {
+    document.getElementById('mainScreen').classList.add('hidden');
+    document.getElementById('summaryScreen').classList.add('hidden');
+    document.getElementById('homeScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
   }
 
   function logout() {
@@ -1361,6 +1386,7 @@
     document.getElementById('saveBtn').disabled = true;
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
+    document.getElementById('summaryScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
     if (cloudEnabled) {
