@@ -5169,7 +5169,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.35';
+  const APP_VERSION = '1.36';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
@@ -5179,6 +5179,37 @@
     } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
   }
+
+  // Automatische Aktualisierung: prüft beim Öffnen, beim Zurückkehren in die App und alle 10 Minuten, ob es eine neuere Version gibt
+  (function () {
+    let busy = false;
+    const num = v => String(v).split('.').map(x => parseInt(x, 10) || 0);
+    const newer = (a, b) => { const x = num(a), y = num(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0; } return false; };
+    function banner(v) {
+      if (document.getElementById('updBanner')) return;
+      const b = document.createElement('button');
+      b.id = 'updBanner'; b.textContent = '🔄 Neue Version ' + v + ' – hier tippen zum Aktualisieren';
+      b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:400;padding:14px 16px;border:0;border-radius:14px;background:#262319;color:#fff;font:600 15px Inter,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);cursor:pointer;';
+      b.onclick = reloadApp;
+      document.body.appendChild(b);
+    }
+    async function check(auto) {
+      if (busy || !navigator.onLine) return;
+      busy = true;
+      try {
+        const r = await fetch(location.pathname + '?chk=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
+        if (!m || !newer(m[1], APP_VERSION)) return;
+        let tried = null; try { tried = sessionStorage.getItem('ef-upd'); } catch (e) {}
+        if (auto && tried !== m[1]) { try { sessionStorage.setItem('ef-upd', m[1]); } catch (e) {} reloadApp(); return; }
+        banner(m[1]);
+      } catch (e) { } finally { busy = false; }
+    }
+    setTimeout(() => check(true), 1500);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(true); });
+    setInterval(() => check(false), 10 * 60 * 1000);
+  })();
 </script>
 </body>
 </html>
