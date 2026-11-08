@@ -25,13 +25,13 @@ service cloud.firestore {
 
     // Freigaben aus den Einstellungen (Dokument settings/app).
     // Fehlt das Dokument noch, gelten die Standardwerte.
+    function hasSettings() {
+      return exists(/databases/$(database)/documents/settings/app);
+    }
     function featureOn(feature, defaults) {
-      return isFamily() && (
-        isTristan() ||
-        (exists(/databases/$(database)/documents/settings/app)
-          ? uname() in get(/databases/$(database)/documents/settings/app).data.get(feature, defaults)
-          : uname() in defaults)
-      );
+      return isFamily() && (isTristan()
+        || (hasSettings() && uname() in get(/databases/$(database)/documents/settings/app).data.get(feature, defaults))
+        || (!hasSettings() && uname() in defaults));
     }
     function isTimeUser() { return featureOn('zeit', ['tristan', 'claudia']); }
     function canTodo()    { return featureOn('todo', ['tristan', 'claudia', 'lina', 'florian']); }
