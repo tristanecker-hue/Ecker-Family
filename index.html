@@ -1416,6 +1416,8 @@
     </div>
     <div class="navbar" data-nav="todo"></div>
 
+    <div id="todoLists"></div>
+
     <div class="card hidden" id="todoAddCard">
       <div class="card-title">Neue Aufgabe</div>
       <div class="field">
@@ -1440,8 +1442,6 @@
       </div>
       <button class="save-btn" onclick="addTodo()">Aufgabe hinzufügen</button>
     </div>
-
-    <div id="todoLists"></div>
   </div>
 
   <!-- Main app -->
@@ -5535,7 +5535,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.52';
+  const APP_VERSION = '1.53';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
