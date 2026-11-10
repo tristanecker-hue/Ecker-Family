@@ -2931,6 +2931,8 @@
   // ---------- Push-Mitteilungen ----------
   const PUSH_VAPID = 'BIWz7jdLRXq-22rRiimP2ur1Az0CAVvfcV7x8RfFTuRYd2_D0izramgEE7PunU1SklugtWCIVfHIp7UMb1PmWmo';
   window.PUSH_VAPID = PUSH_VAPID;
+  // Push-Mitteilungen: auf true setzen, sobald Blaze + Cloud Function eingerichtet sind
+  const PUSH_AKTIV = false;
   const pushKey = () => 'ef-push-' + userKey(currentUser);
   const pushOn = () => { try { return localStorage.getItem(pushKey()) === '1'; } catch (e) { return false; } };
   const pushSupported = () => cloudEnabled && 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
@@ -2939,6 +2941,8 @@
   function pushRender() {
     const n = document.getElementById('pushNote'), b = document.getElementById('pushBtn');
     if (!n) return;
+    document.getElementById('pushCard').classList.toggle('hidden', !PUSH_AKTIV);
+    if (!PUSH_AKTIV) return;
     if (!cloudEnabled) { n.textContent = 'Nur mit Anmeldung verfügbar.'; b.classList.add('hidden'); return; }
     if (isIOS() && !isStandalone()) { n.textContent = 'Auf dem iPhone zuerst die App installieren: in Safari auf Teilen → «Zum Home-Bildschirm», dann von dort öffnen.'; b.classList.add('hidden'); return; }
     if (!pushSupported()) { n.textContent = 'Dieses Gerät unterstützt keine Mitteilungen.'; b.classList.add('hidden'); return; }
@@ -2965,7 +2969,7 @@
   }
   // Adresse des Geräts bei jedem Start auffrischen (Adressen können wechseln)
   function pushRefresh() {
-    if (pushSupported() && pushOn() && Notification.permission === 'granted' && cloudApi) cloudApi.pushEnable(PUSH_VAPID).catch(() => {});
+    if (PUSH_AKTIV && pushSupported() && pushOn() && Notification.permission === 'granted' && cloudApi) cloudApi.pushEnable(PUSH_VAPID).catch(() => {});
   }
 
   // ---------- Google Kalender (nur lesen, pro Person) ----------
@@ -5603,7 +5607,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.54';
+  const APP_VERSION = '1.55';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
