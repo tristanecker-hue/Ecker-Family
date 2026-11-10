@@ -1389,6 +1389,11 @@
       <div class="set-note" style="margin-top:0;">Gilt für dich auf diesem Gerät.</div>
       <div class="theme-list" id="themeList"></div>
     </div>
+    <div class="card" id="pushCard">
+      <div class="card-title">Mitteilungen</div>
+      <div class="set-note" style="margin-top:0;" id="pushNote"></div>
+      <button class="btn" id="pushBtn" onclick="pushToggle()" style="margin-top:8px;"></button>
+    </div>
     <div class="card" id="gcalCard">
       <div class="card-title">Google Kalender</div>
       <div class="set-note" style="margin-top:0;" id="gcalNote"></div>
@@ -2584,7 +2589,7 @@
     document.getElementById('tilePunkte').classList.toggle('hidden', !hasFeature('punkte'));
     document.getElementById('tileEssen').classList.toggle('hidden', !hasFeature('essen'));
     if (hasFeature('essen')) loadEssenSub();
-    updateHomeInfo();
+    updateHomeInfo(); pushRefresh();
     const hint = document.getElementById('homeHint');
     hint.textContent = '';
     document.getElementById('tilePlanName').textContent = canEditPlan() ? 'Stundenplan Kinder' : 'Stundenplan';
@@ -2626,7 +2631,7 @@
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
-    renderThemes(); gcalRender();
+    renderThemes(); gcalRender(); pushRender();
     if (isAdmin()) renderSettings();
     applyAvatars();
   }
@@ -2921,6 +2926,46 @@
       if (t) { t.classList.add('saved'); setTimeout(() => t.classList.remove('saved'), 1200); }
       if (id === isoDate(mondayOf(new Date()))) { loadEssenSub(); }
     } catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); }
+  }
+
+  // ---------- Push-Mitteilungen ----------
+  const PUSH_VAPID = 'BIWz7jdLRXq-22rRiimP2ur1Az0CAVvfcV7x8RfFTuRYd2_D0izramgEE7PunU1SklugtWCIVfHIp7UMb1PmWmo';
+  window.PUSH_VAPID = PUSH_VAPID;
+  const pushKey = () => 'ef-push-' + userKey(currentUser);
+  const pushOn = () => { try { return localStorage.getItem(pushKey()) === '1'; } catch (e) { return false; } };
+  const pushSupported = () => cloudEnabled && 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+  const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const isStandalone = () => window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  function pushRender() {
+    const n = document.getElementById('pushNote'), b = document.getElementById('pushBtn');
+    if (!n) return;
+    if (!cloudEnabled) { n.textContent = 'Nur mit Anmeldung verfügbar.'; b.classList.add('hidden'); return; }
+    if (isIOS() && !isStandalone()) { n.textContent = 'Auf dem iPhone zuerst die App installieren: in Safari auf Teilen → «Zum Home-Bildschirm», dann von dort öffnen.'; b.classList.add('hidden'); return; }
+    if (!pushSupported()) { n.textContent = 'Dieses Gerät unterstützt keine Mitteilungen.'; b.classList.add('hidden'); return; }
+    b.classList.remove('hidden');
+    const denied = Notification.permission === 'denied';
+    n.textContent = denied ? 'Mitteilungen sind in den Geräte-Einstellungen blockiert.' : pushOn() ? 'Eingeschaltet auf diesem Gerät.' : 'Meldungen bei neuen Aufgaben, Bestätigungen und eingelösten Belohnungen.';
+    b.textContent = pushOn() ? 'Ausschalten' : 'Mitteilungen erlauben';
+    b.disabled = denied;
+  }
+  async function pushToggle() {
+    try {
+      if (pushOn()) {
+        await cloudApi.pushDisable();
+        localStorage.removeItem(pushKey());
+      } else {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') { showToast('Mitteilungen nicht erlaubt'); pushRender(); return; }
+        await cloudApi.pushEnable(PUSH_VAPID);
+        localStorage.setItem(pushKey(), '1');
+        showToast('Mitteilungen eingeschaltet');
+      }
+    } catch (e) { showToast('Fehlgeschlagen: ' + ((e && (e.code || e.message)) || 'unbekannt')); }
+    pushRender();
+  }
+  // Adresse des Geräts bei jedem Start auffrischen (Adressen können wechseln)
+  function pushRefresh() {
+    if (pushSupported() && pushOn() && Notification.permission === 'granted' && cloudApi) cloudApi.pushEnable(PUSH_VAPID).catch(() => {});
   }
 
   // ---------- Google Kalender (nur lesen, pro Person) ----------
@@ -5504,6 +5549,29 @@
           return d.exists() ? d.data() : null;
         },
         kvMerge: (col, id, data) => F.setDoc(F.doc(db, col, id), data, { merge: true }),
+        pushEnable: async (vapidKey) => {
+          const M = await import(base + 'firebase-messaging.js');
+          const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+          await navigator.serviceWorker.ready;
+          const messaging = M.getMessaging(app);
+          const token = await M.getToken(messaging, { vapidKey, serviceWorkerRegistration: reg });
+          if (!token) throw new Error('kein Token');
+          const key = auth.currentUser.email.split('@')[0];
+          await F.setDoc(F.doc(db, 'pushTokens', key), { tokens: F.arrayUnion(token), updatedAt: Date.now() }, { merge: true });
+          M.onMessage(messaging, p => { const d = (p && p.data) || {}; if (window.showToast) window.showToast((d.title || '') + (d.body ? ': ' + d.body : '')); });
+          return token;
+        },
+        pushDisable: async () => {
+          const M = await import(base + 'firebase-messaging.js');
+          const messaging = M.getMessaging(app);
+          const key = auth.currentUser.email.split('@')[0];
+          try {
+            const reg = await navigator.serviceWorker.getRegistration('firebase-cloud-messaging-push-scope') || await navigator.serviceWorker.getRegistration();
+            const token = await M.getToken(messaging, { vapidKey: window.PUSH_VAPID, serviceWorkerRegistration: reg });
+            if (token) await F.setDoc(F.doc(db, 'pushTokens', key), { tokens: F.arrayRemove(token) }, { merge: true });
+          } catch (e) {}
+          try { await M.deleteToken(messaging); } catch (e) {}
+        },
         calList: async (me) => {
           const ref = F.collection(db, 'calendars');
           const sn = await F.getDocs(me ? F.query(ref, F.where('allowed', 'array-contains', me)) : ref);
@@ -5535,12 +5603,12 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.53';
+  const APP_VERSION = '1.54';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
     try {
-      if ('serviceWorker' in navigator) (await navigator.serviceWorker.getRegistrations()).forEach(r => r.unregister());
+      if ('serviceWorker' in navigator) (await navigator.serviceWorker.getRegistrations()).forEach(r => { if (!/firebase-messaging-sw/.test((r.active && r.active.scriptURL) || '')) r.unregister(); });
       if (window.caches) (await caches.keys()).forEach(k => caches.delete(k));
     } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());

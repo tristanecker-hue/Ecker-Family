@@ -8,6 +8,7 @@ window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyAEUivDH4qAa07UQFHzJZVFTlFtovIdDNc",
   authDomain: "ecker-s-family-app.firebaseapp.com",
   projectId: "ecker-s-family-app",
+  messagingSenderId: "607539029616",
   appId: "1:607539029616:web:407caafd1384e25d35b6b5"
 };
 

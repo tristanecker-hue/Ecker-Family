@@ -92,6 +92,11 @@ service cloud.firestore {
       allow write: if canAssign();
     }
 
+    // Push-Adressen: jede Person verwaltet nur ihre eigenen Geräte (versendet wird serverseitig)
+    match /pushTokens/{id} {
+      allow read, write: if isFamily() && uname() == id;
+    }
+
     // Kalender: Tristan schreibt (Sync aus Google), gelesen wird nur, wer im Feld "allowed" steht
     match /calendars/{id} {
       allow read: if isTristan() || (isFamily() && uname() in resource.data.allowed);
