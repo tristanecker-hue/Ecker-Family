@@ -2900,9 +2900,19 @@
   async function essenToday() { essenMonday = mondayOf(new Date()); await renderEssen(); window.scrollTo(0, 0); }
 
   // ---------- Rezepte ----------
-  let recipes = [], recipesLoaded = false;
+  let recipes = [], recipesLoaded = false, recSeeded = [];
+  // Vorlagen, die Eltern mit einem Tipp übernehmen können (einmalig, danach frei bearbeitbar)
+  const SEED_RECIPES = [
+    { id: 'seed-butterzopf', name: 'Butterzopf', portionen: '', zutaten: '1 kg Mehl\n150 g Butter\n1 Würfel Hefe\n1 EL Zucker\n1 EL Salz\n6 dl Milch/Wasser', schritte: 'Backen: 30–40 Min. bei 220 °C', link: '' }
+  ];
   async function loadRecipes() {
-    try { const d = await kvGet('meals', 'recipes'); recipes = (d && d.list) || []; recipesLoaded = true; } catch (e) { recipes = []; }
+    try { const d = await kvGet('meals', 'recipes'); recipes = (d && d.list) || []; recSeeded = (d && d.seeded) || []; recipesLoaded = true; } catch (e) { recipes = []; }
+  }
+  async function recSeed() {
+    const add = SEED_RECIPES.filter(r => !recSeeded.includes(r.id) && !recipes.some(x => x.id === r.id));
+    const list = [...recipes, ...add], seeded = [...new Set([...recSeeded, ...SEED_RECIPES.map(r => r.id)])];
+    try { await kvMerge('meals', 'recipes', { list, seeded }); } catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); return; }
+    recipes = list; recSeeded = seeded; showToast('Rezepte hinzugefügt'); renderRecipes();
   }
   const recFor = name => { const n = String(name || '').trim().toLowerCase(); return n ? recipes.find(r => String(r.name).trim().toLowerCase() === n) : null; };
   const recBtn = name => { const r = recFor(name); return r ? `<button class="rec-link" title="Rezept" onclick="event.preventDefault();event.stopPropagation();openRecipe('${r.id}')">📖</button>` : ''; };
@@ -2926,6 +2936,7 @@
     const list = [...recipes].sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
     el.innerHTML = `<div class="card rec-card">
       <div class="card-title">Rezepte</div>
+      ${edit && SEED_RECIPES.some(r => !recSeeded.includes(r.id) && !recipes.some(x => x.id === r.id)) ? `<div class="set-note" style="margin:0 0 8px;">Vorlage bereit: ${escapeHtml(SEED_RECIPES.filter(r => !recSeeded.includes(r.id)).map(r => r.name).join(', '))}</div><button class="switch-btn" style="margin-bottom:10px;" onclick="recSeed()">Vorlage hinzufügen</button>` : ''}
       ${list.length > 4 ? '<input type="text" id="recSearch" placeholder="Suchen …" oninput="recFilter()" style="width:100%;margin-bottom:6px;">' : ''}
       <div id="recList">${list.map(r => {
         const u = safeUrl(r.link);
@@ -5705,7 +5716,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.56';
+  const APP_VERSION = '1.57';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
