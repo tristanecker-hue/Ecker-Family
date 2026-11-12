@@ -290,6 +290,14 @@
   body.doodle.login-bg { background-color:#fff; background-image:radial-gradient(#e6e0d0 1.3px, transparent 1.4px); background-size:24px 24px; }
   body.doodle input[type="date"], body.doodle input[type="time"] { -webkit-appearance:none; appearance:none; width:100%; min-width:0; max-width:100%; box-sizing:border-box; text-align:left; display:block; }
   body.doodle input[type="date"]::-webkit-date-and-time-value, body.doodle input[type="time"]::-webkit-date-and-time-value { text-align:left; min-height:1.3em; }
+  .seg { display:flex; gap:8px; margin:0 0 12px; }
+  .seg button { flex:1; font-size:16px; padding:10px; border-radius:12px; border:2px solid #cfc7b8; background:#fff; font-family:inherit; font-weight:600; cursor:pointer; color:inherit; }
+  .seg button.on { background:#2b2b2b; border-color:#2b2b2b; color:#fff; }
+  .rec-link { border:none; background:none; cursor:pointer; font-size:15px; padding:0 0 0 6px; }
+  .rec-card details { border-top:1px solid rgba(0,0,0,.12); padding:8px 0; }
+  .rec-card summary { cursor:pointer; font-weight:700; font-size:17px; }
+  .rec-card .rec-txt { white-space:pre-wrap; margin:6px 0 10px; font-size:15px; }
+  .rec-card .rec-h { font-weight:700; margin-top:8px; font-size:14px; opacity:.75; }
   body.doodle button, body.doodle input, body.doodle select, body.doodle textarea { font-family:'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive; }
   body.doodle #hauswartScreen, body.doodle #mainScreen, body.doodle #summaryScreen { --cc:var(--k-zeit); --cb:var(--k-zeit-b); --hl:var(--k-zeit-h); }
   body.doodle #todoScreen { --cc:var(--k-todo); --cb:var(--k-todo-b); --hl:var(--k-todo-h); }
@@ -1338,6 +1346,8 @@
       </div>
     </div>
     <div class="navbar" data-nav="essen"></div>
+    <div class="seg" id="essenTabs"><button class="on" onclick="essenTab('plan')">📅 Wochenplan</button><button onclick="essenTab('rez')">📖 Rezepte</button></div>
+    <div id="essenPlan">
     <div class="wk-nav">
       <button class="wk-arrow" onclick="essenShift(-1)" aria-label="Vorwoche">‹</button>
       <div class="wk-mid"><div class="wk-title" id="essenWeekLabel"></div><div class="wk-range" id="essenWeekRange"></div></div>
@@ -1346,6 +1356,8 @@
     </div>
     <div id="essenHint" class="sub" style="margin:-4px 2px 12px;display:none;">Tippe auf ein Feld, um ein Essen einzutragen. Es wird automatisch gespeichert.</div>
     <div id="essenBody"></div>
+    </div>
+    <div id="essenRez" class="hidden"></div>
     <datalist id="essenSuggest"></datalist>
   </div>
 
@@ -2880,13 +2892,99 @@
     hideAllScreens(); refreshNavs();
     document.getElementById('essenScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
+    essenTab('plan');
     essenMonday = mondayOf(new Date());
     await renderEssen();
   }
   async function essenShift(delta) { essenMonday.setDate(essenMonday.getDate() + 7 * delta); await renderEssen(); }
   async function essenToday() { essenMonday = mondayOf(new Date()); await renderEssen(); window.scrollTo(0, 0); }
 
+  // ---------- Rezepte ----------
+  let recipes = [], recipesLoaded = false;
+  async function loadRecipes() {
+    try { const d = await kvGet('meals', 'recipes'); recipes = (d && d.list) || []; recipesLoaded = true; } catch (e) { recipes = []; }
+  }
+  const recFor = name => { const n = String(name || '').trim().toLowerCase(); return n ? recipes.find(r => String(r.name).trim().toLowerCase() === n) : null; };
+  const recBtn = name => { const r = recFor(name); return r ? `<button class="rec-link" title="Rezept" onclick="event.preventDefault();event.stopPropagation();openRecipe('${r.id}')">📖</button>` : ''; };
+  function essenTab(t) {
+    const rez = t === 'rez';
+    document.getElementById('essenPlan').classList.toggle('hidden', rez);
+    document.getElementById('essenRez').classList.toggle('hidden', !rez);
+    [...document.querySelectorAll('#essenTabs button')].forEach((b, i) => b.classList.toggle('on', (i === 1) === rez));
+    if (rez) renderRecipes();
+  }
+  function openRecipe(id) {
+    essenTab('rez');
+    const d = document.getElementById('rec-' + id);
+    if (d) { d.open = true; d.scrollIntoView({ block: 'center' }); }
+  }
+  function safeUrl(u) { return /^https?:\/\//i.test(String(u || '').trim()) ? String(u).trim() : ''; }
+  async function renderRecipes() {
+    const el = document.getElementById('essenRez');
+    if (!recipesLoaded) { el.innerHTML = '<div class="card"><div class="todo-empty">Wird geladen …</div></div>'; await loadRecipes(); }
+    const edit = canAssignTodos();
+    const list = [...recipes].sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
+    el.innerHTML = `<div class="card rec-card">
+      <div class="card-title">Rezepte</div>
+      ${list.length > 4 ? '<input type="text" id="recSearch" placeholder="Suchen …" oninput="recFilter()" style="width:100%;margin-bottom:6px;">' : ''}
+      <div id="recList">${list.map(r => {
+        const u = safeUrl(r.link);
+        return `<details id="rec-${escapeHtml(r.id)}" data-n="${escapeHtml(String(r.name).toLowerCase())}"><summary>${escapeHtml(r.name)}${r.portionen ? ' <span style="font-weight:400;font-size:13px;opacity:.7;">· ' + escapeHtml(r.portionen) + '</span>' : ''}</summary>
+          ${r.zutaten ? `<div class="rec-h">Zutaten</div><div class="rec-txt">${escapeHtml(r.zutaten)}</div>` : ''}
+          ${r.schritte ? `<div class="rec-h">Zubereitung</div><div class="rec-txt">${escapeHtml(r.schritte)}</div>` : ''}
+          ${u ? `<div class="rec-txt"><a href="${escapeHtml(u)}" target="_blank" rel="noopener">🔗 Quelle</a></div>` : ''}
+          ${edit ? `<div style="display:flex;gap:8px;"><button class="switch-btn" onclick="recEdit('${escapeHtml(r.id)}')">✎ Bearbeiten</button><button class="switch-btn" onclick="recDelete('${escapeHtml(r.id)}')">✕ Löschen</button></div>` : ''}
+        </details>`;
+      }).join('') || '<div class="todo-empty">Noch keine Rezepte.</div>'}</div>
+      ${edit ? '<button class="save-btn" style="margin-top:12px;" onclick="recEdit(null)">+ Neues Rezept</button>' : ''}
+    </div>
+    <div class="card hidden" id="recForm">
+      <div class="card-title" id="recFormTitle">Rezept</div>
+      <input type="hidden" id="recId">
+      <div class="field"><label for="recName">Name (wie im Wochenplan, dann erscheint dort 📖)</label><input type="text" id="recName" maxlength="80"></div>
+      <div class="field"><label for="recPort">Portionen (optional)</label><input type="text" id="recPort" maxlength="30" placeholder="z. B. 4 Personen"></div>
+      <div class="field"><label for="recZut">Zutaten (eine pro Zeile)</label><textarea id="recZut" rows="5" style="width:100%;"></textarea></div>
+      <div class="field"><label for="recSchr">Zubereitung</label><textarea id="recSchr" rows="6" style="width:100%;"></textarea></div>
+      <div class="field"><label for="recLink">Link (optional)</label><input type="text" id="recLink" maxlength="300" placeholder="https://…"></div>
+      <button class="save-btn" onclick="recSave()">Speichern</button>
+      <button class="switch-btn" style="margin-top:8px;width:100%;" onclick="document.getElementById('recForm').classList.add('hidden')">Abbrechen</button>
+    </div>`;
+  }
+  function recFilter() {
+    const q = document.getElementById('recSearch').value.trim().toLowerCase();
+    document.querySelectorAll('#recList details').forEach(d => d.style.display = !q || d.dataset.n.includes(q) ? '' : 'none');
+  }
+  function recEdit(id) {
+    const r = id ? recipes.find(x => x.id === id) : null;
+    document.getElementById('recForm').classList.remove('hidden');
+    document.getElementById('recFormTitle').textContent = r ? 'Rezept bearbeiten' : 'Neues Rezept';
+    document.getElementById('recId').value = r ? r.id : '';
+    document.getElementById('recName').value = r ? r.name : '';
+    document.getElementById('recPort').value = r ? (r.portionen || '') : '';
+    document.getElementById('recZut').value = r ? (r.zutaten || '') : '';
+    document.getElementById('recSchr').value = r ? (r.schritte || '') : '';
+    document.getElementById('recLink').value = r ? (r.link || '') : '';
+    document.getElementById('recForm').scrollIntoView({ block: 'center' });
+  }
+  async function saveRecipes(list) {
+    try { await kvMerge('meals', 'recipes', { list }); } catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); return false; }
+    recipes = list; return true;
+  }
+  async function recSave() {
+    const name = document.getElementById('recName').value.trim();
+    if (!name) { showToast('Bitte einen Namen eingeben'); return; }
+    const id = document.getElementById('recId').value || Date.now().toString(36);
+    const r = { id, name, portionen: document.getElementById('recPort').value.trim(), zutaten: document.getElementById('recZut').value.trim(), schritte: document.getElementById('recSchr').value.trim(), link: document.getElementById('recLink').value.trim() };
+    const list = recipes.some(x => x.id === id) ? recipes.map(x => x.id === id ? r : x) : [...recipes, r];
+    if (await saveRecipes(list)) { showToast('Gespeichert'); await renderRecipes(); const d = document.getElementById('rec-' + id); if (d) d.open = true; }
+  }
+  async function recDelete(id) {
+    if (!window.confirm('Dieses Rezept löschen?')) return;
+    if (await saveRecipes(recipes.filter(x => x.id !== id))) renderRecipes();
+  }
+
   async function renderEssen() {
+    if (!recipesLoaded) await loadRecipes();
     const id = isoDate(essenMonday), sun = new Date(essenMonday); sun.setDate(sun.getDate() + 6);
     const fmt = d => d.getDate() + '. ' + d.toLocaleDateString('de-CH', { month: 'short' });
     document.getElementById('essenWeekLabel').textContent = 'Woche ' + isoWeek(essenMonday);
@@ -2897,14 +2995,14 @@
     Object.values(essenData).forEach(v => { if (v) { if (v.m) essenSeen.add(v.m); if (v.a) essenSeen.add(v.a); } });
     const edit = canAssignTodos(), todayD = new Date(), today = isoDate(todayD);
     document.getElementById('essenHint').style.display = edit ? '' : 'none';
-    document.getElementById('essenSuggest').innerHTML = [...essenSeen].slice(-60).map(x => `<option value="${escapeHtml(x)}">`).join('');
+    document.getElementById('essenSuggest').innerHTML = [...new Set([...recipes.map(r => r.name), ...[...essenSeen].slice(-60)])].map(x => `<option value="${escapeHtml(x)}">`).join('');
     const tile = (k, f, icon, label, v) => edit
-      ? `<label class="meal-tile editable"><div class="ml">${icon} ${label}</div><input type="text" list="essenSuggest" value="${escapeHtml(v[f] || '')}" maxlength="80" placeholder="Eintragen …" enterkeyhint="done" onchange="saveMeal('${k}','${f}',this.value,this)"></label>`
-      : `<div class="meal-tile"><div class="ml">${icon} ${label}</div><div class="mv ${v[f] ? '' : 'none'}">${v[f] ? escapeHtml(v[f]) : 'Noch offen'}</div></div>`;
+      ? `<label class="meal-tile editable"><div class="ml">${icon} ${label}${recBtn(v[f])}</div><input type="text" list="essenSuggest" value="${escapeHtml(v[f] || '')}" maxlength="80" placeholder="Eintragen …" enterkeyhint="done" onchange="saveMeal('${k}','${f}',this.value,this)"></label>`
+      : `<div class="meal-tile"><div class="ml">${icon} ${label}${recBtn(v[f])}</div><div class="mv ${v[f] ? '' : 'none'}">${v[f] ? escapeHtml(v[f]) : 'Noch offen'}</div></div>`;
     let hero = '';
     if (isThisWeek) {
       const tk = DAYS[(todayD.getDay() + 6) % 7][0], tv = essenData[tk] || {};
-      const hc = (icon, label, val) => `<div class="hc"><div class="hl">${icon} ${label}</div><div class="hm ${val ? '' : 'none'}">${val ? escapeHtml(val) : 'Noch offen'}</div></div>`;
+      const hc = (icon, label, val) => `<div class="hc"><div class="hl">${icon} ${label}${recBtn(val)}</div><div class="hm ${val ? '' : 'none'}">${val ? escapeHtml(val) : 'Noch offen'}</div></div>`;
       hero = `<div class="meal-hero"><div class="hh">Heute auf dem Tisch</div><div class="hr">${hc('☀️', 'Mittag', tv.m)}${hc('🌙', 'Abend', tv.a)}</div></div>`;
     }
     document.getElementById('essenBody').innerHTML = hero + DAYS.map(([k, name], i) => {
@@ -5607,7 +5705,7 @@
 </div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.55';
+  const APP_VERSION = '1.56';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
