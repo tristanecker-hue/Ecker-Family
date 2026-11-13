@@ -313,6 +313,14 @@
     #printArea p { font-size:14pt; line-height:1.55; margin:0 0 7pt; }
     #printArea .pr-foot { margin-top:26pt; font-size:10pt; color:#999; border-top:.5pt solid #ddd; padding-top:6pt; }
   }
+  .kal-day { margin-bottom:10px; }
+  .kal-day .kd-h { display:flex; justify-content:space-between; font-weight:700; margin-bottom:6px; }
+  .kal-day.kal-today { outline:3px solid #d9662d; outline-offset:2px; border-radius:18px; }
+  .kal-ev { display:flex; gap:8px; align-items:flex-start; padding:5px 0; border-top:1px dotted rgba(0,0,0,.18); }
+  .kal-ev .dot { flex:0 0 10px; height:10px; border-radius:50%; margin-top:6px; }
+  .kal-ev .tm { flex:0 0 92px; font-size:14px; opacity:.75; }
+  .kal-ev .tt { flex:1; overflow-wrap:anywhere; }
+  .kal-none { opacity:.5; font-size:14px; }
   .seg { display:flex; gap:8px; margin:0 0 12px; }
   .seg button { flex:1; font-size:16px; padding:10px; border-radius:12px; border:2px solid #cfc7b8; background:#fff; font-family:inherit; font-weight:600; cursor:pointer; color:inherit; }
   .seg button.on { background:#2b2b2b; border-color:#2b2b2b; color:#fff; }
@@ -326,6 +334,7 @@
   body.doodle #todoScreen { --cc:var(--k-todo); --cb:var(--k-todo-b); --hl:var(--k-todo-h); }
   body.doodle #spieleScreen { --cc:var(--k-spiele); --cb:var(--k-spiele-b); --hl:var(--k-spiele-h); }
   body.doodle #essenScreen { --cc:var(--k-essen); --cb:var(--k-essen-b); --hl:var(--k-essen-h); }
+  body.doodle #kalenderScreen { --cc:var(--k-plan, var(--k-zeit)); --cb:var(--k-plan-b, var(--k-zeit-b)); --hl:var(--k-plan-h, var(--k-zeit-h)); }
   body.doodle #punkteScreen { --cc:var(--k-punkte); --cb:var(--k-punkte-b); --hl:var(--k-punkte-h); }
   body.doodle #spesenScreen, body.doodle #planScreen { --cc:var(--k-plan); --cb:var(--k-plan-b); --hl:var(--k-plan-h); }
   body.doodle #settingsScreen { --cc:var(--k-zeit); --cb:var(--k-zeit-b); --hl:var(--k-zeit-h); }
@@ -1384,6 +1393,24 @@
     <datalist id="essenSuggest"></datalist>
   </div>
 
+  <!-- Kalender (Wochenübersicht) -->
+  <div id="kalenderScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>Kalender</h1>
+        <div class="sub">Wochenübersicht</div>
+      </div>
+    </div>
+    <div class="wk-nav">
+      <button class="wk-arrow" onclick="kalShift(-1)" aria-label="Vorwoche">‹</button>
+      <div class="wk-mid"><div class="wk-title" id="kalLabel"></div><div class="wk-range" id="kalRange"></div></div>
+      <button class="wk-now hidden" id="kalNow" onclick="kalToday()">Heute</button>
+      <button class="wk-arrow" onclick="kalShift(1)" aria-label="Nächste Woche">›</button>
+    </div>
+    <div id="kalBody"></div>
+  </div>
+
   <!-- Stundenplan -->
   <div id="planScreen" class="hidden">
     <div class="summary-header">
@@ -2080,7 +2107,7 @@
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
@@ -2101,7 +2128,7 @@
     hideAllScreens(); refreshNavs();
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -2119,7 +2146,7 @@
   function goHome() {
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -2147,7 +2174,7 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
@@ -2662,7 +2689,7 @@
 
   function openSettings() {
     if (!currentUser) return;
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
@@ -2709,7 +2736,7 @@
   // ---------- Menüleiste zum Wechseln ----------
 
   function hideAllScreens() {
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'settingsScreen']
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen', 'settingsScreen']
       .forEach(id => document.getElementById(id).classList.add('hidden'));
   }
 
@@ -3296,11 +3323,11 @@
     if (!tok) { gcalNeedsLogin = true; return; }
     const H = { Authorization: 'Bearer ' + tok };
     gcalCals = (await gcalFetchCals()) || gcalCals || [];
-    const a = new Date(); a.setHours(0, 0, 0, 0);
-    const b = new Date(a.getTime() + 15 * 86400000);
+    const a = new Date(); a.setHours(0, 0, 0, 0); a.setDate(a.getDate() - 14);
+    const b = new Date(); b.setHours(0, 0, 0, 0); b.setDate(b.getDate() + 120);
     for (const c of gcalCals) {
       if (!calAllowed(c).length) continue;
-      const u = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(c.id) + '/events?singleEvents=true&orderBy=startTime&maxResults=60&timeMin=' + encodeURIComponent(a.toISOString()) + '&timeMax=' + encodeURIComponent(b.toISOString());
+      const u = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(c.id) + '/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=' + encodeURIComponent(a.toISOString()) + '&timeMax=' + encodeURIComponent(b.toISOString());
       const j = await (await fetch(u, { headers: H })).json();
       if (!j.items) continue;
       const events = j.items.map(e => ({ t: String(e.summary || '(ohne Titel)').slice(0, 80), s: e.start.date || e.start.dateTime, e: e.end.date || e.end.dateTime, a: !!e.start.date }));
@@ -3334,6 +3361,53 @@
     renderHomeInfo();
   }
 
+  // ---------- Kalender-Wochenübersicht ----------
+  let kalMonday = null;
+  async function openKalender() {
+    if (!currentUser) return;
+    hideAllScreens(); refreshNavs();
+    document.getElementById('kalenderScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    kalMonday = mondayOf(new Date());
+    document.getElementById('kalBody').innerHTML = '<div class="card"><div class="todo-empty">Wird geladen …</div></div>';
+    try { await calReadDocs(); } catch (e) {}
+    renderKalender();
+  }
+  function kalShift(d) { kalMonday.setDate(kalMonday.getDate() + 7 * d); renderKalender(); }
+  function kalToday() { kalMonday = mondayOf(new Date()); renderKalender(); }
+  function renderKalender() {
+    const me = calUser(), pad = n => String(n).padStart(2, '0'), hm = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
+    const fmt = d => d.getDate() + '. ' + d.toLocaleDateString('de-CH', { month: 'short' });
+    const sun = new Date(kalMonday); sun.setDate(sun.getDate() + 6);
+    document.getElementById('kalLabel').textContent = 'Woche ' + isoWeek(kalMonday);
+    document.getElementById('kalRange').textContent = fmt(kalMonday) + ' – ' + fmt(sun);
+    document.getElementById('kalNow').classList.toggle('hidden', isoDate(kalMonday) === isoDate(mondayOf(new Date())));
+    const docs = calDocs.filter(d => (d.allowed || []).includes(me));
+    const evs = [];
+    docs.forEach(d => (d.events || []).forEach(e => {
+      const st = e.a ? new Date(e.s + 'T00:00:00') : new Date(e.s), en = e.a ? new Date(e.e + 'T00:00:00') : new Date(e.e);
+      evs.push({ e, st, en, name: d.name, color: d.color || '#888' });
+    }));
+    const todayIso = isoDate(new Date());
+    let html = '';
+    DAYS.forEach(([k, name], i) => {
+      const day = new Date(kalMonday); day.setDate(day.getDate() + i); day.setHours(0, 0, 0, 0);
+      const next = new Date(day.getTime() + 86400000);
+      const list = evs.filter(x => x.st < next && x.en > day).sort((a, b) => (b.e.a - a.e.a) || (a.st - b.st));
+      html += `<div class="card kal-day ${isoDate(day) === todayIso ? 'kal-today' : ''}"><div class="kd-h"><span>${name}</span><span>${day.getDate()}.${day.getMonth() + 1}.</span></div>` +
+        (list.map(x => {
+          let tm;
+          if (x.e.a) tm = 'ganztägig';
+          else if (x.st < day) tm = x.en < next ? 'bis ' + hm(x.en) : 'ganztägig';
+          else tm = hm(x.st) + (x.en < next ? '–' + hm(x.en) : '');
+          return `<div class="kal-ev"><span class="dot" style="background:${escapeHtml(x.color)}"></span><span class="tm">${tm}</span><span class="tt">${escapeHtml(x.e.t)}${docs.length > 1 ? ' <span style="opacity:.55;font-size:12px;">· ' + escapeHtml(x.name) + '</span>' : ''}</span></div>`;
+        }).join('') || '<div class="kal-none">–</div>') + '</div>';
+    });
+    const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+    const outside = sun < new Date(t0.getTime() - 14 * 86400000) || kalMonday > new Date(t0.getTime() + 120 * 86400000);
+    document.getElementById('kalBody').innerHTML = (outside ? '<div class="set-note" style="margin:0 0 10px;">Für diese Woche sind keine Termine gespeichert (ca. 2 Wochen zurück bis 4 Monate voraus).</div>' : '') + html;
+  }
+
   let homeMeal = '', homeTodo = null;
   function updateHomeInfo() { homeMeal = ''; homeTodo = null; renderHomeInfo(); gcalLoad(); if (hasFeature('todo')) updateTodoBadge(); }
   function renderHomeInfo() {
@@ -3341,14 +3415,14 @@
     if (!el) return;
     const r = [];
     if (homeMeal && hasFeature('essen')) r.push(['', '🍽️ ' + homeMeal]);
-    gcalLines.forEach(l => r.push(['', l]));
+    gcalLines.forEach(l => r.push(['cal', l]));
     if (gcalNeedsLogin) r.push(['gcal-link', '📅 Kalender verbinden – hier tippen']);
     if (homeTodo && hasFeature('todo')) {
       if (homeTodo.mine) r.push(['', `✅ ${homeTodo.mine} offene Pendenz${homeTodo.mine > 1 ? 'en' : ''}`]);
       if (homeTodo.late) r.push(['warn', `⚠ ${homeTodo.late} überfällig`]);
       if (homeTodo.confirmN) r.push(['', `⏳ ${homeTodo.confirmN} zu bestätigen`]);
     }
-    el.innerHTML = r.map(x => x[0] === 'gcal-link' ? `<div class="hi" style="cursor:pointer" onclick="gcalConnect()">${escapeHtml(x[1])}</div>` : `<div class="hi ${x[0]}">${escapeHtml(x[1])}</div>`).join('');
+    el.innerHTML = r.map(x => x[0] === 'gcal-link' ? `<div class="hi" style="cursor:pointer" onclick="gcalConnect()">${escapeHtml(x[1])}</div>` : x[0] === 'cal' ? `<div class="hi" style="cursor:pointer" onclick="openKalender()">${escapeHtml(x[1])} <span style="opacity:.5">›</span></div>` : `<div class="hi ${x[0]}">${escapeHtml(x[1])}</div>`).join('');
   }
 
   async function loadEssenSub() {
@@ -5824,7 +5898,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.63';
+  const APP_VERSION = '1.65';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
