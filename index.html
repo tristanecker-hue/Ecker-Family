@@ -2947,7 +2947,7 @@
     document.getElementById('essenPlan').classList.toggle('hidden', rez);
     document.getElementById('essenRez').classList.toggle('hidden', !rez);
     [...document.querySelectorAll('#essenTabs button')].forEach((b, i) => b.classList.toggle('on', (i === 1) === rez));
-    if (rez) renderRecipes();
+    if (rez) { renderRecipes(); loadJsPdf().catch(() => {}); }
   }
   function openRecipe(id) {
     essenTab('rez');
@@ -2988,22 +2988,85 @@
       <button class="switch-btn" style="margin-top:8px;width:100%;" onclick="document.getElementById('recForm').classList.add('hidden')">Abbrechen</button>
     </div>`;
   }
-  function recPrint(ids) {
+  // PDF erzeugen (jsPDF) und teilen/öffnen – funktioniert auch auf dem iPhone
+  let jsPdfP = null;
+  function loadJsPdf() {
+    if (window.jspdf) return Promise.resolve();
+    if (!jsPdfP) jsPdfP = new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      sc.onload = () => res(); sc.onerror = () => { jsPdfP = null; rej(new Error('jsPDF')); };
+      document.head.appendChild(sc);
+    });
+    return jsPdfP;
+  }
+  const pdfTxt = t => String(t || '').replace(/[^\n -ÿ–—‘’“”€]/g, '').replace(/\s+\n/g, '\n');
+  function buildRecipePdf(list) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const M = 18, W = 210, H = 297, OR = [217, 102, 45];
+    const lines = t => pdfTxt(t).split('\n').map(x => x.trim()).filter(Boolean);
+    list.forEach((r, idx) => {
+      if (idx) doc.addPage();
+      let y = 32;
+      doc.setFont('times', 'bold'); doc.setFontSize(30); doc.setTextColor(34, 34, 34);
+      const tl = doc.splitTextToSize(pdfTxt(r.name), W - 2 * M);
+      doc.text(tl, M, y); y += (tl.length - 1) * 12;
+      y += 7; doc.setFont('times', 'normal'); doc.setFontSize(11); doc.setTextColor(119, 119, 119);
+      doc.text(pdfTxt(r.portionen) || 'Rezept', M, y);
+      y += 4; doc.setDrawColor(...OR); doc.setLineWidth(0.8); doc.line(M, y, W - M, y);
+      y += 10;
+      const z = lines(r.zutaten), st = lines(r.schritte), top = y;
+      const bw = 70, gx = M + bw + 10, sw = W - M - gx;
+      // Zutaten-Box
+      doc.setFont('times', 'normal'); doc.setFontSize(13);
+      const zw = z.map(x => doc.splitTextToSize(x, bw - 12));
+      const lh = 5.8, zh = 14 + zw.reduce((a, l) => a + l.length * lh + 3, 0);
+      if (z.length) {
+        doc.setFillColor(250, 245, 236); doc.roundedRect(M, top, bw, zh, 3, 3, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...OR); doc.text('ZUTATEN', M + 6, top + 8, { charSpace: 0.6 });
+        doc.setFont('times', 'normal'); doc.setFontSize(13); doc.setTextColor(34, 34, 34);
+        let zy = top + 16;
+        zw.forEach((l, i) => { doc.text(l, M + 6, zy); zy += l.length * lh; if (i < zw.length - 1) { doc.setDrawColor(201, 191, 174); doc.setLineWidth(0.2); doc.line(M + 6, zy - 2.2, M + bw - 6, zy - 2.2); } zy += 3; });
+      }
+      // Zubereitung
+      let sy = top + 8;
+      if (st.length) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...OR); doc.text('ZUBEREITUNG', gx, sy, { charSpace: 0.6 });
+        sy += 8; doc.setFont('times', 'normal'); doc.setFontSize(13); doc.setTextColor(34, 34, 34);
+        st.forEach((x, i) => {
+          const txt = st.length > 1 ? (i + 1) + '.  ' + x : x;
+          const l = doc.splitTextToSize(txt, sw);
+          if (sy + l.length * lh > H - 30) { doc.addPage(); sy = 30; }
+          doc.text(l, gx, sy); sy += l.length * lh + 3;
+        });
+      }
+      const u = safeUrl(r.link);
+      if (u) { doc.setFontSize(9); doc.setTextColor(119, 119, 119); doc.text(doc.splitTextToSize('Quelle: ' + u, sw), gx, sy + 2); }
+    });
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) {
+      doc.setPage(i); doc.setDrawColor(221, 221, 221); doc.setLineWidth(0.2); doc.line(M, H - 16, W - M, H - 16);
+      doc.setFont('times', 'normal'); doc.setFontSize(9); doc.setTextColor(153, 153, 153);
+      doc.text("Ecker's Family · Rezepte", M, H - 11);
+    }
+    return doc;
+  }
+  async function recPrint(ids) {
     const list = [...recipes].sort((a, b) => String(a.name).localeCompare(String(b.name), 'de')).filter(r => !ids || ids.includes(r.id));
     if (!list.length) return;
-    const lines = t => String(t || '').split('\n').map(x => x.trim()).filter(Boolean);
-    document.getElementById('printArea').innerHTML = list.map(r => {
-      const z = lines(r.zutaten), st = lines(r.schritte), u = safeUrl(r.link);
-      return `<div class="pr"><h1>${escapeHtml(r.name)}</h1><div class="pr-sub">${r.portionen ? escapeHtml(r.portionen) : 'Rezept'}</div><hr class="pr-line">
-        <div class="pr-cols">
-          ${z.length ? `<div class="pr-zut"><h2>Zutaten</h2><ul>${z.map(x => '<li>' + escapeHtml(x) + '</li>').join('')}</ul></div>` : ''}
-          <div class="pr-steps">${st.length ? '<h2>Zubereitung</h2>' + (st.length > 1 ? '<ol>' + st.map(x => '<li>' + escapeHtml(x) + '</li>').join('') + '</ol>' : '<p>' + escapeHtml(st[0]) + '</p>') : ''}${u ? `<p style="font-size:10pt;color:#777;">Quelle: ${escapeHtml(u)}</p>` : ''}</div>
-        </div><div class="pr-foot">Ecker's Family · Rezepte</div></div>`;
-    }).join('');
-    document.body.classList.add('printing');
-    const done = () => { document.body.classList.remove('printing'); window.removeEventListener('afterprint', done); };
-    window.addEventListener('afterprint', done);
-    setTimeout(() => { window.print(); if (!/iPhone|iPad|iPod|Android/.test(navigator.userAgent)) setTimeout(done, 500); }, 150);
+    try { await loadJsPdf(); } catch (e) { showToast('PDF-Erstellung nicht möglich – bitte Verbindung prüfen'); return; }
+    const doc = buildRecipePdf(list);
+    const name = (list.length === 1 ? list[0].name : 'Rezepte').replace(/[^\wÀ-ÿ -]/g, '').trim() || 'Rezepte';
+    const blob = doc.output('blob');
+    const file = new File([blob], name + '.pdf', { type: 'application/pdf' });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    if (!w) { const a = document.createElement('a'); a.href = url; a.download = name + '.pdf'; document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
   function recFilter() {
     const q = document.getElementById('recSearch').value.trim().toLowerCase();
@@ -5761,7 +5824,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.62';
+  const APP_VERSION = '1.63';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
