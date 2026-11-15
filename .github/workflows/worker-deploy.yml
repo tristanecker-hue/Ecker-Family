@@ -16,10 +16,15 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "Secret CLOUDFLARE_API_TOKEN fehlt"; exit 1; }
           H="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
           R=$(curl -s -H "$H" https://api.cloudflare.com/client/v4/accounts)
-          echo "Konten: $(echo "$R" | jq -c '[.result[]?|.name] , .errors')"
+          echo "Konten: $(echo "$R" | jq -c '[.result[]?|.name], [.errors[]?.message]')"
           ACC=$(echo "$R" | jq -r '.result[0].id // empty')
+          if [ -z "$ACC" ]; then
+            R3=$(curl -s -H "$H" https://api.cloudflare.com/client/v4/memberships)
+            echo "Mitgliedschaften: $(echo "$R3" | jq -c '[.result[]?|.account.name], [.errors[]?.message]')"
+            ACC=$(echo "$R3" | jq -r '.result[0].account.id // empty')
+          fi
           R2=$(curl -s -H "$H" "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces?per_page=100")
-          echo "KV: $(echo "$R2" | jq -c '[.result[]?|.title] , .errors')"
+          echo "KV: $(echo "$R2" | jq -c '[.result[]?|.title], [.errors[]?.message]')"
           KV=$(echo "$R2" | jq -r '[.result[]?|select(.title=="ecker-push-kv")][0].id // empty')
           if [ -z "$KV" ]; then KV=$(echo "$R2" | jq -r '[.result[]?][0].id // empty'); fi
           test -n "$ACC" -a -n "$KV" || { echo "Konto oder KV nicht gefunden"; exit 1; }
