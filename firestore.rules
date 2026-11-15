@@ -38,6 +38,7 @@ service cloud.firestore {
     function canAssign()  { return featureOn('assign', ['tristan', 'claudia']); }
     function canPoints()  { return featureOn('punkte', ['tristan', 'claudia', 'lina', 'florian']); }
     function canMeals()   { return featureOn('essen', ['tristan', 'claudia', 'lina', 'florian']); }
+    function canChat()    { return featureOn('chat', ['tristan', 'claudia', 'lina', 'florian']); }
 
     // Einstellungen: alle lesen, nur Tristan ändert
     match /settings/{id} {
@@ -90,6 +91,20 @@ service cloud.firestore {
     match /meals/{id} {
       allow read: if canMeals();
       allow write: if canAssign();
+    }
+
+    // Familienchat: alle Freigeschalteten lesen und schreiben (nur als sich selbst); löschen: eigene Nachrichten (Tristan alle)
+    match /chat/{id} {
+      allow read: if canChat();
+      allow create: if canChat()
+        && request.resource.data.keys().hasOnly(['from', 'name', 'text', 'at'])
+        && request.resource.data.from == uname()
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.at is number;
+      allow update: if false;
+      allow delete: if canChat() && (resource.data.from == uname() || isTristan());
     }
 
     // Spiele-Rekorde: alle lesen, jede Person schreibt nur die eigenen Bestwerte

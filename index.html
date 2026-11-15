@@ -127,6 +127,20 @@
   .sv-small .sv-c { font-size:11px; cursor:default; }
   .sv-msg { text-align:center; font-weight:800; min-height:26px; margin:6px 0; }
   #blCanvas { width:100%; max-width:420px; display:block; margin:0 auto; border-radius:14px; border:3px solid #262319; touch-action:none; background:#dbeafe; }
+  body.doodle #chatScreen { --cc:var(--k-plan); --cb:var(--k-plan-b); --hl:var(--k-plan-h); }
+  body.doodle #tileChat { --tc:var(--k-plan); --tb:var(--k-plan-b); }
+  #chatList { display:flex; flex-direction:column; gap:6px; padding:4px 0 8px; min-height:40vh; }
+  .chat-day { align-self:center; font-size:12px; color:#8a8170; margin:8px 0 2px; }
+  .chat-row { display:flex; gap:8px; align-items:flex-end; max-width:86%; }
+  .chat-row.me { align-self:flex-end; flex-direction:row-reverse; }
+  .chat-av { width:30px; height:30px; border-radius:50%; flex:0 0 30px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff; overflow:hidden; background-size:cover; background-position:center; }
+  .chat-bub { background:#fff; border:2px solid #262319; border-radius:16px 16px 16px 4px; padding:7px 11px; font-size:16px; line-height:1.3; word-break:break-word; white-space:pre-wrap; }
+  .chat-row.me .chat-bub { background:var(--hl, #cfe8ff); border-radius:16px 16px 4px 16px; }
+  .chat-who { font-size:11px; font-weight:700; color:#6b634f; margin-bottom:1px; }
+  .chat-time { font-size:10px; color:#8a8170; margin-top:2px; text-align:right; }
+  .chat-bar { position:sticky; bottom:0; display:flex; gap:8px; align-items:flex-end; padding:10px 0 calc(10px + env(safe-area-inset-bottom)); background:var(--bg, #f5f1e8); }
+  .chat-bar textarea { flex:1; resize:none; max-height:110px; border:2px solid #262319; border-radius:16px; padding:9px 12px; font:inherit; font-size:16px; background:#fff; }
+  .chat-bar button { border:2px solid #262319; background:var(--btn, #F5B942); border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; flex:0 0 44px; }
   .bs-tubes { display:flex; flex-wrap:wrap; gap:14px 10px; justify-content:center; margin:14px auto; max-width:440px; }
   .bs-tube { width:48px; height:196px; border:3px solid #262319; border-radius:0 0 26px 26px; background:#ffffffaa; display:flex; flex-direction:column-reverse; align-items:center; padding:4px 0; gap:3px; cursor:pointer; touch-action:manipulation; }
   .bs-tube.sel { background:#fff3bf; box-shadow:0 0 0 3px #ffd43b; }
@@ -1229,6 +1243,11 @@
         <div class="account-avatar" style="background:#E0568B;">🎮</div>
         <div class="account-name">Spiele</div>
       </div>
+      <div class="account-btn hidden" id="tileChat" role="button" tabindex="0" onclick="openChat()" onkeydown="if(event.key==='Enter'||event.key===' '){openChat()}">
+        <div class="account-avatar" style="background:#3FA7D6;">💬</div>
+        <div class="account-name">Chat</div>
+        <div class="account-hint" id="chatBadge"></div>
+      </div>
       <div class="account-btn hidden" id="tilePunkte" role="button" tabindex="0" onclick="openPunkte()" onkeydown="if(event.key==='Enter'||event.key===' '){openPunkte()}">
         <div class="account-avatar" style="background:#E5A823;">⭐</div>
         <div class="account-name">Sterne</div>
@@ -1432,6 +1451,22 @@
   </div>
 
   <!-- Kalender (Wochenübersicht) -->
+  <div id="chatScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>Familienchat</h1>
+        <div class="sub">Nur für uns vier 💬</div>
+      </div>
+    </div>
+    <div class="navbar" data-nav="chat"></div>
+    <div id="chatList"></div>
+    <div class="chat-bar">
+      <textarea id="chatInput" rows="1" maxlength="500" placeholder="Nachricht …" enterkeyhint="send"></textarea>
+      <button id="chatSend" onclick="chatSend()" aria-label="Senden">➤</button>
+    </div>
+  </div>
+
   <div id="kalenderScreen" class="hidden">
     <div class="summary-header">
       <button class="back-btn" onclick="goHome()">←</button>
@@ -2146,7 +2181,7 @@
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
@@ -2167,7 +2202,7 @@
     hideAllScreens(); refreshNavs();
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -2185,7 +2220,7 @@
   function goHome() {
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -2213,7 +2248,7 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
@@ -2629,7 +2664,8 @@
     { key: 'compare', label: 'Zeiten vergleichen' },
     { key: 'spiele', label: 'Kachel Spiele' },
     { key: 'punkte', label: 'Kachel Sterne & Belohnungen' },
-    { key: 'essen', label: 'Kachel Essen (Wochenplan)' }
+    { key: 'essen', label: 'Kachel Essen (Wochenplan)' },
+    { key: 'chat', label: 'Kachel Familienchat' }
   ].filter(f => PUNKTE_AKTIV || f.key !== 'punkte');
   let settings = null;
 
@@ -2641,7 +2677,8 @@
       compare: ['Tristan'].map(userKey),
       spiele: USERS.map(userKey),
       punkte: USERS.map(userKey),
-      essen: USERS.map(userKey)
+      essen: USERS.map(userKey),
+      chat: USERS.map(userKey)
     };
   }
 
@@ -2689,6 +2726,8 @@
     document.getElementById('tileSpiele').classList.toggle('hidden', !hasFeature('spiele'));
     document.getElementById('tilePunkte').classList.toggle('hidden', !hasFeature('punkte'));
     document.getElementById('tileEssen').classList.toggle('hidden', !hasFeature('essen'));
+    document.getElementById('tileChat').classList.toggle('hidden', !(cloudEnabled && hasFeature('chat')));
+    if (cloudEnabled && hasFeature('chat')) chatCheck();
     if (hasFeature('essen')) loadEssenSub();
     updateHomeInfo(); pushRefresh();
     const hint = document.getElementById('homeHint');
@@ -2728,7 +2767,7 @@
 
   function openSettings() {
     if (!currentUser) return;
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen', 'chatScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
@@ -2775,7 +2814,7 @@
   // ---------- Menüleiste zum Wechseln ----------
 
   function hideAllScreens() {
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen', 'settingsScreen']
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen', 'chatScreen', 'settingsScreen']
       .forEach(id => document.getElementById(id).classList.add('hidden'));
   }
 
@@ -3210,6 +3249,87 @@
       if (id === isoDate(mondayOf(new Date()))) { loadEssenSub(); }
     } catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); }
   }
+
+  // ---------- Familienchat ----------
+  let chatMsgs = [], chatTimer = null, chatSending = false;
+  const chatSeenKey = () => 'ef-chat-seen-' + userKey(currentUser);
+  const chatSeen = () => { try { return +localStorage.getItem(chatSeenKey()) || 0; } catch (e) { return 0; } };
+  const chatMarkSeen = () => { try { const t = chatMsgs.length ? chatMsgs[chatMsgs.length - 1].at : 0; if (t) localStorage.setItem(chatSeenKey(), String(t)); } catch (e) {} };
+  // Neue Nachrichten auf der Startseite anzeigen
+  async function chatCheck() {
+    try {
+      const list = await withTimeout(cloudApi.chatList(15));
+      const me = userKey(currentUser), seen = chatSeen();
+      const n = list.filter(m => m.at > seen && m.from !== me).length;
+      const b = document.getElementById('chatBadge');
+      if (b) b.textContent = n ? '💬 ' + n + ' neu' : '';
+    } catch (e) {}
+  }
+  function chatRender(stick) {
+    const el = document.getElementById('chatList'); if (!el) return;
+    const me = userKey(currentUser);
+    let html = '', lastDay = '';
+    chatMsgs.forEach(m => {
+      const d = new Date(m.at), day = d.toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' });
+      if (day !== lastDay) { html += `<div class="chat-day">${escapeHtml(day)}</div>`; lastDay = day; }
+      const mine = m.from === me, name = m.name || ACCOUNTS[m.from] || m.from;
+      html += `<div class="chat-row ${mine ? 'me' : ''}"><span class="chat-av" data-avatar="${escapeHtml(name)}"></span><div>${mine ? '' : `<div class="chat-who">${escapeHtml(name)}</div>`}<div class="chat-bub" ${mine ? `onclick="chatDelete('${m.id}')"` : ''}>${escapeHtml(m.text)}</div><div class="chat-time">${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div></div>`;
+    });
+    if (!chatMsgs.length) html = '<div class="todo-empty">Noch keine Nachrichten – schreib die erste! 👋</div>';
+    el.innerHTML = html;
+    applyAvatars();
+    if (stick) window.scrollTo(0, document.body.scrollHeight);
+  }
+  async function chatLoad(first) {
+    try {
+      const list = await withTimeout(cloudApi.chatList(100));
+      const changed = list.length !== chatMsgs.length || (list.length && chatMsgs.length && list[list.length - 1].id !== chatMsgs[chatMsgs.length - 1].id);
+      if (changed || first) {
+        const nearEnd = first || (window.innerHeight + window.scrollY >= document.body.scrollHeight - 140);
+        chatMsgs = list; chatRender(nearEnd);
+      }
+      chatMarkSeen();
+    } catch (e) { if (first) document.getElementById('chatList').innerHTML = '<div class="todo-empty">Chat konnte nicht geladen werden – Verbindung prüfen.</div>'; }
+  }
+  async function openChat() {
+    if (!currentUser || !cloudEnabled) return;
+    hideAllScreens(); refreshNavs();
+    document.getElementById('chatScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    chatMsgs = [];
+    document.getElementById('chatList').innerHTML = '<div class="todo-empty">Wird geladen …</div>';
+    await chatLoad(true);
+    clearInterval(chatTimer);
+    chatTimer = setInterval(() => {
+      if (document.getElementById('chatScreen').classList.contains('hidden') || document.visibilityState !== 'visible') { if (document.getElementById('chatScreen').classList.contains('hidden')) { clearInterval(chatTimer); chatTimer = null; } return; }
+      chatLoad(false);
+    }, 4000);
+  }
+  async function chatSend() {
+    const inp = document.getElementById('chatInput'), text = inp.value.trim();
+    if (!text || chatSending) return;
+    chatSending = true;
+    const me = userKey(currentUser);
+    const m = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), from: me, name: currentUser, text: text.slice(0, 500), at: Date.now() };
+    try {
+      await withTimeout(cloudApi.chatAdd(m));
+      inp.value = ''; inp.style.height = '';
+      chatMsgs.push(m); chatRender(true); chatMarkSeen();
+      pushSend([{ to: Object.keys(ACCOUNTS).filter(k => k !== me), title: currentUser + ' im Chat', body: m.text.slice(0, 120), url: './' }]);
+    } catch (e) { showToast('Senden fehlgeschlagen – bitte Verbindung prüfen'); }
+    chatSending = false;
+  }
+  async function chatDelete(id) {
+    const m = chatMsgs.find(x => x.id === id);
+    if (!m || m.from !== userKey(currentUser)) return;
+    if (!window.confirm('Diese Nachricht löschen?')) return;
+    try { await withTimeout(cloudApi.chatDelete(id)); chatMsgs = chatMsgs.filter(x => x.id !== id); chatRender(false); } catch (e) { showToast('Löschen fehlgeschlagen'); }
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('chatInput'); if (!inp) return;
+    inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(110, inp.scrollHeight) + 'px'; });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !/iPhone|iPad|iPod|Android/.test(navigator.userAgent)) { e.preventDefault(); chatSend(); } });
+  });
 
   // ---------- Push-Mitteilungen ----------
   // Adresse des Cloudflare-Workers (cloudflare/worker.js). Leer = Mitteilungen aus.
@@ -6405,6 +6525,14 @@
           await sub.unsubscribe();
         },
         idToken: () => auth.currentUser.getIdToken(),
+        chatList: async (n) => {
+          const sn = await F.getDocs(F.query(F.collection(db, 'chat'), F.orderBy('at', 'desc'), F.limit(n || 100)));
+          const out = [];
+          sn.forEach(d => out.push({ id: d.id, ...d.data() }));
+          return out.reverse();
+        },
+        chatAdd: m => { const { id, ...data } = m; return F.setDoc(F.doc(db, 'chat', id), data); },
+        chatDelete: id => F.deleteDoc(F.doc(db, 'chat', id)),
         kvList: async (col) => {
           const sn = await F.getDocs(F.collection(db, col));
           const out = [];
@@ -6443,7 +6571,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.78';
+  const APP_VERSION = '1.79';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
