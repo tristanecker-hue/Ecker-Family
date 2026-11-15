@@ -389,6 +389,8 @@
   body.doodle #hauswartScreen, body.doodle #mainScreen, body.doodle #summaryScreen { --cc:var(--k-zeit); --cb:var(--k-zeit-b); --hl:var(--k-zeit-h); }
   body.doodle #todoScreen { --cc:var(--k-todo); --cb:var(--k-todo-b); --hl:var(--k-todo-h); }
   body.doodle #spieleScreen { --cc:var(--k-spiele); --cb:var(--k-spiele-b); --hl:var(--k-spiele-h); }
+  body.doodle #rezScreen { --cc:var(--k-essen); --cb:var(--k-essen-b); --hl:var(--k-essen-h); }
+  body.doodle #tileRezepte { --tc:var(--k-essen); --tb:var(--k-essen-b); }
   body.doodle #essenScreen { --cc:var(--k-essen); --cb:var(--k-essen-b); --hl:var(--k-essen-h); }
   body.doodle #kalenderScreen { --cc:var(--k-plan, var(--k-zeit)); --cb:var(--k-plan-b, var(--k-zeit-b)); --hl:var(--k-plan-h, var(--k-zeit-h)); }
   body.doodle #punkteScreen { --cc:var(--k-punkte); --cb:var(--k-punkte-b); --hl:var(--k-punkte-h); }
@@ -1258,8 +1260,12 @@
       </div>
       <div class="account-btn hidden" id="tileEssen" role="button" tabindex="0" onclick="openEssen()" onkeydown="if(event.key==='Enter'||event.key===' '){openEssen()}">
         <div class="account-avatar" style="background:#D9693B;">🍽️</div>
-        <div class="account-name">Essen</div>
+        <div class="account-name">Wochenplan</div>
         <div class="account-hint" id="essenSub" style="margin-top:-8px;"></div>
+      </div>
+      <div class="account-btn hidden" id="tileRezepte" role="button" tabindex="0" onclick="openRezepte()" onkeydown="if(event.key==='Enter'||event.key===' '){openRezepte()}">
+        <div class="account-avatar" style="background:#C98B4A;">📖</div>
+        <div class="account-name">Rezepte</div>
       </div>
     </div>
   </div>
@@ -1434,12 +1440,11 @@
     <div class="summary-header">
       <button class="back-btn" onclick="goHome()">←</button>
       <div>
-        <h1>Essen</h1>
-        <div class="sub">Wochenplan</div>
+        <h1>Wochenplan</h1>
+        <div class="sub">Was gibt es zu essen?</div>
       </div>
     </div>
     <div class="navbar" data-nav="essen"></div>
-    <div class="seg" id="essenTabs"><button class="on" onclick="essenTab('plan')">📅 Wochenplan</button><button onclick="essenTab('rez')">📖 Rezepte</button></div>
     <div id="essenPlan">
     <div class="wk-nav">
       <button class="wk-arrow" onclick="essenShift(-1)" aria-label="Vorwoche">‹</button>
@@ -1450,8 +1455,19 @@
     <div id="essenHint" class="sub" style="margin:-4px 2px 12px;display:none;">Tippe auf ein Feld, um ein Essen einzutragen. Es wird automatisch gespeichert.</div>
     <div id="essenBody"></div>
     </div>
-    <div id="essenRez" class="hidden"></div>
     <datalist id="essenSuggest"></datalist>
+  </div>
+
+  <div id="rezScreen" class="hidden">
+    <div class="summary-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div>
+        <h1>Rezepte</h1>
+        <div class="sub">Zum Kochen und Drucken</div>
+      </div>
+    </div>
+    <div class="navbar" data-nav="rez"></div>
+    <div id="essenRez"></div>
   </div>
 
   <!-- Kalender (Wochenübersicht) -->
@@ -2186,7 +2202,7 @@
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
@@ -2207,7 +2223,7 @@
     hideAllScreens(); refreshNavs();
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -2225,7 +2241,7 @@
   function goHome() {
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -2253,7 +2269,7 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
@@ -2669,7 +2685,7 @@
     { key: 'compare', label: 'Zeiten vergleichen' },
     { key: 'spiele', label: 'Kachel Spiele' },
     { key: 'punkte', label: 'Kachel Sterne & Belohnungen' },
-    { key: 'essen', label: 'Kachel Essen (Wochenplan)' },
+    { key: 'essen', label: 'Kacheln Wochenplan & Rezepte' },
     { key: 'chat', label: 'Kachel Familienchat' }
   ].filter(f => PUNKTE_AKTIV || f.key !== 'punkte');
   let settings = null;
@@ -2731,6 +2747,7 @@
     document.getElementById('tileSpiele').classList.toggle('hidden', !hasFeature('spiele'));
     document.getElementById('tilePunkte').classList.toggle('hidden', !hasFeature('punkte'));
     document.getElementById('tileEssen').classList.toggle('hidden', !hasFeature('essen'));
+    document.getElementById('tileRezepte').classList.toggle('hidden', !hasFeature('essen'));
     document.getElementById('tileChat').classList.toggle('hidden', !(cloudEnabled && hasFeature('chat')));
     if (cloudEnabled && hasFeature('chat')) chatCheck();
     if (hasFeature('essen')) loadEssenSub();
@@ -2772,7 +2789,7 @@
 
   function openSettings() {
     if (!currentUser) return;
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen', 'chatScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen', 'chatScreen', 'rezScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
@@ -2819,7 +2836,7 @@
   // ---------- Menüleiste zum Wechseln ----------
 
   function hideAllScreens() {
-    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen', 'chatScreen', 'settingsScreen']
+    ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen', 'chatScreen', 'rezScreen', 'settingsScreen']
       .forEach(id => document.getElementById(id).classList.add('hidden'));
   }
 
@@ -3026,7 +3043,6 @@
     hideAllScreens(); refreshNavs();
     document.getElementById('essenScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
-    essenTab('plan');
     essenMonday = mondayOf(new Date());
     await renderEssen();
   }
@@ -3054,15 +3070,16 @@
   }
   const recFor = name => { const n = String(name || '').trim().toLowerCase(); return n ? recipes.find(r => String(r.name).trim().toLowerCase() === n) : null; };
   const recBtn = name => { const r = recFor(name); return r ? `<button class="rec-link" title="Rezept" onclick="event.preventDefault();event.stopPropagation();openRecipe('${r.id}')">📖</button>` : ''; };
-  function essenTab(t) {
-    const rez = t === 'rez';
-    document.getElementById('essenPlan').classList.toggle('hidden', rez);
-    document.getElementById('essenRez').classList.toggle('hidden', !rez);
-    [...document.querySelectorAll('#essenTabs button')].forEach((b, i) => b.classList.toggle('on', (i === 1) === rez));
-    if (rez) { renderRecipes(); loadJsPdf().catch(() => {}); }
+  async function openRezepte() {
+    if (!currentUser) return;
+    hideAllScreens(); refreshNavs();
+    document.getElementById('rezScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    loadJsPdf().catch(() => {});
+    await renderRecipes();
   }
-  function openRecipe(id) {
-    essenTab('rez');
+  async function openRecipe(id) {
+    await openRezepte();
     const d = document.getElementById('rec-' + id);
     if (d) { d.open = true; d.scrollIntoView({ block: 'center' }); }
   }
@@ -6636,7 +6653,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.83';
+  const APP_VERSION = '1.84';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
