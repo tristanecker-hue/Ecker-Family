@@ -152,6 +152,18 @@
   .pool-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1.5px dashed #bfa84a; }
   .pool-row > div { flex:1; }
   .pool-row .take { border:2px solid #262319; background:#7CCB4A; border-radius:12px; padding:8px 10px; font-weight:800; cursor:pointer; color:#262319; }
+  #chatRec { display:none; width:100%; align-items:center; gap:8px; background:#fff; border:2px solid #262319; border-radius:16px; padding:8px 10px; box-sizing:border-box; }
+  #chatRec.on { display:flex; }
+  #chatRec .rec-dot { width:12px; height:12px; border-radius:50%; background:#e0342b; animation:recp 1s infinite; }
+  @keyframes recp { 50% { opacity:.25; } }
+  #chatRec .rec-t { flex:1; font-weight:800; }
+  #chatRec button { width:auto; height:38px; flex:none; border-radius:12px; padding:0 14px; font-size:15px; font-weight:800; background:#fff; }
+  #chatRec button.go { background:#7CCB4A; }
+  .chat-bub.voice { display:flex; align-items:center; gap:10px; min-width:150px; }
+  .vplay { width:38px; height:38px; flex:none; border:2px solid #262319; border-radius:50%; background:var(--hl,#ffd84d); font-size:15px; cursor:pointer; color:#262319; padding:0; }
+  .vbar { flex:1; height:6px; border-radius:3px; background:#d8d2c2; overflow:hidden; }
+  .vbar i { display:block; height:100%; width:0; background:#262319; }
+  .vdur { font-size:13px; font-weight:700; }
   .chat-tools { display:flex; gap:6px; }
   .chat-bar .chat-tool { width:40px; height:40px; flex:0 0 40px; font-size:19px; background:#fff; }
   #chatPanel { display:none; width:100%; max-height:min(52vh,340px); overflow:auto; background:#fff; border:2px solid #262319; border-radius:16px; padding:8px; box-sizing:border-box; }
@@ -1521,8 +1533,10 @@
     <div id="chatList"></div>
     <div class="chat-bar">
       <div id="chatPanel"></div>
+      <div id="chatRec"><span class="rec-dot"></span><span class="rec-t" id="chatRecT">0:00</span><button onclick="chatRecStop(false)">Abbrechen</button><button class="go" onclick="chatRecStop(true)">Senden ➤</button></div>
       <div class="chat-tools">
         <button class="chat-tool" onclick="document.getElementById('chatFile').click()" aria-label="Foto senden" title="Foto">📷</button>
+        <button class="chat-tool" id="chatMic" onclick="chatRecStart()" aria-label="Sprachnachricht" title="Sprachnachricht">🎤</button>
         <button class="chat-tool" onclick="chatPanelToggle()" aria-label="Emojis und Sticker" title="Emojis">😊</button>
       </div>
       <textarea id="chatInput" rows="1" maxlength="500" placeholder="Nachricht …" enterkeyhint="send"></textarea>
@@ -3442,7 +3456,7 @@
     return `<span class="yst" style="--s:${size}px"><img src="${st.img}" class="${st.flip ? 'flip' : ''}" alt="">${(st.o || []).map(o => `<i style="left:${o.x}%;top:${o.y}%;font-size:calc(var(--s)*${o.z})">${o.e}</i>`).join('')}</span>`;
   }
   const chatStickerOf = m => { const k = /^:([a-z]+):$/.exec(m.text || ''); return k && STICKERS[k[1]] ? STICKERS[k[1]] : null; };
-  const chatPreview = m => m.photo ? '📷 Foto' + (m.text ? ': ' + m.text : '') : (chatStickerOf(m) ? chatStickerOf(m).say : m.text);
+  const chatPreview = m => m.voice ? '🎤 Sprachnachricht' : m.photo ? '📷 Foto' + (m.text ? ': ' + m.text : '') : (chatStickerOf(m) ? chatStickerOf(m).say : m.text);
   function chatRender(stick) {
     const el = document.getElementById('chatList'); if (!el) return;
     const me = userKey(currentUser);
@@ -3454,10 +3468,11 @@
       const mine = m.from === me, name = m.name || ACCOUNTS[m.from] || m.from, st = chatStickerOf(m), canDel = mine || isParentUser();
       const del = canDel ? `onclick="chatDelete('${m.id}')"` : '';
       let inner;
-      if (m.photo) inner = `<div class="chat-bub photo"><img class="chat-img" data-photo="${escapeHtml(m.photo)}" data-msg="${m.id}" alt="Foto">${m.text ? `<div class="cap">${escapeHtml(m.text)}</div>` : ''}</div>`;
+      if (m.voice) inner = `<div class="chat-bub voice" ${del ? '' : ''}><button class="vplay" data-voice="${escapeHtml(m.voice)}" onclick="chatPlay(this)" aria-label="Abspielen">▶</button><div class="vbar"><i></i></div><span class="vdur">${chatFmt(m.dur || 0)}</span></div>`;
+      else if (m.photo) inner = `<div class="chat-bub photo"><img class="chat-img" data-photo="${escapeHtml(m.photo)}" data-msg="${m.id}" alt="Foto">${m.text ? `<div class="cap">${escapeHtml(m.text)}</div>` : ''}</div>`;
       else if (st) inner = `<div class="chat-sticker" ${del}>${stickerArt(st, 150)}<span>${escapeHtml(st.t)}</span></div>`;
       else inner = `<div class="chat-bub" ${del}>${escapeHtml(m.text)}</div>`;
-      html += `<div class="chat-row ${mine ? 'me' : ''}"><span class="chat-av" data-avatar="${escapeHtml(name)}"></span><div>${mine ? '' : `<div class="chat-who">${escapeHtml(name)}</div>`}${inner}<div class="chat-time">${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div></div>`;
+      html += `<div class="chat-row ${mine ? 'me' : ''}"><span class="chat-av" data-avatar="${escapeHtml(name)}"></span><div>${mine ? '' : `<div class="chat-who">${escapeHtml(name)}</div>`}${inner}<div class="chat-time">${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}${m.voice && canDel ? ` · <a href="#" onclick="chatDelete('${m.id}');return false" style="color:inherit">löschen</a>` : ''}</div></div></div>`;
     });
     if (!chatMsgs.length) html = '<div class="todo-empty">Noch keine Nachrichten – schreib die erste! 👋</div>';
     el.innerHTML = html;
@@ -3473,7 +3488,9 @@
     if (chatPhotoCache[id]) return chatPhotoCache[id];
     try { const d = await cloudApi.photoGet(id); if (d) chatPhotoCache[id] = d; return d; } catch (e) { return null; }
   }
-  function chatStop() { if (chatUnsub) { try { chatUnsub(); } catch (e) {} chatUnsub = null; } }
+  function chatStop() {
+    if (rec) chatRecStop(false);
+    if (recAudio) { try { recAudio.a.pause(); } catch (e) {} recAudio = null; } if (chatUnsub) { try { chatUnsub(); } catch (e) {} chatUnsub = null; } }
   async function openChat() {
     if (!currentUser || !cloudEnabled) return;
     hideAllScreens(); refreshNavs();
@@ -3559,11 +3576,73 @@
   async function chatDelete(id) {
     const m = chatMsgs.find(x => x.id === id);
     if (!m || !(m.from === userKey(currentUser) || isParentUser())) return;
-    if (!window.confirm(m.photo ? 'Dieses Foto löschen?' : 'Diese Nachricht löschen?')) return;
+    if (!window.confirm(m.voice ? 'Diese Sprachnachricht löschen?' : m.photo ? 'Dieses Foto löschen?' : 'Diese Nachricht löschen?')) return;
     try {
-      await withTimeout(cloudApi.chatDelete(id, m.photo));
+      await withTimeout(cloudApi.chatDelete(id, m.photo || m.voice));
       chatMsgs = chatMsgs.filter(x => x.id !== id); chatRender(false);
     } catch (e) { showToast('Löschen fehlgeschlagen'); }
+  }
+  // ---- Sprachnachrichten (max. 60 s, klein komprimiert, wie Fotos in der Datenbank gespeichert)
+  const chatFmt = n => Math.floor(n / 60) + ':' + String(Math.round(n % 60)).padStart(2, '0');
+  let rec = null, recTimer = null, recAudio = null;
+  async function chatRecStart() {
+    if (rec || chatSending) return;
+    if (!navigator.mediaDevices || !window.MediaRecorder) { showToast('Aufnahme geht auf diesem Gerät nicht'); return; }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { showToast('Mikrofon nicht erlaubt – bitte in den Einstellungen freigeben'); return; }
+    const types = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
+    const mt = types.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+    const mr = new MediaRecorder(stream, mt ? { mimeType: mt, audioBitsPerSecond: 24000 } : { audioBitsPerSecond: 24000 });
+    rec = { mr, stream, chunks: [], t0: Date.now(), send: false, mt: mr.mimeType || mt || 'audio/mp4' };
+    mr.ondataavailable = e => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+    mr.onstop = () => chatRecDone(rec);
+    mr.start();
+    document.getElementById('chatRec').classList.add('on');
+    document.getElementById('chatPanel').classList.remove('open');
+    document.getElementById('chatRecT').textContent = '0:00';
+    recTimer = setInterval(() => {
+      const sec = (Date.now() - rec.t0) / 1000;
+      document.getElementById('chatRecT').textContent = chatFmt(sec) + ' / 1:00';
+      if (sec >= 60) chatRecStop(true);
+    }, 250);
+  }
+  function chatRecStop(send) {
+    if (!rec) return;
+    rec.send = !!send; clearInterval(recTimer);
+    document.getElementById('chatRec').classList.remove('on');
+    try { rec.mr.stop(); } catch (e) { chatRecDone(rec); }
+  }
+  async function chatRecDone(r) {
+    try { r.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+    if (rec === r) rec = null;
+    const dur = Math.round((Date.now() - r.t0) / 1000);
+    if (!r.send) return;
+    if (dur < 1 || !r.chunks.length) { showToast('Zu kurz – halte die Aufnahme länger'); return; }
+    chatSending = true; showToast('Sprachnachricht wird gesendet …');
+    const id = 'v' + chatNewId();
+    try {
+      const blob = new Blob(r.chunks, { type: r.mt });
+      const data = await new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(f.result); f.onerror = rej; f.readAsDataURL(blob); });
+      if (data.length > 900000) throw new Error('zu gross');
+      await withTimeout(cloudApi.photoPut(id, { from: userKey(currentUser), data, at: Date.now() }), 30000);
+      chatPhotoCache[id] = data;
+      const m = { id: chatNewId(), from: userKey(currentUser), name: currentUser, text: '', at: Date.now(), voice: id, dur };
+      try { await chatPost(m, chatPreview(m)); } catch (e) { try { await cloudApi.photoDelete(id); } catch (x) {} throw e; }
+    } catch (e) { showToast('Sprachnachricht senden fehlgeschlagen'); }
+    chatSending = false;
+  }
+  async function chatPlay(btn) {
+    if (recAudio && recAudio.btn === btn) { recAudio.a.pause(); recAudio.btn.textContent = '▶'; recAudio = null; return; }
+    if (recAudio) { recAudio.a.pause(); recAudio.btn.textContent = '▶'; recAudio = null; }
+    btn.textContent = '…';
+    const src = await chatPhotoSrc(btn.dataset.voice);
+    if (!src) { btn.textContent = '▶'; showToast('Sprachnachricht nicht mehr vorhanden'); return; }
+    const a = new Audio(src), bar = btn.parentNode.querySelector('.vbar i');
+    recAudio = { a, btn };
+    a.ontimeupdate = () => { if (a.duration) bar.style.width = (100 * a.currentTime / a.duration) + '%'; };
+    a.onended = () => { btn.textContent = '▶'; bar.style.width = '0'; recAudio = null; };
+    try { await a.play(); btn.textContent = '⏸'; } catch (e) { btn.textContent = '▶'; recAudio = null; showToast('Abspielen nicht möglich'); }
   }
   function chatPanelBuild() {
     const el = document.getElementById('chatPanel'); if (!el || el.dataset.built) return;
@@ -6949,7 +7028,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.95';
+  const APP_VERSION = '1.96';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

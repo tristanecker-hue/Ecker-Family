@@ -108,11 +108,12 @@ service cloud.firestore {
     match /chat/{id} {
       allow read: if canChat();
       allow create: if canChat()
-        && request.resource.data.keys().hasOnly(['from', 'name', 'text', 'at', 'photo'])
+        && request.resource.data.keys().hasOnly(['from', 'name', 'text', 'at', 'photo', 'voice', 'dur'])
         && request.resource.data.from == uname()
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 500
-        && (request.resource.data.text.size() > 0 || request.resource.data.get('photo', null) is string)
+        && (request.resource.data.text.size() > 0 || request.resource.data.get('photo', null) is string || request.resource.data.get('voice', null) is string)
+        && request.resource.data.get('dur', 0) is number
         && request.resource.data.at is number;
       allow update: if false;
       allow delete: if canChat() && (resource.data.from == uname() || uname() in ['tristan', 'claudia']);
