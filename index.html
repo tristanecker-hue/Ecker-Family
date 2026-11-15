@@ -126,6 +126,7 @@
   .sv-c.ship { background:#566573; } .sv-c.miss { background:#1d5f99; } .sv-c.hit { background:#d9480f; } .sv-c.sunk { background:#7a1c1c; }
   .sv-small .sv-c { font-size:11px; cursor:default; }
   .sv-msg { text-align:center; font-weight:800; min-height:26px; margin:6px 0; }
+  #blCanvas { width:100%; max-width:420px; display:block; margin:0 auto; border-radius:14px; border:3px solid #262319; touch-action:none; background:#dbeafe; }
   .bs-tubes { display:flex; flex-wrap:wrap; gap:14px 10px; justify-content:center; margin:14px auto; max-width:440px; }
   .bs-tube { width:48px; height:196px; border:3px solid #262319; border-radius:0 0 26px 26px; background:#ffffffaa; display:flex; flex-direction:column-reverse; align-items:center; padding:4px 0; gap:3px; cursor:pointer; touch-action:manipulation; }
   .bs-tube.sel { background:#fff3bf; box-shadow:0 0 0 3px #ffd43b; }
@@ -3499,7 +3500,8 @@
     { k: 'hangman', e: '🔤', n: 'Galgenmännchen' },
     { k: 'reihen', e: '🚀', n: 'Reihen-Rakete' },
     { k: 'schiffe', e: '🚢', n: 'Schiffe versenken' },
-    { k: 'kugeln', e: '🔮', n: 'Kugeln sortieren' }
+    { k: 'kugeln', e: '🔮', n: 'Kugeln sortieren' },
+    { k: 'blasen', e: '🫧', n: 'Blasen-Schuss' }
   ];
 
   function scoresKey() { return 'ef-spiele-' + userKey(currentUser); }
@@ -3526,6 +3528,9 @@
     { key: 'kugeln-leicht', e: '🔮', n: 'Kugeln sortieren leicht', u: ' Züge', low: true },
     { key: 'kugeln-mittel', e: '🔮', n: 'Kugeln sortieren mittel', u: ' Züge', low: true },
     { key: 'kugeln-schwer', e: '🔮', n: 'Kugeln sortieren schwer', u: ' Züge', low: true },
+    { key: 'blasen-leicht', e: '🫧', n: 'Blasen-Schuss leicht', u: ' Punkte' },
+    { key: 'blasen-mittel', e: '🫧', n: 'Blasen-Schuss mittel', u: ' Punkte' },
+    { key: 'blasen-schwer', e: '🫧', n: 'Blasen-Schuss schwer', u: ' Punkte' },
     { key: 'reihen-gemuetlich', e: '🚀', n: 'Reihen-Rakete gemütlich', u: ' Punkte' },
     { key: 'reihen-normal', e: '🚀', n: 'Reihen-Rakete normal', u: ' Punkte' },
     { key: 'reihen-rasant', e: '🚀', n: 'Reihen-Rakete rasant', u: ' Punkte' }
@@ -3622,6 +3627,7 @@
       if (k === 'reflex') return sc.reflex !== undefined ? 'Beste: ' + sc.reflex + ' ms' : '';
       if (k === 'schiffe') { const v = ['leicht', 'mittel', 'schwer'].map(l => sc['schiffe-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.min(...v) + ' Schüsse' : ''; }
       if (k === 'kugeln') { const v = ['leicht', 'mittel', 'schwer'].map(l => sc['kugeln-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.min(...v) + ' Züge' : ''; }
+      if (k === 'blasen') { const v = ['leicht', 'mittel', 'schwer'].map(l => sc['blasen-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.max(...v) + ' Punkte' : ''; }
       if (k === 'reihen') { const v = ['gemuetlich', 'normal', 'rasant'].map(l => sc['reihen-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.max(...v) + ' Punkte' : ''; }
       return sc['tictac-wins'] ? sc['tictac-wins'] + ' Siege' : '';
     };
@@ -3652,7 +3658,7 @@
   }
 
   function startGame(kind) {
-    ({ memory: gameMemory, mathe: gameMathe, sterne: gameSterne, tictac: gameTicTac, snake: gameSnake, simon: gameSimon, mole: gameMole, reflex: gameReflex, hangman: gameHangman, reihen: gameReihen, schiffe: gameSchiffe, kugeln: gameKugeln })[kind]();
+    ({ memory: gameMemory, mathe: gameMathe, sterne: gameSterne, tictac: gameTicTac, snake: gameSnake, simon: gameSimon, mole: gameMole, reflex: gameReflex, hangman: gameHangman, reihen: gameReihen, schiffe: gameSchiffe, kugeln: gameKugeln, blasen: gameBlasen })[kind]();
   }
 
   const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -4222,6 +4228,125 @@
         } else { sel = tubes[i].length ? i : -1; render(); }
       };
       render();
+    });
+  }
+
+  // 14) Blasen-Schuss
+  function gameBlasen() {
+    const body = gameArea('Blasen-Schuss');
+    levelPicker(body, '🫧 Zielen, loslassen, schiessen! 3 gleiche Blasen platzen. Tippe auf die kleine Blase, um zu tauschen. Lass die Wand nicht zu weit runter!', level => {
+      const W = 320, H = 440, R = 16, H3 = R * 1.732, COLS = 10, LIM = 11, SX = W / 2, SY = 400;
+      const CFG = { leicht: { nc: 4, rows: 4, every: 8 }, mittel: { nc: 5, rows: 5, every: 6 }, schwer: { nc: 6, rows: 6, every: 4 } }[level];
+      const COL = ['#ef4444', '#3b82f6', '#22c55e', '#facc15', '#a855f7', '#f97316'];
+      body.innerHTML = `<canvas id="blCanvas"></canvas>`;
+      const cv = document.getElementById('blCanvas'), dpr = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = W * dpr; cv.height = H * dpr; cv.style.aspectRatio = W + '/' + H;
+      const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+      const info = document.getElementById('gameInfo');
+      let par = 0, grid = [], score = 0, shots = 0, shot = null, over = false, raf = 0, last = performance.now(), fx = [], ang = -Math.PI / 2, skipFire = false;
+      const off = r => (r + par) & 1;
+      const rowLen = r => COLS - off(r);
+      const px = (r, c) => R + c * 2 * R + off(r) * R, py = r => R + r * H3;
+      const rnd = () => Math.floor(Math.random() * CFG.nc);
+      for (let r = 0; r < CFG.rows; r++) grid.push(Array.from({ length: rowLen(r) }, rnd));
+      const ensure = r => { while (grid.length <= r) grid.push(Array(rowLen(grid.length)).fill(null)); };
+      const trim = () => { while (grid.length && grid[grid.length - 1].every(v => v === null)) grid.pop(); };
+      const nbrs = (r, c) => {
+        const o = off(r), out = [[r, c - 1], [r, c + 1]];
+        [r - 1, r + 1].forEach(rr => { out.push([rr, o ? c : c - 1], [rr, o ? c + 1 : c]); });
+        return out.filter(([rr, cc]) => rr >= 0 && rr < grid.length && cc >= 0 && cc < rowLen(rr));
+      };
+      const present = () => { const s = new Set(); grid.forEach(row => row.forEach(v => { if (v !== null) s.add(v); })); return [...s]; };
+      const pick = () => { const p = present(); return p.length ? p[Math.floor(Math.random() * p.length)] : rnd(); };
+      let cur = pick(), nxt = pick();
+      const upd = () => info.textContent = '⭐ ' + score;
+      const end = win => {
+        over = true; stopGame(); cancelAnimationFrame(raf);
+        if (win) score += 100;
+        const rec = score > 0 && saveScore('blasen-' + level, score, true);
+        body.innerHTML = `<div class="card"><div class="game-msg">${win ? '🎉 Alles weggepustet!' : '💥 Die Wand ist unten!'}<br>${score} Punkte${rec ? '<br>⭐ Neuer Rekord!' : ''}</div><div style="text-align:center"><button class="switch-btn" onclick="gameBlasen()">Nochmal</button></div></div>`;
+      };
+      const addRow = () => { par ^= 1; grid.unshift(Array.from({ length: rowLen(0) }, rnd)); };
+      const resolve = (r, c) => {
+        const col = grid[r][c], seen = new Set([r + ',' + c]), q = [[r, c]];
+        for (let i = 0; i < q.length; i++) nbrs(q[i][0], q[i][1]).forEach(([a, b]) => { const k = a + ',' + b; if (!seen.has(k) && grid[a][b] === col) { seen.add(k); q.push([a, b]); } });
+        if (q.length >= 3) {
+          q.forEach(([a, b]) => { fx.push({ x: px(a, b), y: py(a), col, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 80, t: 0.5, pop: true }); grid[a][b] = null; });
+          score += 10 * q.length + 5 * (q.length - 3) * (q.length - 3);
+          // schwebende Blasen
+          const ok = new Set(), st = [];
+          if (grid[0]) grid[0].forEach((v, c2) => { if (v !== null) { ok.add('0,' + c2); st.push([0, c2]); } });
+          while (st.length) { const [a, b] = st.pop(); nbrs(a, b).forEach(([a2, b2]) => { const k = a2 + ',' + b2; if (grid[a2][b2] !== null && !ok.has(k)) { ok.add(k); st.push([a2, b2]); } }); }
+          let drop = 0;
+          grid.forEach((row, a) => row.forEach((v, b) => { if (v !== null && !ok.has(a + ',' + b)) { drop++; fx.push({ x: px(a, b), y: py(a), col: v, vx: (Math.random() - 0.5) * 60, vy: 0, t: 1.2, pop: false }); row[b] = null; } }));
+          score += drop * 20;
+        }
+      };
+      const stick = () => {
+        ensure(LIM + 1);
+        let best = null, bd = 1e9;
+        for (let r = 0; r <= LIM + 1; r++) for (let c = 0; c < rowLen(r); c++) {
+          if (grid[r][c] !== null) continue;
+          const d = (px(r, c) - shot.x) ** 2 + (py(r) - shot.y) ** 2;
+          if (d < bd) { bd = d; best = [r, c]; }
+        }
+        const [r, c] = best; grid[r][c] = shot.col; shot = null;
+        resolve(r, c); shots++;
+        trim();
+        if (shots % CFG.every === 0) { addRow(); }
+        trim();
+        upd();
+        if (grid.length === 0) return end(true);
+        if (grid.some((row, r2) => r2 >= LIM && row.some(v => v !== null))) return end(false);
+        cur = nxt; nxt = pick();
+        if (!present().includes(cur)) cur = pick();
+      };
+      const setAim = e => { const rc = cv.getBoundingClientRect(), x = (e.clientX - rc.left) / rc.width * W, y = (e.clientY - rc.top) / rc.height * H; let a = Math.atan2(Math.min(y - SY, -20), x - SX); ang = Math.max(-Math.PI + 0.15, Math.min(-0.15, a)); return [x, y]; };
+      cv.addEventListener('pointerdown', e => { const [x, y] = setAim(e); skipFire = Math.hypot(x - (SX - 56), y - (SY + 8)) < 24; if (skipFire && !shot) { [cur, nxt] = [nxt, cur]; } });
+      cv.addEventListener('pointermove', setAim);
+      cv.addEventListener('pointerup', e => { setAim(e); if (skipFire) { skipFire = false; return; } if (shot || over) return; shot = { x: SX, y: SY, vx: Math.cos(ang) * 620, vy: Math.sin(ang) * 620, col: cur }; });
+      const frame = now => {
+        if (over) return;
+        const dt = Math.min(0.04, (now - last) / 1000); last = now;
+        if (shot) {
+          let dist = Math.hypot(shot.vx, shot.vy) * dt, hit = false;
+          while (dist > 0 && !hit) {
+            const d = Math.min(4, dist); dist -= d; const k = d / Math.hypot(shot.vx, shot.vy);
+            shot.x += shot.vx * k; shot.y += shot.vy * k;
+            if (shot.x < R) { shot.x = R; shot.vx = Math.abs(shot.vx); } if (shot.x > W - R) { shot.x = W - R; shot.vx = -Math.abs(shot.vx); }
+            if (shot.y <= R) hit = true;
+            else for (let r = 0; r < grid.length && !hit; r++) for (let c = 0; c < grid[r].length; c++) if (grid[r][c] !== null && (px(r, c) - shot.x) ** 2 + (py(r) - shot.y) ** 2 < (2 * R - 5) ** 2) { hit = true; break; }
+          }
+          if (hit) stick();
+          if (over) return;
+        }
+        fx.forEach(f => { f.t -= dt; f.vy += (f.pop ? 200 : 700) * dt; f.x += f.vx * dt; f.y += f.vy * dt; });
+        fx = fx.filter(f => f.t > 0 && f.y < H + 20);
+        draw(); raf = requestAnimationFrame(frame);
+      };
+      const bub = (x, y, col, r = R, a = 1) => {
+        ctx.globalAlpha = a; ctx.fillStyle = COL[col]; ctx.beginPath(); ctx.arc(x, y, r - 1, 0, 7); ctx.fill();
+        ctx.strokeStyle = '#0006'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = '#ffffff88'; ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.28, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+      };
+      const draw = () => {
+        ctx.fillStyle = '#dbeafe'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#bfdbfe'; ctx.fillRect(0, py(LIM) - R + 4, W, H);
+        grid.forEach((row, r) => row.forEach((v, c) => { if (v !== null) bub(px(r, c), py(r), v); }));
+        ctx.strokeStyle = '#dc2626'; ctx.setLineDash([6, 5]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, py(LIM) - R + 4); ctx.lineTo(W, py(LIM) - R + 4); ctx.stroke(); ctx.setLineDash([]);
+        fx.forEach(f => bub(f.x, f.y, f.col, f.pop ? R * Math.max(0.2, f.t * 2) : R, f.pop ? Math.min(1, f.t * 3) : 1));
+        // Zielhilfe (mit einem Wandabprall)
+        if (!shot) {
+          ctx.fillStyle = '#1e3a8a99'; let x = SX, y = SY, vx = Math.cos(ang), vy = Math.sin(ang);
+          for (let i = 1; i < 30; i++) { x += vx * 11; y += vy * 11; if (x < R || x > W - R) { vx = -vx; x = Math.max(R, Math.min(W - R, x)); } if (y < R + 20) break; ctx.beginPath(); ctx.arc(x, y, 2.2, 0, 7); ctx.fill(); }
+        }
+        if (shot) bub(shot.x, shot.y, shot.col); else bub(SX, SY, cur);
+        bub(SX - 56, SY + 8, nxt, 11);
+        ctx.fillStyle = '#1e3a8a'; ctx.font = '600 11px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('nächste', SX - 80, SY + 36);
+        ctx.textAlign = 'right'; ctx.fillText('neue Reihe in ' + (CFG.every - shots % CFG.every), W - 8, H - 8);
+      };
+      gameCleanup = () => { over = true; cancelAnimationFrame(raf); };
+      upd(); raf = requestAnimationFrame(frame);
     });
   }
 
@@ -6284,7 +6409,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.70';
+  const APP_VERSION = '1.71';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
