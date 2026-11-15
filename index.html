@@ -157,17 +157,19 @@
   #chatPanel.open { display:block; }
   .cp-h { font-size:12px; font-weight:700; color:#6b634f; margin:4px 2px; }
   .cp-st { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
-  #chatPanel .cp-st button { width:100%; height:auto; min-height:86px; flex:none; border:2px solid #262319; border-radius:16px; background:#fff3d6; padding:8px 4px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#262319; font-size:12px; font-weight:700; line-height:1.15; text-align:center; cursor:pointer; }
+  #chatPanel .cp-st button { width:100%; height:auto; min-height:96px; flex:none; border:2px solid #262319; border-radius:16px; background:#fff3d6; padding:8px 4px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#262319; font-size:12px; font-weight:700; line-height:1.15; text-align:center; cursor:pointer; }
   #chatPanel .cp-st button:active { background:#ffe49a; }
   #chatPanel .cp-st button b { font-size:32px; line-height:1; font-weight:400; }
-  #chatPanel .cp-st button img { width:42px; height:42px; object-fit:contain; }
   .cp-em { display:flex; flex-wrap:wrap; gap:2px; }
   #chatPanel .cp-em button { width:40px; height:40px; flex:none; border:0; border-radius:10px; background:none; font-size:24px; padding:0; cursor:pointer; }
   #chatPanel .cp-em button:active { background:#eee; }
   .chat-sticker { display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 6px; }
   .chat-sticker b { font-size:60px; line-height:1.05; font-weight:400; }
-  .chat-sticker img { width:130px; height:auto; }
-  .chat-sticker span { font-weight:800; font-size:15px; background:var(--hl,#fff3d6); border:2px solid #262319; border-radius:12px; padding:2px 10px; }
+  .yst { position:relative; display:inline-block; width:var(--s); margin-top:calc(var(--s)*.2); }
+  .yst img, #chatPanel .cp-st button .yst img { width:100%; height:auto; display:block; object-fit:contain; }
+  .yst img.flip { transform:scaleX(-1); }
+  .yst i { position:absolute; font-style:normal; line-height:1; pointer-events:none; }
+  .chat-sticker > span:last-child { font-weight:800; font-size:15px; background:var(--hl,#fff3d6); border:2px solid #262319; border-radius:12px; padding:2px 10px; }
   .chat-img { display:block; width:100%; max-width:240px; min-height:90px; border-radius:10px; background:#ddd center/cover; cursor:zoom-in; }
   .chat-bub.photo { padding:5px; }
   .chat-bub.photo .cap { padding:5px 6px 2px; }
@@ -3399,6 +3401,14 @@
   const isParentUser = () => ['tristan', 'claudia'].includes(userKey(currentUser));
   const STICKERS = {
     yuna: { img: 'hund.png', t: 'Yuna ♡', say: 'Yuna' },
+    yunaliebe: { img: 'hund.png', flip: 1, o: [{ e: '❤️', x: 2, y: 4, z: .34 }, { e: '💕', x: 70, y: 0, z: .3 }], t: 'Ich hab dich lieb', say: 'Yuna: Ich hab dich lieb' },
+    yunaparty: { img: 'hund.png', o: [{ e: '🎊', x: 38, y: -26, z: .3 }, { e: '🎉', x: 74, y: -4, z: .36 }, { e: '🎈', x: 0, y: 0, z: .36 }], t: 'Party!', say: 'Yuna: Party!' },
+    yunakrone: { img: 'hund.png', flip: 1, o: [{ e: '👑', x: 36, y: -22, z: .4 }, { e: '✨', x: 74, y: 6, z: .28 }], t: 'Königin Yuna', say: 'Königin Yuna' },
+    yunanacht: { img: 'hund.png', o: [{ e: '💤', x: 70, y: -2, z: .4 }, { e: '🌙', x: 2, y: 2, z: .32 }], t: 'Schlaf gut', say: 'Yuna: Schlaf gut' },
+    yunahunger: { img: 'hund.png', flip: 1, o: [{ e: '🍖', x: 66, y: 2, z: .4 }, { e: '🤤', x: 0, y: -6, z: .3 }], t: 'Hunger!', say: 'Yuna: Ich hab Hunger!' },
+    yunagassi: { img: 'hund.png', o: [{ e: '🚶', x: 0, y: -4, z: .36 }, { e: '🌳', x: 72, y: 0, z: .34 }], t: 'Gassi gehen?', say: 'Yuna: Gassi gehen?' },
+    yunadanke: { img: 'hund.png', flip: 1, o: [{ e: '🙏', x: 68, y: 0, z: .36 }, { e: '💖', x: 2, y: 4, z: .3 }], t: 'Danke!', say: 'Yuna: Danke!' },
+    yunaschnee: { img: 'hund.png', o: [{ e: '❄️', x: 4, y: 0, z: .34 }, { e: '⛄', x: 72, y: 2, z: .34 }], t: 'Brrr, kalt!', say: 'Yuna: Brrr, kalt!' },
     liebe: { e: '🥰', t: 'Hab dich lieb', say: 'Hab dich lieb' },
     nacht: { e: '🌙', t: 'Gute Nacht', say: 'Gute Nacht' },
     essen: { e: '🍝', t: 'Essen ist fertig!', say: 'Essen ist fertig!' },
@@ -3425,6 +3435,11 @@
       if (b) b.textContent = n ? '💬 ' + n + ' neu' : '';
     } catch (e) {}
   }
+  // Yuna-Sticker: dasselbe Bild, gespiegelt und mit Zubehör (Herz, Krone, Hut …)
+  function stickerArt(st, size) {
+    if (!st.img) return `<b>${st.e}</b>`;
+    return `<span class="yst" style="--s:${size}px"><img src="${st.img}" class="${st.flip ? 'flip' : ''}" alt="">${(st.o || []).map(o => `<i style="left:${o.x}%;top:${o.y}%;font-size:calc(var(--s)*${o.z})">${o.e}</i>`).join('')}</span>`;
+  }
   const chatStickerOf = m => { const k = /^:([a-z]+):$/.exec(m.text || ''); return k && STICKERS[k[1]] ? STICKERS[k[1]] : null; };
   const chatPreview = m => m.photo ? '📷 Foto' + (m.text ? ': ' + m.text : '') : (chatStickerOf(m) ? chatStickerOf(m).say : m.text);
   function chatRender(stick) {
@@ -3439,7 +3454,7 @@
       const del = canDel ? `onclick="chatDelete('${m.id}')"` : '';
       let inner;
       if (m.photo) inner = `<div class="chat-bub photo"><img class="chat-img" data-photo="${escapeHtml(m.photo)}" data-msg="${m.id}" alt="Foto">${m.text ? `<div class="cap">${escapeHtml(m.text)}</div>` : ''}</div>`;
-      else if (st) inner = `<div class="chat-sticker" ${del}>${st.img ? `<img src="${st.img}" alt="">` : `<b>${st.e}</b>`}<span>${escapeHtml(st.t)}</span></div>`;
+      else if (st) inner = `<div class="chat-sticker" ${del}>${stickerArt(st, 150)}<span>${escapeHtml(st.t)}</span></div>`;
       else inner = `<div class="chat-bub" ${del}>${escapeHtml(m.text)}</div>`;
       html += `<div class="chat-row ${mine ? 'me' : ''}"><span class="chat-av" data-avatar="${escapeHtml(name)}"></span><div>${mine ? '' : `<div class="chat-who">${escapeHtml(name)}</div>`}${inner}<div class="chat-time">${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div></div>`;
     });
@@ -3552,7 +3567,7 @@
   function chatPanelBuild() {
     const el = document.getElementById('chatPanel'); if (!el || el.dataset.built) return;
     el.dataset.built = '1';
-    el.innerHTML = '<div class="cp-h">Sticker</div><div class="cp-st">' + Object.keys(STICKERS).map(k => { const s = STICKERS[k]; return `<button onclick="chatSend(':${k}:')">${s.img ? `<img src="${s.img}" alt="">` : `<b>${s.e}</b>`}${escapeHtml(s.t)}</button>`; }).join('') + '</div><div class="cp-h">Emojis</div><div class="cp-em">' + FAMILY_EMOJIS.map(e => `<button onclick="chatEmoji('${e}')">${e}</button>`).join('') + '</div>';
+    el.innerHTML = '<div class="cp-h">Sticker</div><div class="cp-st">' + Object.keys(STICKERS).map(k => { const s = STICKERS[k]; return `<button onclick="chatSend(':${k}:')">${stickerArt(s, 56)}${escapeHtml(s.t)}</button>`; }).join('') + '</div><div class="cp-h">Emojis</div><div class="cp-em">' + FAMILY_EMOJIS.map(e => `<button onclick="chatEmoji('${e}')">${e}</button>`).join('') + '</div>';
   }
   function chatPanelToggle() { chatPanelBuild(); document.getElementById('chatPanel').classList.toggle('open'); }
   function chatEmoji(e) { const i = document.getElementById('chatInput'); i.value = (i.value + e).slice(0, 500); i.focus(); }
@@ -6933,7 +6948,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.89';
+  const APP_VERSION = '1.91';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
