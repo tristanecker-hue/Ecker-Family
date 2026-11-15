@@ -6285,7 +6285,7 @@
     const open = typeof force === 'boolean' ? force : card.classList.contains('hidden');
     card.classList.toggle('hidden', !open);
     btn.textContent = open ? '✕ Abbrechen' : '＋ Neue Aufgabe';
-    if (open) { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); const t = document.getElementById('todoText'); if (t) t.focus({ preventScroll: true }); }
+    if (open) { if (card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' }); const t = document.getElementById('todoText'); if (t) t.focus({ preventScroll: true }); }
   }
   async function refreshTodos() {
     await loadTodos();
