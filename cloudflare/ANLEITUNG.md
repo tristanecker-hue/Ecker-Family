@@ -7,3 +7,7 @@
 5. Worker `ecker-push` → **Settings → Bindings → Add → KV namespace** → Variablenname `KV` → Namespace `ecker-push-kv` → Deploy.
 6. Die Worker-Adresse (`https://ecker-push.<name>.workers.dev`) im Browser mit `/vapid` am Ende öffnen: es muss `{"pub":"…"}` erscheinen.
 7. Adresse in `index.html` bei `PUSH_URL` eintragen. Danach: Einstellungen → Mitteilungen → «Mitteilungen erlauben» (iPhone: App zuerst zum Home-Bildschirm hinzufügen).
+
+
+## Erinnerungen (Cron-Trigger)
+Nach dem Einfügen des neuen worker.js und «Deploy»: Worker → Settings → Trigger Events → Add → Cron Trigger → `*/5 * * * *` (alle 5 Minuten). Ohne diesen Trigger werden keine zeitgesteuerten Erinnerungen gesendet.

@@ -68,13 +68,18 @@ service cloud.firestore {
       allow update: if
         (canAssign()
           && resource.data.createdByKey == uname()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'assigneeKey', 'dueAt', 'note', 'points', 'done', 'doneAt', 'claimedAt']))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'assigneeKey', 'dueAt', 'note', 'points', 'done', 'doneAt', 'claimedAt', 'remind', 'repeat']))
         || (canAssign()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'claimedAt', 'seenAt']))
         || (canTodo()
           && mail() == resource.data.assigneeKey + '@ecker.ch'
           && resource.data.done == false
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedAt', 'seenAt']));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedAt', 'seenAt']))
+        || (canTodo()
+          && resource.data.assigneeKey == 'alle'
+          && resource.data.done == false
+          && request.resource.data.assigneeKey == uname()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['assigneeKey']));
       allow delete: if canAssign();
     }
 
@@ -93,18 +98,37 @@ service cloud.firestore {
       allow write: if canAssign();
     }
 
-    // Familienchat: alle Freigeschalteten lesen und schreiben (nur als sich selbst); löschen: eigene Nachrichten (Tristan alle)
+    // Private Aufgaben: nur Tristan und Claudia sehen und ändern sie (eigene Sammlung, damit Kinder sie nie laden)
+    match /todosPrivat/{id} {
+      allow read, write: if canAssign() && uname() in ['tristan', 'claudia'];
+    }
+
+    // Familienchat: alle Freigeschalteten lesen und schreiben (nur als sich selbst).
+    // Löschen: eigene Nachrichten; Tristan und Claudia löschen alle. Nachrichten sind unveränderbar.
     match /chat/{id} {
       allow read: if canChat();
       allow create: if canChat()
-        && request.resource.data.keys().hasOnly(['from', 'name', 'text', 'at'])
+        && request.resource.data.keys().hasOnly(['from', 'name', 'text', 'at', 'photo'])
         && request.resource.data.from == uname()
         && request.resource.data.text is string
-        && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 500
+        && (request.resource.data.text.size() > 0 || request.resource.data.get('photo', null) is string)
         && request.resource.data.at is number;
       allow update: if false;
-      allow delete: if canChat() && (resource.data.from == uname() || isTristan());
+      allow delete: if canChat() && (resource.data.from == uname() || uname() in ['tristan', 'claudia']);
+    }
+
+    // Chat-Fotos (komprimiert als Text gespeichert): lesen alle, löschen wie Nachrichten
+    match /chatPhotos/{id} {
+      allow read: if canChat();
+      allow create: if canChat()
+        && request.resource.data.keys().hasOnly(['from', 'data', 'at'])
+        && request.resource.data.from == uname()
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 950000
+        && request.resource.data.at is number;
+      allow update: if false;
+      allow delete: if canChat() && (resource.data.from == uname() || uname() in ['tristan', 'claudia']);
     }
 
     // Spiele-Rekorde: alle lesen, jede Person schreibt nur die eigenen Bestwerte

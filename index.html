@@ -141,6 +141,40 @@
   .chat-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:min(100%, 520px); box-sizing:border-box; display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; padding:22px 16px calc(6px + env(safe-area-inset-bottom)); background:linear-gradient(to bottom, transparent, var(--bg, #f5f1e8) 28%); z-index:20; }
   body:has(#chatScreen:not(.hidden)) .app-version { display:none; }
   .chat-ver { width:100%; text-align:center; font-size:11px; color:#8a8170; line-height:1; }
+  .rep-days { display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; }
+  .rep-days button { border:2px solid #262319; background:#fff; border-radius:10px; padding:6px 9px; font-size:13px; font-weight:700; cursor:pointer; color:#262319; }
+  .rep-days button.on { background:var(--hl,#ffd84d); }
+  .rep-chk { display:flex; gap:8px; align-items:flex-start; font-size:14px; margin:10px 0; }
+  .rep-chk input { width:auto; margin-top:3px; }
+  .pool-card { background:#FFF6D6; border:2px solid #262319; border-radius:18px; padding:12px; margin-bottom:14px; }
+  .pool-card .kt { font-size:18px; font-weight:800; }
+  .pool-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1.5px dashed #bfa84a; }
+  .pool-row > div { flex:1; }
+  .pool-row .take { border:2px solid #262319; background:#7CCB4A; border-radius:12px; padding:8px 10px; font-weight:800; cursor:pointer; color:#262319; }
+  .chat-tools { display:flex; gap:6px; }
+  .chat-bar .chat-tool { width:40px; height:40px; flex:0 0 40px; font-size:19px; background:#fff; }
+  #chatPanel { display:none; width:100%; max-height:230px; overflow:auto; background:#fff; border:2px solid #262319; border-radius:16px; padding:8px; box-sizing:border-box; }
+  #chatPanel.open { display:block; }
+  .cp-h { font-size:12px; font-weight:700; color:#6b634f; margin:4px 2px; }
+  .cp-st { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:6px; }
+  .cp-st button { width:auto; height:auto; border-radius:14px; background:var(--hl,#fff3d6); font-size:12px; font-weight:700; padding:6px 2px; display:flex; flex-direction:column; align-items:center; gap:2px; color:#262319; flex:initial; }
+  .cp-st button b { font-size:28px; line-height:1; }
+  .cp-st button img { width:38px; height:38px; object-fit:contain; }
+  .cp-em { display:flex; flex-wrap:wrap; gap:2px; }
+  .cp-em button { width:40px; height:40px; border:0; background:none; font-size:24px; border-radius:10px; flex:initial; }
+  .cp-em button:active { background:#eee; }
+  .chat-sticker { display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 6px; }
+  .chat-sticker b { font-size:60px; line-height:1.05; font-weight:400; }
+  .chat-sticker img { width:130px; height:auto; }
+  .chat-sticker span { font-weight:800; font-size:15px; background:var(--hl,#fff3d6); border:2px solid #262319; border-radius:12px; padding:2px 10px; }
+  .chat-img { display:block; width:100%; max-width:240px; min-height:90px; border-radius:10px; background:#ddd center/cover; cursor:zoom-in; }
+  .chat-bub.photo { padding:5px; }
+  .chat-bub.photo .cap { padding:5px 6px 2px; }
+  #chatBox { position:fixed; inset:0; background:#000d; z-index:100; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:16px; }
+  #chatBox.open { display:flex; }
+  #chatBox img { max-width:100%; max-height:76vh; border-radius:8px; }
+  #chatBox .cb-btns { display:flex; gap:10px; }
+  #chatBox button { border:2px solid #fff; background:#0006; color:#fff; border-radius:14px; padding:10px 18px; font-size:16px; cursor:pointer; }
   .chat-bar textarea { flex:1; resize:none; max-height:110px; border:2px solid #262319; border-radius:16px; padding:9px 12px; font:inherit; font-size:16px; background:#fff; }
   .chat-bar button { border:2px solid #262319; background:var(--btn, #F5B942); border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; flex:0 0 44px; }
   .rec-scale { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:2px 0 4px; font-weight:700; }
@@ -1482,10 +1516,17 @@
     <div class="navbar" data-nav="chat"></div>
     <div id="chatList"></div>
     <div class="chat-bar">
+      <div id="chatPanel"></div>
+      <div class="chat-tools">
+        <button class="chat-tool" onclick="document.getElementById('chatFile').click()" aria-label="Foto senden" title="Foto">📷</button>
+        <button class="chat-tool" onclick="chatPanelToggle()" aria-label="Emojis und Sticker" title="Emojis">😊</button>
+      </div>
       <textarea id="chatInput" rows="1" maxlength="500" placeholder="Nachricht …" enterkeyhint="send"></textarea>
       <button id="chatSend" onclick="chatSend()" aria-label="Senden">➤</button>
+      <input type="file" id="chatFile" accept="image/*" class="hidden" onchange="chatPhoto(this)">
       <div class="chat-ver" id="chatVer"></div>
     </div>
+    <div id="chatBox" onclick="if(event.target===this)chatBoxClose()"><img id="chatBoxImg" alt="Foto"><div class="cb-btns"><button id="chatBoxDel" onclick="chatBoxDelete()">🗑 Löschen</button><button onclick="chatBoxClose()">✕ Schliessen</button></div></div>
   </div>
 
   <div id="kalenderScreen" class="hidden">
@@ -1599,9 +1640,21 @@
         <select id="todoPoints"><option value="0">keine</option><option value="1" selected>⭐ 1</option><option value="2">⭐ 2</option><option value="3">⭐ 3</option><option value="4">⭐ 4</option><option value="5">⭐ 5</option></select>
       </div>
       <div class="field">
+        <label for="todoRepeat">Wiederholen</label>
+        <select id="todoRepeat" onchange="repeatUi('todo')"><option value="">nie</option><option value="d">jeden Tag</option><option value="w">jede Woche</option><option value="m">jeden Monat</option></select>
+        <div id="todoDays" class="rep-days hidden"></div>
+      </div>
+      <div class="field">
+        <label for="todoRemind">Erinnerung per Push um (optional)</label>
+        <input type="time" id="todoRemind">
+        <div class="hint" style="font-size:12px;color:var(--ink-soft);margin-top:3px;">Am Fälligkeitstag (ohne Datum: heute). Auf ca. 5 Minuten genau.</div>
+      </div>
+      <div class="field">
         <label for="todoNote">Bemerkung (optional)</label>
         <textarea id="todoNote" rows="2" maxlength="400" placeholder="z. B. Schlüssel liegt im Büro" style="width:100%;"></textarea>
       </div>
+      <label class="rep-chk" id="todoPoolWrap"><input type="checkbox" id="todoPool" onchange="poolUi()"> ⭐ Zusatzaufgabe für alle Kinder (wer zuerst «Ich mach das» drückt)</label>
+      <label class="rep-chk" id="todoPrivWrap"><input type="checkbox" id="todoPriv" onchange="privUi()"> 🔒 Privat (nur Tristan &amp; Claudia sehen das)</label>
       <button class="save-btn" onclick="addTodo()">Aufgabe hinzufügen</button>
     </div>
   </div>
@@ -1817,6 +1870,11 @@
     <input type="date" id="teDue" style="width:100%;margin:4px 0 12px;">
     <label class="punkte-field" style="font-size:13px;color:var(--ink-soft);">Sterne fürs Erledigen</label>
     <select id="tePoints" class="punkte-field" style="width:100%;margin:4px 0 12px;"><option value="0">keine</option><option value="1">⭐ 1</option><option value="2">⭐ 2</option><option value="3">⭐ 3</option><option value="4">⭐ 4</option><option value="5">⭐ 5</option></select>
+    <label style="font-size:13px;color:var(--ink-soft);">Wiederholen</label>
+    <select id="teRepeat" onchange="repeatUi('te')" style="width:100%;margin:4px 0 12px;"><option value="">nie</option><option value="d">jeden Tag</option><option value="w">jede Woche</option><option value="m">jeden Monat</option></select>
+    <div id="teDays" class="rep-days hidden"></div>
+    <label style="font-size:13px;color:var(--ink-soft);">Erinnerung um</label>
+    <input type="time" id="teRemind" style="width:100%;margin:4px 0 12px;">
     <label style="font-size:13px;color:var(--ink-soft);">Bemerkung</label>
     <textarea id="teNote" rows="2" maxlength="400" style="width:100%;margin:4px 0 16px;"></textarea>
     <button class="save-btn" onclick="saveTodoEdit()">Speichern</button>
@@ -2202,7 +2260,7 @@
     document.getElementById('accountScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); chatStop(); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
 
@@ -2223,7 +2281,7 @@
     hideAllScreens(); refreshNavs();
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); chatStop(); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('mainScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -2241,7 +2299,7 @@
   function goHome() {
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); chatStop(); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -2269,7 +2327,7 @@
     document.getElementById('mainScreen').classList.add('hidden');
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
-    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
+    document.getElementById('todoScreen').classList.add('hidden'); document.getElementById('planScreen').classList.add('hidden'); document.getElementById('hauswartScreen').classList.add('hidden'); document.getElementById('spesenScreen').classList.add('hidden'); document.getElementById('spieleScreen').classList.add('hidden'); document.getElementById('punkteScreen').classList.add('hidden'); document.getElementById('essenScreen').classList.add('hidden'); document.getElementById('kalenderScreen').classList.add('hidden'); chatStop(); document.getElementById('chatScreen').classList.add('hidden'); document.getElementById('rezScreen').classList.add('hidden');
     document.getElementById('settingsScreen').classList.add('hidden');
     document.getElementById('accountScreen').classList.remove('hidden');
     setLoginBackground(true);
@@ -2836,6 +2894,7 @@
   // ---------- Menüleiste zum Wechseln ----------
 
   function hideAllScreens() {
+    chatStop();
     ['homeScreen', 'mainScreen', 'summaryScreen', 'todoScreen', 'planScreen', 'hauswartScreen', 'spesenScreen', 'spieleScreen', 'punkteScreen', 'essenScreen', 'kalenderScreen', 'chatScreen', 'rezScreen', 'settingsScreen']
       .forEach(id => document.getElementById(id).classList.add('hidden'));
   }
@@ -3333,7 +3392,24 @@
   }
 
   // ---------- Familienchat ----------
-  let chatMsgs = [], chatTimer = null, chatSending = false;
+  let chatMsgs = [], chatUnsub = null, chatSending = false, chatBoxId = null;
+  const chatPhotoCache = {};
+  const isParentUser = () => ['tristan', 'claudia'].includes(userKey(currentUser));
+  const STICKERS = {
+    yuna: { img: 'hund.png', t: 'Yuna ♡', say: 'Yuna' },
+    liebe: { e: '🥰', t: 'Hab dich lieb', say: 'Hab dich lieb' },
+    nacht: { e: '🌙', t: 'Gute Nacht', say: 'Gute Nacht' },
+    essen: { e: '🍝', t: 'Essen ist fertig!', say: 'Essen ist fertig!' },
+    hunger: { e: '🍕', t: 'Ich hab Hunger!', say: 'Ich hab Hunger!' },
+    gassi: { e: '🐶', t: 'Wer geht mit Yuna Gassi?', say: 'Wer geht mit Yuna Gassi?' },
+    unterwegs: { e: '🚗', t: 'Bin unterwegs', say: 'Bin unterwegs' },
+    super: { e: '🎉', t: 'Super gemacht!', say: 'Super gemacht!' },
+    danke: { e: '🙏', t: 'Danke!', say: 'Danke!' },
+    familie: { e: '👨‍👩‍👧‍👦', t: 'Familie ♥', say: 'Familie ♥' },
+    geburtstag: { e: '🎂', t: 'Alles Gute!', say: 'Alles Gute!' },
+    besserung: { e: '🤒', t: 'Gute Besserung', say: 'Gute Besserung' }
+  };
+  const FAMILY_EMOJIS = '❤️ 💜 💙 💚 💛 🧡 😍 🥰 😘 😂 🤣 😊 😎 🤗 😴 🤔 😅 😭 😡 🙄 👍 👏 🙏 💪 🎉 🥳 🎂 🎁 ⭐ 🔥 🌈 ☀️ 🌙 ⚽ 🎮 🍕 🍝 🍰 🍦 ☕ 🏠 🚗 🛒 🧹 🧺 🛠️ 🌸 🦄 🚀 🐶 🐾 🦴 👨‍👩‍👧‍👦 👪 👩‍👧 👨‍👧 👩‍👦 👨‍👦 👶 👧 👦 👩 👨'.split(' ');
   const chatSeenKey = () => 'ef-chat-seen-' + userKey(currentUser);
   const chatSeen = () => { try { return +localStorage.getItem(chatSeenKey()) || 0; } catch (e) { return 0; } };
   const chatMarkSeen = () => { const bd = document.getElementById('chatBadge'); if (bd) bd.textContent = ''; try { const t = chatMsgs.length ? chatMsgs[chatMsgs.length - 1].at : 0; if (t) localStorage.setItem(chatSeenKey(), String(t)); } catch (e) {} };
@@ -3347,6 +3423,8 @@
       if (b) b.textContent = n ? '💬 ' + n + ' neu' : '';
     } catch (e) {}
   }
+  const chatStickerOf = m => { const k = /^:([a-z]+):$/.exec(m.text || ''); return k && STICKERS[k[1]] ? STICKERS[k[1]] : null; };
+  const chatPreview = m => m.photo ? '📷 Foto' + (m.text ? ': ' + m.text : '') : (chatStickerOf(m) ? chatStickerOf(m).say : m.text);
   function chatRender(stick) {
     const el = document.getElementById('chatList'); if (!el) return;
     const me = userKey(currentUser);
@@ -3354,59 +3432,126 @@
     chatMsgs.forEach(m => {
       const d = new Date(m.at), day = d.toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' });
       if (day !== lastDay) { html += `<div class="chat-day">${escapeHtml(day)}</div>`; lastDay = day; }
-      const mine = m.from === me, name = m.name || ACCOUNTS[m.from] || m.from;
-      html += `<div class="chat-row ${mine ? 'me' : ''}"><span class="chat-av" data-avatar="${escapeHtml(name)}"></span><div>${mine ? '' : `<div class="chat-who">${escapeHtml(name)}</div>`}<div class="chat-bub" ${mine ? `onclick="chatDelete('${m.id}')"` : ''}>${escapeHtml(m.text)}</div><div class="chat-time">${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div></div>`;
+      const mine = m.from === me, name = m.name || ACCOUNTS[m.from] || m.from, st = chatStickerOf(m), canDel = mine || isParentUser();
+      const del = canDel ? `onclick="chatDelete('${m.id}')"` : '';
+      let inner;
+      if (m.photo) inner = `<div class="chat-bub photo"><img class="chat-img" data-photo="${escapeHtml(m.photo)}" data-msg="${m.id}" alt="Foto">${m.text ? `<div class="cap">${escapeHtml(m.text)}</div>` : ''}</div>`;
+      else if (st) inner = `<div class="chat-sticker" ${del}>${st.img ? `<img src="${st.img}" alt="">` : `<b>${st.e}</b>`}<span>${escapeHtml(st.t)}</span></div>`;
+      else inner = `<div class="chat-bub" ${del}>${escapeHtml(m.text)}</div>`;
+      html += `<div class="chat-row ${mine ? 'me' : ''}"><span class="chat-av" data-avatar="${escapeHtml(name)}"></span><div>${mine ? '' : `<div class="chat-who">${escapeHtml(name)}</div>`}${inner}<div class="chat-time">${d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div></div>`;
     });
     if (!chatMsgs.length) html = '<div class="todo-empty">Noch keine Nachrichten – schreib die erste! 👋</div>';
     el.innerHTML = html;
     applyAvatars();
+    el.querySelectorAll('img[data-photo]').forEach(img => {
+      const id = img.dataset.photo;
+      img.onclick = () => chatBoxOpen(id, img.dataset.msg);
+      chatPhotoSrc(id).then(src => { if (src) img.src = src; else img.alt = 'Foto nicht mehr vorhanden'; });
+    });
     if (stick) window.scrollTo(0, document.body.scrollHeight);
   }
-  async function chatLoad(first) {
-    try {
-      const list = await withTimeout(cloudApi.chatList(100));
-      const changed = list.length !== chatMsgs.length || (list.length && chatMsgs.length && list[list.length - 1].id !== chatMsgs[chatMsgs.length - 1].id);
-      if (changed || first) {
-        const nearEnd = first || (window.innerHeight + window.scrollY >= document.body.scrollHeight - 140);
-        chatMsgs = list; chatRender(nearEnd);
-      }
-      chatMarkSeen();
-    } catch (e) { if (first) document.getElementById('chatList').innerHTML = '<div class="todo-empty">Chat konnte nicht geladen werden – Verbindung prüfen.</div>'; }
+  async function chatPhotoSrc(id) {
+    if (chatPhotoCache[id]) return chatPhotoCache[id];
+    try { const d = await cloudApi.photoGet(id); if (d) chatPhotoCache[id] = d; return d; } catch (e) { return null; }
   }
+  function chatStop() { if (chatUnsub) { try { chatUnsub(); } catch (e) {} chatUnsub = null; } }
   async function openChat() {
     if (!currentUser || !cloudEnabled) return;
     hideAllScreens(); refreshNavs();
     document.getElementById('chatScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     chatMsgs = [];
+    document.getElementById('chatPanel').classList.remove('open');
     document.getElementById('chatList').innerHTML = '<div class="todo-empty">Wird geladen …</div>';
-    await chatLoad(true);
-    clearInterval(chatTimer);
-    chatTimer = setInterval(() => {
-      if (document.getElementById('chatScreen').classList.contains('hidden') || document.visibilityState !== 'visible') { if (document.getElementById('chatScreen').classList.contains('hidden')) { clearInterval(chatTimer); chatTimer = null; } return; }
-      chatLoad(false);
-    }, 4000);
+    chatPanelBuild();
+    chatStop();
+    let first = true;
+    chatUnsub = cloudApi.chatListen(100, list => {
+      const near = first || (window.innerHeight + window.scrollY >= document.body.scrollHeight - 160);
+      chatMsgs = list; first = false;
+      chatRender(near); chatMarkSeen();
+    }, () => { if (first) document.getElementById('chatList').innerHTML = '<div class="todo-empty">Chat konnte nicht geladen werden – Verbindung prüfen.</div>'; });
   }
-  async function chatSend() {
-    const inp = document.getElementById('chatInput'), text = inp.value.trim();
+  async function chatPost(m, pushText) {
+    const me = userKey(currentUser);
+    await withTimeout(cloudApi.chatAdd(m));
+    chatMsgs.push(m); chatRender(true); chatMarkSeen();
+    pushSend([{ to: Object.keys(ACCOUNTS).filter(k => k !== me), title: currentUser + ' im Chat', body: String(pushText || '').slice(0, 120), url: './' }]);
+  }
+  const chatNewId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  async function chatSend(textOverride) {
+    const inp = document.getElementById('chatInput'), isSticker = typeof textOverride === 'string';
+    const text = (isSticker ? textOverride : inp.value).trim();
     if (!text || chatSending) return;
     chatSending = true;
-    const me = userKey(currentUser);
-    const m = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), from: me, name: currentUser, text: text.slice(0, 500), at: Date.now() };
+    const m = { id: chatNewId(), from: userKey(currentUser), name: currentUser, text: text.slice(0, 500), at: Date.now() };
     try {
-      await withTimeout(cloudApi.chatAdd(m));
-      inp.value = ''; inp.style.height = '';
-      chatMsgs.push(m); chatRender(true); chatMarkSeen();
-      pushSend([{ to: Object.keys(ACCOUNTS).filter(k => k !== me), title: currentUser + ' im Chat', body: m.text.slice(0, 120), url: './' }]);
+      await chatPost(m, chatPreview(m));
+      if (!isSticker) { inp.value = ''; inp.style.height = ''; }
+      document.getElementById('chatPanel').classList.remove('open');
     } catch (e) { showToast('Senden fehlgeschlagen – bitte Verbindung prüfen'); }
     chatSending = false;
   }
+  // Foto verkleinern (max. ca. 1280 px, JPEG), damit es klein in der Datenbank bleibt
+  async function chatCompress(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Bild')); i.src = url; });
+      let max = 1280, q = 0.72, out = '';
+      for (let k = 0; k < 6; k++) {
+        const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * sc)); c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL('image/jpeg', q);
+        if (out.length < 700000) break;
+        max *= 0.8; q = Math.max(0.45, q - 0.07);
+      }
+      if (out.length >= 900000) throw new Error('zu gross');
+      return out;
+    } finally { URL.revokeObjectURL(url); }
+  }
+  async function chatPhoto(inp) {
+    const file = inp.files && inp.files[0]; inp.value = '';
+    if (!file || chatSending) return;
+    chatSending = true; showToast('Foto wird gesendet …');
+    const caption = document.getElementById('chatInput').value.trim();
+    const photoId = 'p' + chatNewId();
+    try {
+      const data = await chatCompress(file);
+      await withTimeout(cloudApi.photoPut(photoId, { from: userKey(currentUser), data, at: Date.now() }), 30000);
+      chatPhotoCache[photoId] = data;
+      const m = { id: chatNewId(), from: userKey(currentUser), name: currentUser, text: caption.slice(0, 500), at: Date.now(), photo: photoId };
+      try { await chatPost(m, chatPreview(m)); } catch (e) { try { await cloudApi.photoDelete(photoId); } catch (x) {} throw e; }
+      document.getElementById('chatInput').value = '';
+    } catch (e) { showToast('Foto senden fehlgeschlagen'); }
+    chatSending = false;
+  }
+  function chatBoxOpen(photoId, msgId) {
+    const src = chatPhotoCache[photoId]; if (!src) return;
+    chatBoxId = msgId;
+    document.getElementById('chatBoxImg').src = src;
+    const m = chatMsgs.find(x => x.id === msgId);
+    document.getElementById('chatBoxDel').classList.toggle('hidden', !(m && (m.from === userKey(currentUser) || isParentUser())));
+    document.getElementById('chatBox').classList.add('open');
+  }
+  function chatBoxClose() { document.getElementById('chatBox').classList.remove('open'); chatBoxId = null; }
+  async function chatBoxDelete() { const id = chatBoxId; chatBoxClose(); if (id) await chatDelete(id); }
   async function chatDelete(id) {
     const m = chatMsgs.find(x => x.id === id);
-    if (!m || m.from !== userKey(currentUser)) return;
-    if (!window.confirm('Diese Nachricht löschen?')) return;
-    try { await withTimeout(cloudApi.chatDelete(id)); chatMsgs = chatMsgs.filter(x => x.id !== id); chatRender(false); } catch (e) { showToast('Löschen fehlgeschlagen'); }
+    if (!m || !(m.from === userKey(currentUser) || isParentUser())) return;
+    if (!window.confirm(m.photo ? 'Dieses Foto löschen?' : 'Diese Nachricht löschen?')) return;
+    try {
+      await withTimeout(cloudApi.chatDelete(id, m.photo));
+      chatMsgs = chatMsgs.filter(x => x.id !== id); chatRender(false);
+    } catch (e) { showToast('Löschen fehlgeschlagen'); }
   }
+  function chatPanelBuild() {
+    const el = document.getElementById('chatPanel'); if (!el || el.dataset.built) return;
+    el.dataset.built = '1';
+    el.innerHTML = '<div class="cp-h">Sticker</div><div class="cp-st">' + Object.keys(STICKERS).map(k => { const s = STICKERS[k]; return `<button onclick="chatSend(':${k}:')">${s.img ? `<img src="${s.img}" alt="">` : `<b>${s.e}</b>`}${escapeHtml(s.t)}</button>`; }).join('') + '</div><div class="cp-h">Emojis</div><div class="cp-em">' + FAMILY_EMOJIS.map(e => `<button onclick="chatEmoji('${e}')">${e}</button>`).join('') + '</div>';
+  }
+  function chatPanelToggle() { chatPanelBuild(); document.getElementById('chatPanel').classList.toggle('open'); }
+  function chatEmoji(e) { const i = document.getElementById('chatInput'); i.value = (i.value + e).slice(0, 500); i.focus(); }
   document.addEventListener('DOMContentLoaded', () => {
     const inp = document.getElementById('chatInput'); if (!inp) return;
     inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(110, inp.scrollHeight) + 'px'; });
@@ -3475,7 +3620,7 @@
   function pushTodoMsgs(before, after) {
     const kids = KIDS.map(userKey), parents = ['Tristan', 'Claudia'].map(userKey), url = './#todos', text = after.text || 'Aufgabe', out = [];
     const nm = k => ACCOUNTS[k] || k;
-    if (!before) { if (after.assigneeKey && after.assigneeKey !== after.createdByKey) out.push({ to: [after.assigneeKey], title: 'Neue Aufgabe', body: text, url }); return out; }
+    if (!before) { if (after.assigneeKey === 'alle') out.push({ to: kids, title: '⭐ Neue Zusatzaufgabe', body: text, url }); else if (after.assigneeKey && after.assigneeKey !== after.createdByKey) out.push({ to: [after.assigneeKey], title: 'Neue Aufgabe', body: text, url }); return out; }
     if (after.claimedAt && !before.claimedAt && !after.done) out.push({ to: parents.filter(p => p !== after.assigneeKey), title: nm(after.assigneeKey) + ' meldet: erledigt', body: text + ' – bitte bestätigen', url });
     if (!before.done && after.done && kids.includes(after.assigneeKey) && after.assigneeKey !== userKey(currentUser)) out.push({ to: [after.assigneeKey], title: 'Bestätigt ✅', body: text, url });
     if (before.claimedAt && !after.claimedAt && !after.done && kids.includes(after.assigneeKey)) out.push({ to: [after.assigneeKey], title: 'Bitte nochmals ansehen', body: text, url });
@@ -5998,9 +6143,98 @@
   }
   function canAssignTodos() { return hasFeature('assign'); }
 
+  // ---------- Aufgaben: privat, wiederkehrend, Erinnerung, Zusatzaufgaben ----------
+  const POOL = 'alle', WDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+  const isParentU = () => ['tristan', 'claudia'].includes(userKey(currentUser));
+  const tPriv = id => !!(todos.find(x => x.id === id) || {}).privat;
+  const dStr = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const dParse = str => { const [y, m, d] = str.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+  let repDays = { todo: [], te: [] };
+  function repeatUi(p) {
+    const v = document.getElementById(p === 'todo' ? 'todoRepeat' : 'teRepeat').value, box = document.getElementById(p + 'Days');
+    box.classList.toggle('hidden', v !== 'w');
+    box.innerHTML = [1, 2, 3, 4, 5, 6, 0].map(i => `<button type="button" class="${repDays[p].includes(i) ? 'on' : ''}" onclick="repDay('${p}',${i})">${WDAYS[i]}</button>`).join('');
+  }
+  function repDay(p, i) { const a = repDays[p], k = a.indexOf(i); if (k >= 0) a.splice(k, 1); else a.push(i); repeatUi(p); }
+  function repGet(p) {
+    const v = document.getElementById(p === 'todo' ? 'todoRepeat' : 'teRepeat').value;
+    if (!v) return null;
+    if (v === 'w') return { t: 'w', days: repDays[p].length ? repDays[p].slice().sort() : [new Date().getDay()] };
+    return { t: v };
+  }
+  function repSet(p, r) {
+    document.getElementById(p === 'todo' ? 'todoRepeat' : 'teRepeat').value = r ? r.t : '';
+    repDays[p] = r && r.days ? r.days.slice() : [];
+    repeatUi(p);
+  }
+  const repLabel = r => !r ? '' : r.t === 'd' ? 'täglich' : r.t === 'm' ? 'monatlich' : 'wöchentlich ' + (r.days || []).map(i => WDAYS[i]).join('/');
+  // nächstes Datum nach "from" (YYYY-MM-DD)
+  function repNext(r, from) {
+    const d = dParse(from);
+    if (r.t === 'd') d.setDate(d.getDate() + 1);
+    else if (r.t === 'm') { const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + 1); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); }
+    else { const ds = r.days && r.days.length ? r.days : [d.getDay()]; do { d.setDate(d.getDate() + 1); } while (!ds.includes(d.getDay())); }
+    return dStr(d);
+  }
+  function poolUi() {
+    const on = document.getElementById('todoPool').checked;
+    document.getElementById('todoAssignee').disabled = on;
+    if (on) { document.getElementById('todoPriv').checked = false; if (document.getElementById('todoPoints').value === '0') document.getElementById('todoPoints').value = '2'; }
+  }
+  function privUi() {
+    const on = document.getElementById('todoPriv').checked, sel = document.getElementById('todoAssignee');
+    if (on) { document.getElementById('todoPool').checked = false; sel.disabled = false; }
+    sel.innerHTML = USERS.filter(n => !on || ['tristan', 'claudia'].includes(userKey(n))).map(n => `<option value="${escapeHtml(userKey(n))}">${escapeHtml(n)}</option>`).join('');
+  }
+  // Erinnerung beim Push-Dienst anmelden oder löschen
+  function remindAt(t) {
+    if (!t.remind || t.done || !/^\d\d:\d\d$/.test(t.remind)) return 0;
+    const [h, m] = t.remind.split(':').map(Number), d = dParse(t.dueAt || todayStr());
+    d.setHours(h, m, 0, 0);
+    return d.getTime();
+  }
+  function remindSync(t) {
+    if (!PUSH_AKTIV || !cloudEnabled || !cloudApi) return;
+    const at = remindAt(t);
+    const to = t.assigneeKey === POOL ? KIDS.map(userKey) : [t.assigneeKey];
+    const body = at > Date.now() ? { id: t.id, to, at, title: '⏰ Erinnerung', body: t.text + (t.assigneeKey === POOL ? ' (Zusatzaufgabe)' : ''), url: './#todos' } : null;
+    try {
+      Promise.resolve(cloudApi.idToken()).then(tok => fetch(PUSH_URL + (body ? '/remind' : '/remind-cancel'), { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify(body || { id: t.id }) })).catch(() => {});
+    } catch (e) {}
+  }
+  // Wenn eine wiederkehrende Aufgabe erledigt wird, entsteht die nächste (feste Nummer: kein Doppel)
+  async function spawnNext(t) {
+    if (!t.repeat || !t.done) return;
+    let due = repNext(t.repeat, t.dueAt || todayStr());
+    if (due <= todayStr()) due = repNext(t.repeat, todayStr());
+    const id = ('r' + t.id.replace(/^r/, '').split('_')[0] + '_' + due).replace(/[^A-Za-z0-9_-]/g, '');
+    if (todos.some(x => x.id === id)) return;
+    const n = { ...t, id, done: false, doneAt: null, claimedAt: null, seenAt: null, createdAt: Date.now(), dueAt: due };
+    if (t.pool) n.assigneeKey = POOL;
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.addTodo(n));
+      todos.push(n);
+      if (!cloudEnabled) persistTodosLocal();
+      remindSync(n);
+      pushSend(pushTodoMsgs(null, n));
+    } catch (e) {}
+  }
+  async function takePool(id) {
+    const t = todos.find(x => x.id === id), me = userKey(currentUser);
+    if (!t || t.assigneeKey !== POOL) return;
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(id, { assigneeKey: me }, t.privat));
+      t.assigneeKey = me; t.pool = true;
+      if (!cloudEnabled) persistTodosLocal();
+    } catch (e) { showToast('Geht nicht – hat es schon jemand genommen?'); await refreshTodos(); return; }
+    pushSend([{ to: ['Tristan', 'Claudia'].map(userKey).filter(k => k !== me), title: (ACCOUNTS[me] || me) + ' übernimmt', body: t.text, url: './#todos' }]);
+    showToast('Super! Die Aufgabe ist jetzt bei dir 💪');
+    renderTodos(); updateTodoBadge();
+  }
+
   async function loadTodos() {
     if (cloudEnabled) {
-      try { todos = await withTimeout(cloudApi.listTodos()); }
+      try { todos = await withTimeout(cloudApi.listTodos()); if (isParentU()) { try { const pr = await withTimeout(cloudApi.listTodosPriv()); todos = todos.concat(pr.map(x => ({ ...x, privat: true }))); } catch (e) {} } }
       catch (e) { showToast("To-Do's konnten nicht geladen werden"); }
       return;
     }
@@ -6038,6 +6272,8 @@
     if (!sel.options.length) {
       sel.innerHTML = USERS.map(n => `<option value="${escapeHtml(userKey(n))}">${escapeHtml(n)}</option>`).join('');
     }
+    document.getElementById('todoPrivWrap').classList.toggle('hidden', !isParentU());
+    repeatUi('todo'); privUi();
     await refreshTodos();
   }
 
@@ -6092,7 +6328,7 @@
         return `<div class="kid-row ${t.done ? 'done' : ''} ${pend ? 'pending' : ''}">
           <button class="todo-check ${t.done ? 'done' : ''}" ${canToggle && !(kidSelf && t.done) ? '' : 'disabled'} onclick="toggleTodo('${t.id}')" title="${t.done ? 'Wieder öffnen' : pend ? (kidSelf ? 'Meldung zurücknehmen' : 'Bestätigen') : (kidSelf ? 'Fertig melden' : 'Erledigt')}">${t.done ? '✓' : pend ? '⏳' : ''}</button>
           <div><div class="kid-text">${escapeHtml(t.text)}</div><div class="kid-line"></div>
-            ${(t.dueAt || t.createdByKey !== key || (PUNKTE_AKTIV && t.points > 0)) ? `<div class="kid-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.seenAt && t.createdByKey === me && !t.done ? ' · 👀 gesehen' : ''}</div>` : ''}
+            ${(t.dueAt || t.createdByKey !== key || t.privat || t.repeat || t.remind || (PUNKTE_AKTIV && t.points > 0)) ? `<div class="kid-meta">von ${escapeHtml(nameOf(t.createdByKey))}${dueHtml(t)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.seenAt && t.createdByKey === me && !t.done ? ' · 👀 gesehen' : ''}${t.privat ? ' · 🔒 privat' : ''}${t.repeat ? ' · 🔁 ' + repLabel(t.repeat) : ''}${t.remind ? ' · ⏰ ' + t.remind : ''}</div>` : ''}
             ${t.note ? `<div class="kid-note">💬 ${escapeHtml(t.note)}</div>` : ''}
             ${pend ? `<div class="kid-pend">⏳ ${parent ? escapeHtml(n) + ' meldet: fertig' : 'wartet auf Bestätigung'}</div>` : ''}
             ${parent && pend ? `<div class="kid-actions"><button class="ok" onclick="toggleTodo('${t.id}')">✔ Bestätigen</button><button onclick="rejectClaim('${t.id}')">↩ Noch nicht</button></div>` : ''}
@@ -6104,7 +6340,10 @@
         ${open.length + done.length === 0 ? '<div class="kid-empty">Noch keine Aufgaben 🎈</div>' : open.map(row).join('') + done.map(row).join('')}
       </div>`;
     };
+    const pool = todos.filter(t => t.assigneeKey === POOL && !t.done);
+    const poolHtml = pool.length ? `<div class="pool-card"><div class="kt">⭐ Zusatzaufgaben für alle</div><div style="font-size:13px;margin-bottom:4px;">Hol dir extra Sterne – wer zuerst kommt!</div>${pool.map(t => `<div class="pool-row"><div><b>${escapeHtml(t.text)}</b>${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${dueHtml(t)}${t.repeat ? ' · 🔁 ' + repLabel(t.repeat) : ''}${t.note ? `<div class="kid-note">💬 ${escapeHtml(t.note)}</div>` : ''}</div>${KIDS.includes(currentUser) ? `<button class="take" onclick="takePool('${t.id}')">Ich mach das!</button>` : ''}${canAssignTodos() ? `<button class="take" style="background:#fff" onclick="deleteTodo('${t.id}')">✕</button>` : ''}</div>`).join('')}</div>` : '';
     wrap.innerHTML = `<div class="kid-head"><div class="kt">Familien To-Do-Liste</div><div class="ks">Gemeinsam schaffen wir das! ♡</div></div>
+      ${poolHtml}
       <div class="kid-grid">${order.map(card).join('')}</div>
       <div class="kid-foot"><img class="fd-img" src="hund.png" alt="Yuna" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'fd',textContent:'🐶'}))">Team ♡ &nbsp;·&nbsp; Zusammen ist alles leichter!</div>`;
   }
@@ -6154,10 +6393,11 @@
     const input = document.getElementById('todoText');
     const text = input.value.trim();
     if (!text) { showToast('Bitte eine Aufgabe eingeben'); return; }
+    const pool = document.getElementById('todoPool').checked, priv = document.getElementById('todoPriv').checked && isParentU();
     const todo = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       text,
-      assigneeKey: document.getElementById('todoAssignee').value,
+      assigneeKey: pool ? POOL : document.getElementById('todoAssignee').value,
       createdByKey: userKey(currentUser),
       done: false,
       createdAt: Date.now(),
@@ -6165,8 +6405,12 @@
       dueAt: document.getElementById('todoDue').value || null,
       note: document.getElementById('todoNote').value.trim(),
       points: PUNKTE_AKTIV ? (parseInt(document.getElementById('todoPoints').value, 10) || 0) : 0,
-      seenAt: null
+      seenAt: null,
+      remind: document.getElementById('todoRemind').value || null,
+      repeat: repGet('todo')
     };
+    if (pool) todo.pool = true;
+    if (priv) todo.privat = true;
     try {
       if (cloudEnabled) await withTimeout(cloudApi.addTodo(todo));
       todos.push(todo);
@@ -6179,7 +6423,10 @@
     document.getElementById('todoDue').value = '';
     document.getElementById('todoNote').value = '';
     document.getElementById('todoPoints').value = '1';
-    pushSend(pushTodoMsgs(null, todo));
+    document.getElementById('todoRemind').value = ''; document.getElementById('todoRepeat').value = ''; repeatUi('todo');
+    document.getElementById('todoPool').checked = false; document.getElementById('todoPriv').checked = false; document.getElementById('todoAssignee').disabled = false; privUi();
+    remindSync(todo);
+    if (!todo.privat) pushSend(pushTodoMsgs(null, todo));
     renderTodos();
     showToast('Aufgabe hinzugefügt');
   }
@@ -6193,14 +6440,16 @@
       : { done: !t.done, doneAt: !t.done ? Date.now() : null, claimedAt: null };
     const before = { ...t };
     try {
-      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(id, patch));
+      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(id, patch, tPriv(id)));
       Object.assign(t, patch);
       if (!cloudEnabled) persistTodosLocal();
     } catch (e) {
       showToast('Änderung fehlgeschlagen – bitte Verbindung prüfen');
       return;
     }
-    pushSend(pushTodoMsgs(before, t));
+    if (!t.privat) pushSend(pushTodoMsgs(before, t));
+    if (t.done) { remindSync(t); await spawnNext(t); }
+    else if (before.done) remindSync(t);
     if (kidClaim) showToast(t.claimedAt ? '⏳ Gemeldet – Mama oder Papa bestätigt' : 'Meldung zurückgenommen');
     renderTodos();
     updateTodoBadge();
@@ -6211,7 +6460,7 @@
     if (!t || !canAssignTodos()) return;
     const patch = { claimedAt: null }, before = { ...t };
     try {
-      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(id, patch));
+      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(id, patch, tPriv(id)));
       Object.assign(t, patch);
       if (!cloudEnabled) persistTodosLocal();
     } catch (e) { showToast('Änderung fehlgeschlagen – bitte Verbindung prüfen'); return; }
@@ -6230,6 +6479,9 @@
     document.getElementById('teDue').value = t.dueAt || '';
     document.getElementById('teNote').value = t.note || '';
     document.getElementById('tePoints').value = String(t.points || 0);
+    document.getElementById('teRemind').value = t.remind || '';
+    repSet('te', t.repeat);
+    document.getElementById('teAssignee').innerHTML = (t.assigneeKey === POOL ? `<option value="${POOL}" selected>⭐ Alle Kinder (Zusatzaufgabe)</option>` : '') + USERS.filter(n => !t.privat || ['tristan', 'claudia'].includes(userKey(n))).map(n => `<option value="${escapeHtml(userKey(n))}" ${userKey(n) === t.assigneeKey ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
     document.getElementById('todoEdit').classList.remove('hidden');
   }
   function closeTodoEdit() { editingTodo = null; document.getElementById('todoEdit').classList.add('hidden'); }
@@ -6238,12 +6490,13 @@
     if (!t) { closeTodoEdit(); return; }
     const text = document.getElementById('teText').value.trim();
     if (!text) { showToast('Bitte eine Aufgabe eingeben'); return; }
-    const patch = { text, assigneeKey: document.getElementById('teAssignee').value, dueAt: document.getElementById('teDue').value || null, note: document.getElementById('teNote').value.trim(), ...(PUNKTE_AKTIV ? { points: parseInt(document.getElementById('tePoints').value, 10) || 0 } : {}) };
+    const patch = { text, assigneeKey: document.getElementById('teAssignee').value, dueAt: document.getElementById('teDue').value || null, note: document.getElementById('teNote').value.trim(), remind: document.getElementById('teRemind').value || null, repeat: repGet('te'), ...(PUNKTE_AKTIV ? { points: parseInt(document.getElementById('tePoints').value, 10) || 0 } : {}) };
     try {
-      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(t.id, patch));
+      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(t.id, patch, tPriv(t.id)));
       Object.assign(t, patch);
       if (!cloudEnabled) persistTodosLocal();
     } catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); return; }
+    remindSync(t);
     closeTodoEdit();
     renderTodos();
     showToast('Pendenz geändert');
@@ -6251,8 +6504,10 @@
 
   async function deleteTodo(id) {
     if (!canAssignTodos()) return;
+    const gone = todos.find(x => x.id === id);
     try {
-      if (cloudEnabled) await withTimeout(cloudApi.deleteTodo(id));
+      if (cloudEnabled) await withTimeout(cloudApi.deleteTodo(id, tPriv(id)));
+      if (gone) remindSync({ ...gone, done: true });
       todos = todos.filter(x => x.id !== id);
       if (!cloudEnabled) persistTodosLocal();
     } catch (e) {
@@ -6301,7 +6556,7 @@
       if (t.assigneeKey !== me || t.seenAt || t.createdByKey === me) continue;
       const patch = { seenAt: Date.now() };
       try {
-        if (cloudEnabled) await withTimeout(cloudApi.updateTodo(t.id, patch));
+        if (cloudEnabled) await withTimeout(cloudApi.updateTodo(t.id, patch, tPriv(t.id)));
         Object.assign(t, patch);
         if (!cloudEnabled) persistTodosLocal();
       } catch (e) { /* nicht schlimm, beim nächsten Mal */ }
@@ -6350,10 +6605,11 @@
     const patch = kidClaim ? { claimedAt: Date.now() } : { done: true, doneAt: Date.now(), claimedAt: null };
     const before = { ...t };
     try {
-      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(id, patch));
+      if (cloudEnabled) await withTimeout(cloudApi.updateTodo(id, patch, tPriv(id)));
       Object.assign(t, patch);
       if (!cloudEnabled) persistTodosLocal();
-      pushSend(pushTodoMsgs(before, t));
+      if (!t.privat) pushSend(pushTodoMsgs(before, t));
+      if (t.done) { remindSync(t); await spawnNext(t); }
       showToast(kidClaim ? '⏳ Gemeldet – Mama oder Papa bestätigt' : 'Als erledigt markiert');
     } catch (e) { showToast('Änderung fehlgeschlagen – bitte Verbindung prüfen'); }
   }
@@ -6578,9 +6834,10 @@
           const sn = await F.getDocs(F.collection(db, 'todos'));
           return sn.docs.map(d => d.data());
         },
-        addTodo: t => F.setDoc(F.doc(db, 'todos', t.id), t),
-        updateTodo: (id, patch) => F.updateDoc(F.doc(db, 'todos', id), patch),
-        deleteTodo: id => F.deleteDoc(F.doc(db, 'todos', id)),
+        listTodosPriv: async () => { const sn = await F.getDocs(F.collection(db, 'todosPrivat')); return sn.docs.map(d => d.data()); },
+        addTodo: t => { const { privat, ...data } = t; return F.setDoc(F.doc(db, privat ? 'todosPrivat' : 'todos', t.id), data); },
+        updateTodo: (id, patch, priv) => F.updateDoc(F.doc(db, priv ? 'todosPrivat' : 'todos', id), patch),
+        deleteTodo: (id, priv) => F.deleteDoc(F.doc(db, priv ? 'todosPrivat' : 'todos', id)),
 
         kvGet: async (col, id) => {
           const d = await F.getDoc(F.doc(db, col, id));
@@ -6613,8 +6870,17 @@
           sn.forEach(d => out.push({ id: d.id, ...d.data() }));
           return out.reverse();
         },
+        // Live-Verbindung: es werden nur neue/geänderte Nachrichten gelesen (spart Datenbank-Zugriffe)
+        chatListen: (n, cb, eb) => F.onSnapshot(F.query(F.collection(db, 'chat'), F.orderBy('at', 'desc'), F.limit(n || 100)), sn => {
+          const out = [];
+          sn.forEach(d => out.push({ id: d.id, ...d.data() }));
+          cb(out.reverse());
+        }, e => { if (eb) eb(e); }),
         chatAdd: m => { const { id, ...data } = m; return F.setDoc(F.doc(db, 'chat', id), data); },
-        chatDelete: id => F.deleteDoc(F.doc(db, 'chat', id)),
+        chatDelete: async (id, photoId) => { await F.deleteDoc(F.doc(db, 'chat', id)); if (photoId) { try { await F.deleteDoc(F.doc(db, 'chatPhotos', photoId)); } catch (e) {} } },
+        photoPut: (id, d) => F.setDoc(F.doc(db, 'chatPhotos', id), d),
+        photoGet: async (id) => { const d = await F.getDoc(F.doc(db, 'chatPhotos', id)); return d.exists() ? d.data().data : null; },
+        photoDelete: id => F.deleteDoc(F.doc(db, 'chatPhotos', id)),
         kvList: async (col) => {
           const sn = await F.getDocs(F.collection(db, col));
           const out = [];
@@ -6653,7 +6919,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.84';
+  const APP_VERSION = '1.85';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

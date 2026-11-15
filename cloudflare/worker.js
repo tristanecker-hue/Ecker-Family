@@ -85,9 +85,48 @@ async function sendPush(sub, msg, v) {
   return fetch(sub.endpoint, { method: 'POST', body, headers: { Authorization: await vapidHeader(sub.endpoint, v), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'high' } });
 }
 
+const cleanMsg = m => ({ title: String(m.title || "Ecker's Family").slice(0, 80), body: String(m.body || '').slice(0, 200), url: String(m.url || './').slice(0, 100) });
+
+async function pushToUser(env, v, user, msg) {
+  const subs = (await env.KV.get('sub:' + user, 'json')) || [];
+  const keep = [];
+  let sent = 0;
+  await Promise.all(subs.map(async s => {
+    try {
+      const r = await sendPush(s, msg, v);
+      if (r.status === 404 || r.status === 410) return;   // Gerät abgemeldet
+      if (r.ok) sent++;
+    } catch (e) {}
+    keep.push(s);
+  }));
+  if (keep.length !== subs.length) await env.KV.put('sub:' + user, JSON.stringify(keep));
+  return sent;
+}
+async function pushToMany(env, v, to, msg) {
+  let n = 0;
+  for (const u of [...new Set((to || []).map(String))].filter(k => FAMILY.includes(k))) n += await pushToUser(env, v, u, msg);
+  return n;
+}
+
+// Fällige Erinnerungen versenden (wird vom Cron-Trigger alle paar Minuten aufgerufen)
+async function runDue(env) {
+  const now = Date.now(), v = await getVapid(env);
+  const list = await env.KV.list({ prefix: 'rem:', limit: 200 });
+  for (const k of list.keys) {
+    const at = parseInt(k.name.split(':')[1], 10) * 1000;
+    if (at > now) break;
+    const val = await env.KV.get(k.name, 'json');
+    await env.KV.delete(k.name);
+    if (val && val.id) await env.KV.delete('remid:' + val.id);
+    if (!val || now - at > 6 * 3600000) continue;   // zu alt (z. B. Pause) – nicht mehr senden
+    await pushToMany(env, v, val.to, val.msg);
+  }
+}
+
 const goodSub = s => s && typeof s.endpoint === 'string' && s.endpoint.startsWith('https://') && s.keys && typeof s.keys.p256dh === 'string' && typeof s.keys.auth === 'string';
 
 export default {
+  async scheduled(event, env, ctx) { ctx.waitUntil(runDue(env)); },
   async fetch(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors() });
     const path = new URL(req.url).pathname;
@@ -115,23 +154,25 @@ export default {
         const msgs = Array.isArray(data.msgs) ? data.msgs.slice(0, 10) : [];
         const v = await getVapid(env);
         let sent = 0;
-        for (const m of msgs) {
-          const msg = { title: String(m.title || "Ecker's Family").slice(0, 80), body: String(m.body || '').slice(0, 200), url: String(m.url || './').slice(0, 100) };
-          for (const to of [...new Set((m.to || []).map(String))].filter(k => FAMILY.includes(k))) {
-            const subs = (await env.KV.get('sub:' + to, 'json')) || [];
-            const keep = [];
-            await Promise.all(subs.map(async s => {
-              try {
-                const r = await sendPush(s, msg, v);
-                if (r.status === 404 || r.status === 410) return;   // Gerät abgemeldet
-                if (r.ok) sent++;
-              } catch (e) {}
-              keep.push(s);
-            }));
-            if (keep.length !== subs.length) await env.KV.put('sub:' + to, JSON.stringify(keep));
-          }
-        }
+        for (const m of msgs) sent += await pushToMany(env, v, m.to, cleanMsg(m));
         return json({ ok: true, sent });
+      }
+      if (path === '/remind') {
+        const id = String(data.id || ''), at = Number(data.at), to = [...new Set((data.to || []).map(String))].filter(k => FAMILY.includes(k));
+        const now = Date.now();
+        if (!/^[A-Za-z0-9_-]{1,100}$/.test(id) || !to.length || !(at > now - 60000) || at > now + 400 * 86400000) return json({ error: 'ungültig' }, 400);
+        const old = await env.KV.get('remid:' + id);
+        if (old) await env.KV.delete(old);
+        const key = 'rem:' + String(Math.floor(at / 1000)).padStart(11, '0') + ':' + id;
+        await env.KV.put(key, JSON.stringify({ id, to, msg: cleanMsg({ title: data.title || '⏰ Erinnerung', body: data.body, url: data.url }) }));
+        await env.KV.put('remid:' + id, key);
+        return json({ ok: true });
+      }
+      if (path === '/remind-cancel') {
+        const id = String(data.id || '');
+        const old = await env.KV.get('remid:' + id);
+        if (old) { await env.KV.delete(old); await env.KV.delete('remid:' + id); }
+        return json({ ok: true });
       }
       return json({ error: 'not found' }, 404);
     } catch (e) { return json({ error: 'Fehler' }, 500); }
