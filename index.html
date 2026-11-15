@@ -165,7 +165,7 @@
   #chatPanel .cp-em button:active { background:#eee; }
   .chat-sticker { display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 6px; }
   .chat-sticker b { font-size:60px; line-height:1.05; font-weight:400; }
-  .yst { position:relative; display:inline-block; width:var(--s); margin-top:calc(var(--s)*.2); }
+  .yst { position:relative; display:inline-block; width:var(--s); margin-top:calc(var(--s)*.3); }
   .yst img, #chatPanel .cp-st button .yst img { width:100%; height:auto; display:block; object-fit:contain; }
   .yst img.flip { transform:scaleX(-1); }
   .yst i { position:absolute; font-style:normal; line-height:1; pointer-events:none; }
@@ -3401,14 +3401,14 @@
   const isParentUser = () => ['tristan', 'claudia'].includes(userKey(currentUser));
   const STICKERS = {
     yuna: { img: 'hund.png', t: 'Yuna ♡', say: 'Yuna' },
-    yunaliebe: { img: 'hund.png', o: [{ e: '❤️', x: 1, y: 2, z: .24 }, { e: '💕', x: 74, y: -6, z: .26 }, { e: '💖', x: 76, y: 22, z: .16 }], t: 'Ich hab dich lieb', say: 'Yuna: Ich hab dich lieb' },
-    yunaparty: { img: 'hund.png', o: [{ e: '🎈', x: 1, y: -2, z: .26 }, { e: '🎉', x: 74, y: 2, z: .26 }, { e: '🎊', x: 40, y: -28, z: .2 }], t: 'Party!', say: 'Yuna: Party!' },
-    yunakrone: { img: 'hund.png', o: [{ e: '👑', x: 31, y: -17, z: .24 }, { e: '✨', x: 76, y: -6, z: .2 }, { e: '✨', x: 4, y: 4, z: .16 }], t: 'Königin Yuna', say: 'Königin Yuna' },
-    yunanacht: { img: 'hund.png', o: [{ e: '🌙', x: -2, y: 0, z: .22 }, { e: '💤', x: 72, y: -8, z: .26 }], t: 'Schlaf gut', say: 'Yuna: Schlaf gut' },
-    yunahunger: { img: 'hund.png', o: [{ e: '🦴', x: 1, y: 4, z: .24 }, { e: '🍖', x: 74, y: 8, z: .26 }], t: 'Hunger!', say: 'Yuna: Ich hab Hunger!' },
-    yunagassi: { img: 'hund.png', o: [{ e: '🚶', x: 0, y: 2, z: .26 }, { e: '🌳', x: 74, y: 0, z: .26 }], t: 'Gassi gehen?', say: 'Yuna: Gassi gehen?' },
-    yunadanke: { img: 'hund.png', o: [{ e: '💖', x: -1, y: 4, z: .22 }, { e: '🙏', x: 74, y: 4, z: .26 }], t: 'Danke!', say: 'Yuna: Danke!' },
-    yunaschnee: { img: 'hund.png', o: [{ e: '❄️', x: 1, y: 0, z: .24 }, { e: '⛄', x: 74, y: 6, z: .28 }, { e: '❄️', x: 44, y: -20, z: .18 }], t: 'Brrr, kalt!', say: 'Yuna: Brrr, kalt!' },
+    yunaliebe: { img: 'hund.png', o: [{ e: '❤️', x: 4, y: -24, z: .24 }, { e: '💕', x: 72, y: -26, z: .26 }, { e: '💖', x: 40, y: -30, z: .18 }], t: 'Ich hab dich lieb', say: 'Yuna: Ich hab dich lieb' },
+    yunaparty: { img: 'hund.png', o: [{ e: '🎈', x: 4, y: -26, z: .26 }, { e: '🎉', x: 72, y: -24, z: .26 }, { e: '🎊', x: 40, y: -30, z: .2 }], t: 'Party!', say: 'Yuna: Party!' },
+    yunakrone: { img: 'hund.png', o: [{ e: '👑', x: 31, y: -17, z: .24 }, { e: '✨', x: 6, y: -22, z: .2 }, { e: '✨', x: 74, y: -24, z: .22 }], t: 'Königin Yuna', say: 'Königin Yuna' },
+    yunanacht: { img: 'hund.png', o: [{ e: '🌙', x: 6, y: -24, z: .24 }, { e: '💤', x: 72, y: -26, z: .26 }], t: 'Schlaf gut', say: 'Yuna: Schlaf gut' },
+    yunahunger: { img: 'hund.png', o: [{ e: '🦴', x: 6, y: -22, z: .24 }, { e: '🍖', x: 72, y: -24, z: .26 }], t: 'Hunger!', say: 'Yuna: Ich hab Hunger!' },
+    yunagassi: { img: 'hund.png', o: [{ e: '🚶', x: 6, y: -24, z: .26 }, { e: '🌳', x: 72, y: -26, z: .26 }], t: 'Gassi gehen?', say: 'Yuna: Gassi gehen?' },
+    yunadanke: { img: 'hund.png', o: [{ e: '💖', x: 6, y: -22, z: .24 }, { e: '🙏', x: 72, y: -24, z: .26 }], t: 'Danke!', say: 'Yuna: Danke!' },
+    yunaschnee: { img: 'hund.png', o: [{ e: '❄️', x: 6, y: -22, z: .24 }, { e: '⛄', x: 72, y: -26, z: .28 }, { e: '❄️', x: 40, y: -30, z: .18 }], t: 'Brrr, kalt!', say: 'Yuna: Brrr, kalt!' },
     liebe: { e: '🥰', t: 'Hab dich lieb', say: 'Hab dich lieb' },
     nacht: { e: '🌙', t: 'Gute Nacht', say: 'Gute Nacht' },
     essen: { e: '🍝', t: 'Essen ist fertig!', say: 'Essen ist fertig!' },
@@ -6948,7 +6948,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.93';
+  const APP_VERSION = '1.94';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
