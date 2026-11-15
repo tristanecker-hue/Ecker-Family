@@ -14,7 +14,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "Secret CLOUDFLARE_API_TOKEN fehlt"; exit 1; }
-          TOK=$(printf %s "$CLOUDFLARE_API_TOKEN" | sed 's/^[Bb]earer //' | tr -d '[:space:]"'"'"'')
+          RAW=$(printf %s "$CLOUDFLARE_API_TOKEN" | tr -s '[:space:]"'"'"'' ' ')
+          TOK=$(printf %s "$RAW" | grep -oE 'Bearer [A-Za-z0-9_-]+' | head -1 | awk '{print $2}')
+          [ -n "$TOK" ] || TOK=$(printf %s "$RAW" | tr -d ' ')
           echo "::add-mask::$TOK"
           echo "Token-Länge: ${#TOK}"
           echo "CLOUDFLARE_API_TOKEN=$TOK" >> "$GITHUB_ENV"
