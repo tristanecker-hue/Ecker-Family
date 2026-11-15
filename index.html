@@ -1655,7 +1655,7 @@
         <label for="todoNote">Bemerkung (optional)</label>
         <textarea id="todoNote" rows="2" maxlength="400" placeholder="z. B. Schlüssel liegt im Büro" style="width:100%;"></textarea>
       </div>
-      <label class="rep-chk" id="todoPoolWrap"><input type="checkbox" id="todoPool" onchange="poolUi()"> ⭐ Zusatzaufgabe für alle Kinder (wer zuerst «Ich mach das» drückt)</label>
+      <label class="rep-chk" id="todoPoolWrap"><input type="checkbox" id="todoPool" onchange="poolUi()"> ⭐ Zusatzaufgabe für alle (wer zuerst «Ich mach das» drückt)</label>
       <label class="rep-chk" id="todoPrivWrap"><input type="checkbox" id="todoPriv" onchange="privUi()"> 🔒 Privat (nur Tristan &amp; Claudia sehen das)</label>
       <button class="save-btn" onclick="addTodo()">Aufgabe hinzufügen</button>
     </div>
@@ -3624,7 +3624,7 @@
   function pushTodoMsgs(before, after) {
     const kids = KIDS.map(userKey), parents = ['Tristan', 'Claudia'].map(userKey), url = './#todos', text = after.text || 'Aufgabe', out = [];
     const nm = k => ACCOUNTS[k] || k;
-    if (!before) { if (after.assigneeKey === 'alle') out.push({ to: kids, title: '⭐ Neue Zusatzaufgabe', body: text, url }); else if (after.assigneeKey && after.assigneeKey !== after.createdByKey) out.push({ to: [after.assigneeKey], title: 'Neue Aufgabe', body: text, url }); return out; }
+    if (!before) { if (after.assigneeKey === 'alle') out.push({ to: Object.keys(ACCOUNTS).filter(k => k !== after.createdByKey), title: '⭐ Neue Zusatzaufgabe', body: text, url }); else if (after.assigneeKey && after.assigneeKey !== after.createdByKey) out.push({ to: [after.assigneeKey], title: 'Neue Aufgabe', body: text, url }); return out; }
     if (after.claimedAt && !before.claimedAt && !after.done) out.push({ to: parents.filter(p => p !== after.assigneeKey), title: nm(after.assigneeKey) + ' meldet: erledigt', body: text + ' – bitte bestätigen', url });
     if (!before.done && after.done && kids.includes(after.assigneeKey) && after.assigneeKey !== userKey(currentUser)) out.push({ to: [after.assigneeKey], title: 'Bestätigt ✅', body: text, url });
     if (before.claimedAt && !after.claimedAt && !after.done && kids.includes(after.assigneeKey)) out.push({ to: [after.assigneeKey], title: 'Bitte nochmals ansehen', body: text, url });
@@ -6200,7 +6200,7 @@
   function remindSync(t) {
     if (!PUSH_AKTIV || !cloudEnabled || !cloudApi) return;
     const at = remindAt(t);
-    const to = t.assigneeKey === POOL ? KIDS.map(userKey) : [t.assigneeKey];
+    const to = t.assigneeKey === POOL ? Object.keys(ACCOUNTS) : [t.assigneeKey];
     const body = at > Date.now() ? { id: t.id, to, at, title: '⏰ Erinnerung', body: t.text + (t.assigneeKey === POOL ? ' (Zusatzaufgabe)' : ''), url: './#todos' } : null;
     try {
       Promise.resolve(cloudApi.idToken()).then(tok => fetch(PUSH_URL + (body ? '/remind' : '/remind-cancel'), { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify(body || { id: t.id }) })).catch(() => {});
@@ -6231,7 +6231,7 @@
       t.assigneeKey = me; t.pool = true;
       if (!cloudEnabled) persistTodosLocal();
     } catch (e) { showToast('Geht nicht – hat es schon jemand genommen?'); await refreshTodos(); return; }
-    pushSend([{ to: ['Tristan', 'Claudia'].map(userKey).filter(k => k !== me), title: (ACCOUNTS[me] || me) + ' übernimmt', body: t.text, url: './#todos' }]);
+    pushSend([{ to: Object.keys(ACCOUNTS).filter(k => k !== me), title: (ACCOUNTS[me] || me) + ' übernimmt', body: t.text, url: './#todos' }]);
     showToast('Super! Die Aufgabe ist jetzt bei dir 💪');
     renderTodos(); updateTodoBadge();
   }
@@ -6354,7 +6354,7 @@
       </div>`;
     };
     const pool = todos.filter(t => t.assigneeKey === POOL && !t.done);
-    const poolHtml = pool.length ? `<div class="pool-card"><div class="kt">⭐ Zusatzaufgaben für alle</div><div style="font-size:13px;margin-bottom:4px;">Hol dir extra Sterne – wer zuerst kommt!</div>${pool.map(t => `<div class="pool-row"><div><b>${escapeHtml(t.text)}</b>${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${dueHtml(t)}${t.repeat ? ' · 🔁 ' + repLabel(t.repeat) : ''}${t.note ? `<div class="kid-note">💬 ${escapeHtml(t.note)}</div>` : ''}</div>${KIDS.includes(currentUser) ? `<button class="take" onclick="takePool('${t.id}')">Ich mach das!</button>` : ''}${canAssignTodos() ? `<button class="take" style="background:#fff" onclick="deleteTodo('${t.id}')">✕</button>` : ''}</div>`).join('')}</div>` : '';
+    const poolHtml = pool.length ? `<div class="pool-card"><div class="kt">⭐ Zusatzaufgaben für alle</div><div style="font-size:13px;margin-bottom:4px;">Für alle in der Familie – wer zuerst kommt!</div>${pool.map(t => `<div class="pool-row"><div><b>${escapeHtml(t.text)}</b>${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${dueHtml(t)}${t.repeat ? ' · 🔁 ' + repLabel(t.repeat) : ''}${t.note ? `<div class="kid-note">💬 ${escapeHtml(t.note)}</div>` : ''}</div><button class="take" onclick="takePool('${t.id}')">Ich mach das!</button>${canAssignTodos() ? `<button class="take" style="background:#fff" onclick="deleteTodo('${t.id}')">✕</button>` : ''}</div>`).join('')}</div>` : '';
     wrap.innerHTML = `<div class="kid-head"><div class="kt">Familien To-Do-Liste</div><div class="ks">Gemeinsam schaffen wir das! ♡</div></div>
       ${poolHtml}
       <div class="kid-grid">${order.map(card).join('')}</div>
@@ -6933,7 +6933,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.88';
+  const APP_VERSION = '1.89';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
