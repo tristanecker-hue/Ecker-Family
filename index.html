@@ -1619,6 +1619,7 @@
     </div>
     <div class="navbar" data-nav="todo"></div>
 
+    <button class="save-btn hidden" id="todoNewBtn" onclick="todoFormToggle()" style="margin:0 0 14px;">＋ Neue Aufgabe</button>
     <div id="todoLists"></div>
 
     <div class="card hidden" id="todoAddCard">
@@ -6267,7 +6268,9 @@
     window.scrollTo(0, 0);
 
     const addCard = document.getElementById('todoAddCard');
-    addCard.classList.toggle('hidden', !canAssignTodos());
+    addCard.classList.add('hidden');
+    document.getElementById('todoNewBtn').classList.toggle('hidden', !canAssignTodos());
+    document.getElementById('todoNewBtn').textContent = '＋ Neue Aufgabe';
     const sel = document.getElementById('todoAssignee');
     if (!sel.options.length) {
       sel.innerHTML = USERS.map(n => `<option value="${escapeHtml(userKey(n))}">${escapeHtml(n)}</option>`).join('');
@@ -6277,6 +6280,13 @@
     await refreshTodos();
   }
 
+  function todoFormToggle(force) {
+    const card = document.getElementById('todoAddCard'), btn = document.getElementById('todoNewBtn');
+    const open = typeof force === 'boolean' ? force : card.classList.contains('hidden');
+    card.classList.toggle('hidden', !open);
+    btn.textContent = open ? '✕ Abbrechen' : '＋ Neue Aufgabe';
+    if (open) { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); const t = document.getElementById('todoText'); if (t) t.focus({ preventScroll: true }); }
+  }
   async function refreshTodos() {
     await loadTodos();
     renderTodos();
@@ -6428,6 +6438,7 @@
     remindSync(todo);
     if (!todo.privat) pushSend(pushTodoMsgs(null, todo));
     renderTodos();
+    todoFormToggle(false);
     showToast('Aufgabe hinzugefügt');
   }
 
@@ -6919,7 +6930,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.85';
+  const APP_VERSION = '1.86';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
