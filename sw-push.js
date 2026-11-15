@@ -12,8 +12,9 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  const go = new URL(url).hash.replace('#', '');
   e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-    for (const c of list) if ('focus' in c) return c.focus();
+    for (const c of list) if ('focus' in c) { if (go) c.postMessage({ go }); return c.focus(); }
     return clients.openWindow(url);
   }));
 });

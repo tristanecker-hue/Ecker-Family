@@ -2272,6 +2272,23 @@
     setTimeout(() => t.classList.remove('show'), 1800);
   }
 
+  // Meldung angetippt -> direkt in den passenden Bereich (Chat, Aufgaben, Sterne)
+  let pendingGo = null;
+  const GO_TARGETS = {
+    chat: () => hasFeature('chat') && openChat(),
+    todos: () => hasFeature('todo') && openTodos(),
+    punkte: () => hasFeature('punkte') && openPunkte()
+  };
+  function goTarget(t) { try { const f = GO_TARGETS[t]; if (f) f(); } catch (e) {} }
+  function runPendingGo() { if (pendingGo && currentUser) { const t = pendingGo; pendingGo = null; goTarget(t); } }
+  (function () {
+    const h = (location.hash || '').replace('#', '');
+    if (GO_TARGETS[h]) { pendingGo = h; try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
+      const t = e.data && e.data.go; if (!GO_TARGETS[t]) return;
+      if (currentUser) goTarget(t); else pendingGo = t;
+    });
+  })();
   async function selectAccount(name) {
     currentUser = name;
     try { const t = localStorage.getItem(themeKey()); if (t) { applyTheme(t); localStorage.setItem('ef-theme-last', t); } } catch (e) {}
@@ -2292,6 +2309,7 @@
     if (cloudEnabled) await loadAvatars();
     applyAvatars();
     await updateTodoBadge();
+    if (pendingGo) { runPendingGo(); return; }
     showTodoPopup();
   }
 
@@ -3513,7 +3531,7 @@
     await withTimeout(cloudApi.chatAdd(m));
     if (!chatMsgs.some(x => x.id === m.id)) chatMsgs.push(m);
     chatRender(true); chatMarkSeen();
-    pushSend([{ to: Object.keys(ACCOUNTS).filter(k => k !== me), title: currentUser + ' im Chat', body: String(pushText || '').slice(0, 120), url: './' }]);
+    pushSend([{ to: Object.keys(ACCOUNTS).filter(k => k !== me), title: currentUser + ' im Chat', body: String(pushText || '').slice(0, 120), url: './#chat' }]);
   }
   const chatNewId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   async function chatSend(textOverride) {
@@ -7028,7 +7046,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.96';
+  const APP_VERSION = '1.97';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
