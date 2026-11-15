@@ -153,16 +153,17 @@
   .pool-row .take { border:2px solid #262319; background:#7CCB4A; border-radius:12px; padding:8px 10px; font-weight:800; cursor:pointer; color:#262319; }
   .chat-tools { display:flex; gap:6px; }
   .chat-bar .chat-tool { width:40px; height:40px; flex:0 0 40px; font-size:19px; background:#fff; }
-  #chatPanel { display:none; width:100%; max-height:230px; overflow:auto; background:#fff; border:2px solid #262319; border-radius:16px; padding:8px; box-sizing:border-box; }
+  #chatPanel { display:none; width:100%; max-height:min(52vh,340px); overflow:auto; background:#fff; border:2px solid #262319; border-radius:16px; padding:8px; box-sizing:border-box; }
   #chatPanel.open { display:block; }
   .cp-h { font-size:12px; font-weight:700; color:#6b634f; margin:4px 2px; }
-  .cp-st { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:6px; }
-  .cp-st button { width:auto; height:auto; border-radius:14px; background:var(--hl,#fff3d6); font-size:12px; font-weight:700; padding:6px 2px; display:flex; flex-direction:column; align-items:center; gap:2px; color:#262319; flex:initial; }
-  .cp-st button b { font-size:28px; line-height:1; }
-  .cp-st button img { width:38px; height:38px; object-fit:contain; }
+  .cp-st { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
+  #chatPanel .cp-st button { width:100%; height:auto; min-height:86px; flex:none; border:2px solid #262319; border-radius:16px; background:#fff3d6; padding:8px 4px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#262319; font-size:12px; font-weight:700; line-height:1.15; text-align:center; cursor:pointer; }
+  #chatPanel .cp-st button:active { background:#ffe49a; }
+  #chatPanel .cp-st button b { font-size:32px; line-height:1; font-weight:400; }
+  #chatPanel .cp-st button img { width:42px; height:42px; object-fit:contain; }
   .cp-em { display:flex; flex-wrap:wrap; gap:2px; }
-  .cp-em button { width:40px; height:40px; border:0; background:none; font-size:24px; border-radius:10px; flex:initial; }
-  .cp-em button:active { background:#eee; }
+  #chatPanel .cp-em button { width:40px; height:40px; flex:none; border:0; border-radius:10px; background:none; font-size:24px; padding:0; cursor:pointer; }
+  #chatPanel .cp-em button:active { background:#eee; }
   .chat-sticker { display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 6px; }
   .chat-sticker b { font-size:60px; line-height:1.05; font-weight:400; }
   .chat-sticker img { width:130px; height:auto; }
@@ -6930,7 +6931,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.86';
+  const APP_VERSION = '1.87';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
