@@ -92,6 +92,12 @@ service cloud.firestore {
       allow write: if canAssign();
     }
 
+    // Spiele-Rekorde: alle lesen, jede Person schreibt nur die eigenen Bestwerte
+    match /scores/{id} {
+      allow read: if isFamily();
+      allow write: if isFamily() && uname() == id;
+    }
+
     // Push-Adressen: jede Person verwaltet nur ihre eigenen Geräte (versendet wird serverseitig)
     match /pushTokens/{id} {
       allow read, write: if isFamily() && uname() == id;

@@ -3489,11 +3489,87 @@
 
   function scoresKey() { return 'ef-spiele-' + userKey(currentUser); }
   function getScores() { try { return JSON.parse(localStorage.getItem(scoresKey()) || '{}'); } catch (e) { return {}; } }
+  // Familien-Rekorde: Bestwerte aller Personen (Firestore "scores/<person>")
+  let scoresAll = {};
+  const SCORE_VARIANTS = [
+    { key: 'memory-leicht', e: '🃏', n: 'Memory leicht', u: ' Züge', low: true },
+    { key: 'memory-mittel', e: '🃏', n: 'Memory mittel', u: ' Züge', low: true },
+    { key: 'memory-schwer', e: '🃏', n: 'Memory schwer', u: ' Züge', low: true },
+    { key: 'mathe-leicht', e: '🧮', n: 'Kopfrechnen leicht', u: ' Punkte' },
+    { key: 'mathe-mittel', e: '🧮', n: 'Kopfrechnen mittel', u: ' Punkte' },
+    { key: 'mathe-schwer', e: '🧮', n: 'Kopfrechnen schwer', u: ' Punkte' },
+    { key: 'sterne', e: '⭐', n: 'Sterne fangen', u: ' Punkte' },
+    { key: 'tictac-wins', e: '❌', n: 'Drei gewinnt', u: ' Siege' },
+    { key: 'snake', e: '🐍', n: 'Schlange', u: ' Äpfel' },
+    { key: 'simon', e: '🎵', n: 'Farben merken', u: ' Runden' },
+    { key: 'mole', e: '🐹', n: 'Maulwurf', u: ' Treffer' },
+    { key: 'reflex', e: '⚡', n: 'Blitzreaktion', u: ' ms', low: true },
+    { key: 'hangman-wins', e: '🔤', n: 'Galgenmännchen', u: ' Siege' },
+    { key: 'reihen-gemuetlich', e: '🚀', n: 'Reihen-Rakete gemütlich', u: ' Punkte' },
+    { key: 'reihen-normal', e: '🚀', n: 'Reihen-Rakete normal', u: ' Punkte' },
+    { key: 'reihen-rasant', e: '🚀', n: 'Reihen-Rakete rasant', u: ' Punkte' }
+  ];
+  const lowerBetter = key => !!(SCORE_VARIANTS.find(v => v.key === key) || {}).low;
+  function pushScore(key, value) {
+    const me = userKey(currentUser);
+    (scoresAll[me] = scoresAll[me] || {})[key] = value;
+    if (cloudEnabled) kvMerge('scores', me, { [key]: value }).catch(() => {});
+  }
+  function familyBestOthers(key) {
+    const me = userKey(currentUser), low = lowerBetter(key);
+    let best = null;
+    Object.entries(scoresAll).forEach(([u, sc]) => { if (u === me || sc[key] === undefined) return; if (best === null || (low ? sc[key] < best : sc[key] > best)) best = sc[key]; });
+    return best;
+  }
+  async function loadAllScores() {
+    const me = userKey(currentUser), all = {};
+    try {
+      if (cloudEnabled) {
+        const list = await withTimeout(cloudApi.kvList('scores'));
+        list.forEach(d => { const { id, ...rest } = d; all[id] = rest; });
+      } else {
+        USERS.forEach(n => { try { all[userKey(n)] = JSON.parse(localStorage.getItem('ef-spiele-' + userKey(n)) || '{}'); } catch (e) {} });
+      }
+    } catch (e) { return; }
+    // eigene lokale Bestwerte, die in der Cloud noch fehlen oder besser sind, hochladen
+    if (cloudEnabled) {
+      const mine = all[me] || {}, loc = getScores(), up = {};
+      Object.entries(loc).forEach(([k, v]) => { if (typeof v === 'number' && (mine[k] === undefined || (lowerBetter(k) ? v < mine[k] : v > mine[k]))) { up[k] = v; mine[k] = v; } });
+      if (Object.keys(up).length) kvMerge('scores', me, up).catch(() => {});
+      all[me] = mine;
+    }
+    scoresAll = all;
+  }
   function saveScore(key, value, higherBetter) {
     const sc = getScores(), old = sc[key];
     const better = old === undefined || (higherBetter ? value > old : value < old);
-    if (better) { sc[key] = value; try { localStorage.setItem(scoresKey(), JSON.stringify(sc)); } catch (e) {} }
+    if (better) {
+      sc[key] = value; try { localStorage.setItem(scoresKey(), JSON.stringify(sc)); } catch (e) {}
+      const other = familyBestOthers(key);
+      pushScore(key, value);
+      if (other !== null && (higherBetter ? value > other : value < other)) setTimeout(() => showToast('👑 Neuer Familien-Rekord!'), 400);
+    }
     return better;
+  }
+  function setWins(key, n) {
+    const sc = getScores(); sc[key] = n; try { localStorage.setItem(scoresKey(), JSON.stringify(sc)); } catch (e) {}
+    const other = familyBestOthers(key);
+    pushScore(key, n);
+    if (other !== null && n > other) setTimeout(() => showToast('👑 Neuer Familien-Rekord!'), 400);
+  }
+  function renderRecords() {
+    const el = document.getElementById('spieleRecords');
+    if (!el) return;
+    const me = userKey(currentUser);
+    const rows = SCORE_VARIANTS.map(v => {
+      const ents = Object.entries(scoresAll).filter(([u, sc]) => typeof sc[v.key] === 'number' && sc[v.key] > 0).sort((a, b) => v.low ? a[1][v.key] - b[1][v.key] : b[1][v.key] - a[1][v.key]);
+      if (!ents.length) return '';
+      const [u, sc] = ents[0], isMe = u === me;
+      const fmtv = x => x + v.u;
+      const rest = ents.slice(1).map(([uu, ss]) => (ACCOUNTS[uu] || uu) + ' ' + ss[v.key]).join(' · ');
+      return `<div style="padding:6px 0;border-top:1px dotted rgba(0,0,0,.18);"><div style="display:flex;justify-content:space-between;gap:8px;"><span>${v.e} ${escapeHtml(v.n)}</span><b>👑 ${escapeHtml(ACCOUNTS[u] || u)} · ${escapeHtml(fmtv(sc[v.key]))}${isMe ? ' 🎉' : ''}</b></div>${rest ? `<div style="font-size:12px;opacity:.6;">${escapeHtml(rest)}</div>` : ''}</div>`;
+    }).join('');
+    el.innerHTML = `<details class="card" ${rows ? 'open' : ''}><summary style="cursor:pointer;font-weight:700;font-size:17px;">🏆 Familien-Rekorde</summary>${rows || '<div class="todo-empty">Noch keine Rekorde – spiel los!</div>'}</details>`;
   }
 
   function stopGame() {
@@ -3528,10 +3604,12 @@
     };
     const menu = document.getElementById('spieleMenu');
     menu.classList.remove('hidden');
-    menu.innerHTML = '<div class="game-grid">' + GAME_LIST.map(g => `
+    menu.innerHTML = '<div id="spieleRecords"></div><div class="game-grid">' + GAME_LIST.map(g => `
       <button class="game-tile" onclick="startGame('${g.k}')">
         <div class="g-emoji">${g.e}</div><div class="g-name">${g.n}</div><div class="g-best">${best(g.k)}</div>
       </button>`).join('') + '</div>';
+    renderRecords();
+    loadAllScores().then(() => { if (document.getElementById('spieleRecords')) renderRecords(); });
   }
 
   function gameArea(title) {
@@ -3705,7 +3783,7 @@
       const finish = w => {
         over = true;
         const wins = (getScores()['tictac-wins'] || 0) + (w === 'X' ? 1 : 0);
-        if (w === 'X') { const sc = getScores(); sc['tictac-wins'] = wins; try { localStorage.setItem(scoresKey(), JSON.stringify(sc)); } catch (e) {} }
+        if (w === 'X') setWins('tictac-wins', wins);
         render();
         document.getElementById('tttMsg').innerHTML = (w === 'X' ? '🎉 Du hast gewonnen!' : w === 'O' ? '🤖 Der Computer gewinnt.' : '🤝 Unentschieden!') + '<br><button class="switch-btn" style="margin-top:10px" onclick="gameTicTac()">Nochmal</button>';
       };
@@ -4021,7 +4099,7 @@
           <div class="game-msg" id="hmMsg"></div>`;
         body.querySelectorAll('.hm-keys button').forEach(b => b.onclick = () => guess(b.dataset.c));
         if (done || over) {
-          if (done) { const sc = getScores(); sc['hangman-wins'] = (sc['hangman-wins'] || 0) + 1; try { localStorage.setItem(scoresKey(), JSON.stringify(sc)); } catch (e) {} }
+          if (done) setWins('hangman-wins', (getScores()['hangman-wins'] || 0) + 1);
           document.getElementById('hmMsg').innerHTML = (done ? '🎉 Richtig!' : '😵 Leider verloren – das gesuchte Wort ist rot markiert.') + '<br><button class="switch-btn" style="margin-top:10px" onclick="gameHangman()">Nochmal</button>';
         }
       };
@@ -6022,6 +6100,12 @@
           } catch (e) {}
           try { await M.deleteToken(messaging); } catch (e) {}
         },
+        kvList: async (col) => {
+          const sn = await F.getDocs(F.collection(db, col));
+          const out = [];
+          sn.forEach(d => out.push({ id: d.id, ...d.data() }));
+          return out;
+        },
         calList: async (me) => {
           const ref = F.collection(db, 'calendars');
           const sn = await F.getDocs(me ? F.query(ref, F.where('allowed', 'array-contains', me)) : ref);
@@ -6054,7 +6138,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.67';
+  const APP_VERSION = '1.68';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
