@@ -138,7 +138,9 @@
   .chat-row.me .chat-bub { background:var(--hl, #cfe8ff); border-radius:16px 16px 4px 16px; }
   .chat-who { font-size:11px; font-weight:700; color:#6b634f; margin-bottom:1px; }
   .chat-time { font-size:10px; color:#8a8170; margin-top:2px; text-align:right; }
-  .chat-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:min(100%, 520px); box-sizing:border-box; display:flex; gap:8px; align-items:flex-end; padding:22px 16px calc(12px + env(safe-area-inset-bottom)); background:linear-gradient(to bottom, transparent, var(--bg, #f5f1e8) 28%); z-index:20; }
+  .chat-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:min(100%, 520px); box-sizing:border-box; display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; padding:22px 16px calc(6px + env(safe-area-inset-bottom)); background:linear-gradient(to bottom, transparent, var(--bg, #f5f1e8) 28%); z-index:20; }
+  body:has(#chatScreen:not(.hidden)) .app-version { display:none; }
+  .chat-ver { width:100%; text-align:center; font-size:11px; color:#8a8170; line-height:1; }
   .chat-bar textarea { flex:1; resize:none; max-height:110px; border:2px solid #262319; border-radius:16px; padding:9px 12px; font:inherit; font-size:16px; background:#fff; }
   .chat-bar button { border:2px solid #262319; background:var(--btn, #F5B942); border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; flex:0 0 44px; }
   .bs-tubes { display:flex; flex-wrap:wrap; gap:14px 10px; justify-content:center; margin:14px auto; max-width:440px; }
@@ -1464,6 +1466,7 @@
     <div class="chat-bar">
       <textarea id="chatInput" rows="1" maxlength="500" placeholder="Nachricht …" enterkeyhint="send"></textarea>
       <button id="chatSend" onclick="chatSend()" aria-label="Senden">➤</button>
+      <div class="chat-ver" id="chatVer"></div>
     </div>
   </div>
 
@@ -6571,8 +6574,9 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.81';
+  const APP_VERSION = '1.82';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
+  document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
     try {
