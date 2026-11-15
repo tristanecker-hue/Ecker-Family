@@ -3252,7 +3252,7 @@
   function pushSend(msgs) {
     msgs = (msgs || []).filter(m => m.to && m.to.length);
     if (!PUSH_AKTIV || !cloudEnabled || !msgs.length || !cloudApi) return;
-    cloudApi.idToken().then(tok => fetch(PUSH_URL + '/notify', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify({ msgs }) })).catch(() => {});
+    try { Promise.resolve(cloudApi.idToken()).then(tok => fetch(PUSH_URL + '/notify', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify({ msgs }) })).catch(() => {}); } catch (e) {}
   }
   function pushTodoMsgs(before, after) {
     const kids = KIDS.map(userKey), parents = ['Tristan', 'Claudia'].map(userKey), url = './#todos', text = after.text || 'Aufgabe', out = [];
@@ -6427,7 +6427,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.73';
+  const APP_VERSION = '1.74';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
