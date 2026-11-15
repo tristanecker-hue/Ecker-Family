@@ -126,8 +126,6 @@
   .sv-c.ship { background:#566573; } .sv-c.miss { background:#1d5f99; } .sv-c.hit { background:#d9480f; } .sv-c.sunk { background:#7a1c1c; }
   .sv-small .sv-c { font-size:11px; cursor:default; }
   .sv-msg { text-align:center; font-weight:800; min-height:26px; margin:6px 0; }
-  .ff-wrap { max-width:420px; margin:0 auto; }
-  #ffCanvas { width:100%; display:block; border-radius:14px; border:3px solid #262319; touch-action:none; background:#2f8f3f; }
   .bs-tubes { display:flex; flex-wrap:wrap; gap:14px 10px; justify-content:center; margin:14px auto; max-width:440px; }
   .bs-tube { width:48px; height:196px; border:3px solid #262319; border-radius:0 0 26px 26px; background:#ffffffaa; display:flex; flex-direction:column-reverse; align-items:center; padding:4px 0; gap:3px; cursor:pointer; touch-action:manipulation; }
   .bs-tube.sel { background:#fff3bf; box-shadow:0 0 0 3px #ffd43b; }
@@ -3501,7 +3499,6 @@
     { k: 'hangman', e: '🔤', n: 'Galgenmännchen' },
     { k: 'reihen', e: '🚀', n: 'Reihen-Rakete' },
     { k: 'schiffe', e: '🚢', n: 'Schiffe versenken' },
-    { k: 'fussball', e: '⚽', n: 'Tischfussball' },
     { k: 'kugeln', e: '🔮', n: 'Kugeln sortieren' }
   ];
 
@@ -3526,7 +3523,6 @@
     { key: 'schiffe-leicht', e: '🚢', n: 'Schiffe versenken leicht', u: ' Schüsse', low: true },
     { key: 'schiffe-mittel', e: '🚢', n: 'Schiffe versenken mittel', u: ' Schüsse', low: true },
     { key: 'schiffe-schwer', e: '🚢', n: 'Schiffe versenken schwer', u: ' Schüsse', low: true },
-    { key: 'fussball-wins', e: '⚽', n: 'Tischfussball', u: ' Siege' },
     { key: 'kugeln-leicht', e: '🔮', n: 'Kugeln sortieren leicht', u: ' Züge', low: true },
     { key: 'kugeln-mittel', e: '🔮', n: 'Kugeln sortieren mittel', u: ' Züge', low: true },
     { key: 'kugeln-schwer', e: '🔮', n: 'Kugeln sortieren schwer', u: ' Züge', low: true },
@@ -3626,7 +3622,6 @@
       if (k === 'reflex') return sc.reflex !== undefined ? 'Beste: ' + sc.reflex + ' ms' : '';
       if (k === 'schiffe') { const v = ['leicht', 'mittel', 'schwer'].map(l => sc['schiffe-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.min(...v) + ' Schüsse' : ''; }
       if (k === 'kugeln') { const v = ['leicht', 'mittel', 'schwer'].map(l => sc['kugeln-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.min(...v) + ' Züge' : ''; }
-      if (k === 'fussball') return sc['fussball-wins'] ? sc['fussball-wins'] + ' Siege' : '';
       if (k === 'reihen') { const v = ['gemuetlich', 'normal', 'rasant'].map(l => sc['reihen-' + l]).filter(x => x !== undefined); return v.length ? 'Beste: ' + Math.max(...v) + ' Punkte' : ''; }
       return sc['tictac-wins'] ? sc['tictac-wins'] + ' Siege' : '';
     };
@@ -3657,7 +3652,7 @@
   }
 
   function startGame(kind) {
-    ({ memory: gameMemory, mathe: gameMathe, sterne: gameSterne, tictac: gameTicTac, snake: gameSnake, simon: gameSimon, mole: gameMole, reflex: gameReflex, hangman: gameHangman, reihen: gameReihen, schiffe: gameSchiffe, fussball: gameFussball, kugeln: gameKugeln })[kind]();
+    ({ memory: gameMemory, mathe: gameMathe, sterne: gameSterne, tictac: gameTicTac, snake: gameSnake, simon: gameSimon, mole: gameMole, reflex: gameReflex, hangman: gameHangman, reihen: gameReihen, schiffe: gameSchiffe, kugeln: gameKugeln })[kind]();
   }
 
   const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -4187,100 +4182,6 @@
         infoT(); draw(); msg('Tippe auf ein Feld beim Gegner!');
       };
       setup();
-    });
-  }
-
-  // 12) Tischfussball
-  function gameFussball() {
-    const body = gameArea('Tischfussball');
-    levelPicker(body, '⚽ Bewege die Stangen mit dem Finger, tippe zum Schiessen. Wer zuerst 5 Tore hat, gewinnt!', level => {
-      const W = 300, H = 440, GOALW = 100, R = 7, TO_WIN = 5;
-      const AI = { leicht: { sp: 60, kick: 0.5 }, mittel: { sp: 110, kick: 0.8 }, schwer: { sp: 180, kick: 1 } }[level];
-      body.innerHTML = `<div class="ff-wrap"><canvas id="ffCanvas"></canvas><div class="game-msg" style="font-size:14px;font-weight:600;">Finger bewegen = Stangen schieben · Tippen = Schuss</div></div>`;
-      const cv = document.getElementById('ffCanvas'), dpr = Math.min(2, window.devicePixelRatio || 1);
-      cv.width = W * dpr; cv.height = H * dpr; cv.style.aspectRatio = W + '/' + H;
-      const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-      const info = document.getElementById('gameInfo');
-      // Stangen: [y, Anzahl Figuren], unten = Spieler, oben = CPU
-      const ROD_DEF = [[410, 1], [350, 2], [255, 3]];
-      const mk = (ys, dir) => ys.map(([y, n]) => ({ y, n, dir, off: 0, vx: 0, kick: 0, base: Array.from({ length: n }, (_, i) => W * (i + 1) / (n + 1)), range: n === 1 ? 44 : W / (n + 1) / 2 - 2 }));
-      const me = mk(ROD_DEF, -1), cpu = mk(ROD_DEF.map(([y, n]) => [H - y, n]), 1);
-      let ball, sc = [0, 0], freeze = 0, over = false, last = performance.now(), raf = 0, pointerX = W / 2, flash = '';
-      const serve = toward => { const a = (Math.random() - 0.5) * 1.0; ball = { x: W / 2, y: H / 2, vx: Math.sin(a) * 110, vy: toward * (130 + Math.random() * 30) }; };
-      serve(Math.random() < 0.5 ? 1 : -1);
-      const upd = () => info.textContent = `Du ${sc[0]} : ${sc[1]} CPU`;
-      const MW = 24, MH = 12;
-      const men = rod => rod.base.map(b => ({ x: Math.max(MW / 2, Math.min(W - MW / 2, b + rod.off)), y: rod.y - rod.dir * rod.kick * 14 }));
-      const collide = (rod, kickDir) => {
-        men(rod).forEach(m => {
-          const cx = Math.max(m.x - MW / 2, Math.min(ball.x, m.x + MW / 2)), cy = Math.max(m.y - MH / 2, Math.min(ball.y, m.y + MH / 2));
-          let dx = ball.x - cx, dy = ball.y - cy, d = Math.hypot(dx, dy);
-          if (d >= R) return;
-          if (d === 0) { dx = 0; dy = ball.y < m.y ? -1 : 1; d = 1; }
-          const nx = dx / d, ny = dy / d;
-          ball.x = cx + nx * (R + 0.5); ball.y = cy + ny * (R + 0.5);
-          const vn = ball.vx * nx + ball.vy * ny;
-          if (vn < 0) { ball.vx -= 1.9 * vn * nx; ball.vy -= 1.9 * vn * ny; }
-          ball.vx += (ball.x - m.x) * 3 + rod.vx * 0.4;
-          if (rod.kick > 0.3) { ball.vy = rod.dir * -1 * Math.max(Math.abs(ball.vy), 0) * 0 + (-rod.dir) * Math.max(300, Math.abs(ball.vy) * 1.2); }
-        });
-      };
-      const goal = who => {
-        sc[who]++; upd(); freeze = 1.1; flash = who === 0 ? '⚽ TOR! 🎉' : '😬 Gegentor';
-        if (sc[who] >= TO_WIN) {
-          over = true; stopGame(); cancelAnimationFrame(raf);
-          const win = who === 0; let rec = false;
-          if (win) { const n = (getScores()['fussball-wins'] || 0) + 1; setWins('fussball-wins', n); }
-          body.innerHTML = `<div class="card"><div class="game-msg">${win ? '🏆 Du hast gewonnen!' : '🤖 Der Computer gewinnt.'}<br>${sc[0]} : ${sc[1]}</div><div style="text-align:center"><button class="switch-btn" onclick="gameFussball()">Nochmal</button></div></div>`;
-          return;
-        }
-        serve(who === 0 ? 1 : -1);
-      };
-      const setPtr = e => { const r = cv.getBoundingClientRect(); pointerX = (e.clientX - r.left) / r.width * W; };
-      cv.addEventListener('pointermove', setPtr);
-      cv.addEventListener('pointerdown', e => { setPtr(e); me.forEach(r => { if (r.kick <= 0) r.kick = 1; }); });
-      const frame = now => {
-        if (over) return;
-        const dt = Math.min(0.04, (now - last) / 1000); last = now;
-        // Spieler-Stangen folgen dem Finger
-        me.forEach(r => { const target = (pointerX / W - 0.5) * 2 * r.range; const nx = r.off + Math.max(-420 * dt, Math.min(420 * dt, target - r.off)); r.vx = (nx - r.off) / dt; r.off = nx; r.kick = Math.max(0, r.kick - dt * 6); });
-        // CPU
-        cpu.forEach(r => {
-          const ms = men(r); let best = ms[0], bd = 1e9; ms.forEach(m => { const d = Math.abs(m.x - ball.x); if (d < bd) { bd = d; best = m; } });
-          const want = r.off + (ball.x - best.x), target = Math.max(-r.range, Math.min(r.range, want));
-          const nx = r.off + Math.max(-AI.sp * dt, Math.min(AI.sp * dt, target - r.off)); r.vx = (nx - r.off) / dt; r.off = nx;
-          if (r.kick > 0) r.kick = Math.max(0, r.kick - dt * 6);
-          else if (Math.abs(ball.y - r.y) < 22 && bd < 18 && Math.random() < AI.kick * dt * 12) r.kick = 1;
-        });
-        if (freeze > 0) freeze -= dt;
-        else {
-          ball.x += ball.vx * dt; ball.y += ball.vy * dt;
-          const sp = Math.hypot(ball.vx, ball.vy), maxS = 430; if (sp > maxS) { ball.vx *= maxS / sp; ball.vy *= maxS / sp; }
-          if (sp < 90) { ball.vy += (ball.vy >= 0 ? 1 : -1) * 90 * dt * 4; }
-          if (ball.x < R) { ball.x = R; ball.vx = Math.abs(ball.vx); } if (ball.x > W - R) { ball.x = W - R; ball.vx = -Math.abs(ball.vx); }
-          const inGoal = Math.abs(ball.x - W / 2) < GOALW / 2;
-          if (ball.y < R) { if (inGoal && ball.y < -R) { goal(0); } else if (!inGoal) { ball.y = R; ball.vy = Math.abs(ball.vy); } }
-          if (ball.y > H - R) { if (inGoal && ball.y > H + R) { goal(1); } else if (!inGoal) { ball.y = H - R; ball.vy = -Math.abs(ball.vy); } }
-          [...me, ...cpu].forEach(r => collide(r));
-        }
-        if (over) return;
-        draw(); raf = requestAnimationFrame(frame);
-      };
-      const draw = () => {
-        ctx.fillStyle = '#2f8f3f'; ctx.fillRect(0, 0, W, H);
-        for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#2c8a3b' : '#33963f'; ctx.fillRect(0, i * H / 8, W, H / 8); }
-        ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 2; ctx.strokeRect(6, 6, W - 12, H - 12);
-        ctx.beginPath(); ctx.moveTo(6, H / 2); ctx.lineTo(W - 6, H / 2); ctx.stroke(); ctx.beginPath(); ctx.arc(W / 2, H / 2, 36, 0, 7); ctx.stroke();
-        ctx.fillStyle = '#111'; ctx.fillRect(W / 2 - GOALW / 2, 0, GOALW, 8); ctx.fillRect(W / 2 - GOALW / 2, H - 8, GOALW, 8);
-        [[me, '#2563eb'], [cpu, '#dc2626']].forEach(([rods, col]) => rods.forEach(r => {
-          ctx.strokeStyle = '#cfd4da'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(8, r.y); ctx.lineTo(W - 8, r.y); ctx.stroke();
-          men(r).forEach(m => { ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(m.x - MW / 2, m.y - MH / 2, MW, MH, 4); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); });
-        }));
-        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ball.x, ball.y, R, 0, 7); ctx.fill(); ctx.strokeStyle = '#222'; ctx.lineWidth = 1.5; ctx.stroke();
-        if (freeze > 0) { ctx.fillStyle = '#000a'; ctx.fillRect(0, H / 2 - 30, W, 60); ctx.fillStyle = '#ffe066'; ctx.font = '800 28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(flash, W / 2, H / 2 + 10); }
-      };
-      gameCleanup = () => { over = true; cancelAnimationFrame(raf); };
-      upd(); raf = requestAnimationFrame(frame);
     });
   }
 
@@ -6383,7 +6284,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.69';
+  const APP_VERSION = '1.70';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
   async function reloadApp() {
