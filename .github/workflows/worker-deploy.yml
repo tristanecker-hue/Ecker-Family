@@ -14,6 +14,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "Secret CLOUDFLARE_API_TOKEN fehlt"; exit 1; }
+          TOK=$(printf %s "$CLOUDFLARE_API_TOKEN" | sed 's/^[Bb]earer //' | tr -d '[:space:]"'"'"'')
+          echo "::add-mask::$TOK"
+          echo "Token-Länge: ${#TOK}"
+          echo "CLOUDFLARE_API_TOKEN=$TOK" >> "$GITHUB_ENV"
+          CLOUDFLARE_API_TOKEN="$TOK"
           H="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
           R=$(curl -s -H "$H" https://api.cloudflare.com/client/v4/accounts)
           echo "Konten: $(echo "$R" | jq -c '[.result[]?|.name], [.errors[]?.message]')"
@@ -43,6 +48,4 @@ jobs:
           sed -i 's/^ *//' cloudflare/wrangler.toml
       - name: Worker veröffentlichen
         working-directory: cloudflare
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx --yes wrangler@3 deploy
