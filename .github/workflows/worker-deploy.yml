@@ -14,8 +14,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "Secret CLOUDFLARE_API_TOKEN fehlt"; exit 1; }
-          ACC=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts | jq -r '.result[0].id')
-          KV=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces?per_page=100" | jq -r '.result[] | select(.title=="ecker-push-kv") | .id')
+          H="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          R=$(curl -s -H "$H" https://api.cloudflare.com/client/v4/accounts)
+          echo "Konten: $(echo "$R" | jq -c '[.result[]?|.name] , .errors')"
+          ACC=$(echo "$R" | jq -r '.result[0].id // empty')
+          R2=$(curl -s -H "$H" "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces?per_page=100")
+          echo "KV: $(echo "$R2" | jq -c '[.result[]?|.title] , .errors')"
+          KV=$(echo "$R2" | jq -r '[.result[]?|select(.title=="ecker-push-kv")][0].id // empty')
+          if [ -z "$KV" ]; then KV=$(echo "$R2" | jq -r '[.result[]?][0].id // empty'); fi
           test -n "$ACC" -a -n "$KV" || { echo "Konto oder KV nicht gefunden"; exit 1; }
           echo "CLOUDFLARE_ACCOUNT_ID=$ACC" >> "$GITHUB_ENV"
           cat > cloudflare/wrangler.toml <<TOML
