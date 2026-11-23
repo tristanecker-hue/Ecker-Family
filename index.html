@@ -204,9 +204,9 @@
   .hue-pin.sel { outline:3px solid #3FA7D6; }
   #huePlanEd { position:fixed; inset:0; z-index:70; background:var(--paper,#FFFDF8); overflow:auto; padding:14px; }
   #huePlanEd .hue-pin { cursor:crosshair; }
-  #hueSheet { position:fixed; inset:0; z-index:60; background:rgba(38,35,25,.5); display:flex; align-items:flex-end; justify-content:center; }
-  #hueSheet .hs { background:var(--paper,#fffdf6); width:100%; max-width:1100px; max-height:92vh; overflow:auto; border-radius:22px 22px 0 0; padding:16px 16px 28px; border:3px solid #262319; border-bottom:0; }
-  #hueSheet .hs h3 { margin:0 0 6px; display:flex; justify-content:space-between; align-items:center; }
+  #hueSheet, #fotoSheet { position:fixed; inset:0; z-index:60; background:rgba(38,35,25,.5); display:flex; align-items:flex-end; justify-content:center; }
+  #hueSheet .hs, #fotoSheet .hs { background:var(--paper,#fffdf6); width:100%; max-width:1100px; max-height:92vh; overflow:auto; border-radius:22px 22px 0 0; padding:16px 16px 28px; border:3px solid #262319; border-bottom:0; }
+  #hueSheet .hs h3, #fotoSheet .hs h3 { margin:0 0 6px; display:flex; justify-content:space-between; align-items:center; }
   #padScreen.tab-p .pad-main { display:none; }
   #padScreen:not(.tab-p) #padPlans { display:none; }
   #padPlans { display:grid; grid-template-columns: 1fr 1fr; gap:14px; align-items:start; }
@@ -225,6 +225,18 @@
   .pw-ev { font-size:clamp(12px,1.9vmin,19px); padding:4px 0; border-top:1.5px dashed rgba(38,35,25,.25); word-break:break-word; }
   .pw-ev b { display:block; font-size:.85em; opacity:.75; }
   @media (max-width: 900px) { #padWeekGrid { grid-template-columns: 1fr; } }
+  .foto-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:8px; margin-top:10px; }
+  .foto { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; border:2px solid #262319; background:#eee; }
+  .foto img { width:100%; height:100%; object-fit:cover; display:block; }
+  .foto button { position:absolute; top:4px; right:4px; width:30px; height:30px; border-radius:50%; border:2px solid #262319; background:#fff; font-weight:800; cursor:pointer; padding:0; }
+  .foto span { position:absolute; left:4px; bottom:4px; background:rgba(255,255,255,.85); border-radius:8px; padding:1px 6px; font-size:11px; font-weight:700; }
+  #padScreen .pad-col { grid-row: 1 / span 2; }
+  #padShowCard { grid-column: 2; padding:6px; }
+  #padShow { position:relative; height:clamp(220px, 38vh, 520px); border-radius:14px; overflow:hidden; background:#222; }
+  #padShow img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity 1.2s ease; }
+  #padShow img.on { opacity:1; }
+  #padScreen.tab-l #padShowCard { display:none; }
+  @media (max-width: 760px) { #padShowCard { grid-column: 1; } #padScreen .pad-col { grid-row:auto; } }
   #padTabs { display:flex; gap:8px; align-self:center; }
   #padTabs button { border:2.5px solid #262319; background:#fff; border-radius:999px; padding:8px 18px; font-family:inherit; font-weight:700; font-size:clamp(14px,2.2vmin,24px); cursor:pointer; }
   #padTabs button.on { background:#FFD84D; }
@@ -1410,6 +1422,10 @@
         <div class="account-name">Chat</div>
         <div class="account-hint" id="chatBadge"></div>
       </div>
+      <div class="account-btn hidden" id="tileFotos" role="button" tabindex="0" onclick="openFotos()" onkeydown="if(event.key==='Enter'||event.key===' '){openFotos()}">
+        <div class="account-avatar" style="background:#8E6BD8;">📸</div>
+        <div class="account-name">Fotos</div>
+      </div>
       <div class="account-btn hidden" id="tilePunkte" role="button" tabindex="0" onclick="openPunkte()" onkeydown="if(event.key==='Enter'||event.key===' '){openPunkte()}">
         <div class="account-avatar" style="background:#E5A823;">⭐</div>
         <div class="account-name">Sterne</div>
@@ -1616,6 +1632,8 @@
 
   <div id="hueSheet" class="hidden" onclick="if(event.target===this)closeHueSheet()"><div class="hs"><h3><span>💡 Licht</span><button class="btn" style="width:auto;padding:6px 14px;" onclick="closeHueSheet()">Schliessen</button></h3><div id="hueBox"><div class="sub">Lädt …</div></div></div></div>
 
+  <div id="fotoSheet" class="hidden" onclick="if(event.target===this)closeFotos()"><div class="hs"><h3><span>📸 Fotos</span><button class="btn" style="width:auto;padding:6px 14px;" onclick="closeFotos()">Schliessen</button></h3><div class="set-note" style="margin:0 0 8px;">Diese Fotos laufen als Diashow am Wand-iPad.</div><label class="btn" style="display:block;text-align:center;cursor:pointer;">＋ Fotos hinzufügen<input type="file" accept="image/*" multiple style="display:none;" onchange="fotoUpload(this)"></label><div id="fotoBox"></div></div></div>
+
   <div id="hueBriDlg" class="hidden" onclick="if(event.target===this)hueBriClose()"><div class="hb"><div style="font-weight:800;font-size:20px;" id="hueBriName"></div><div id="hueBriVal" style="margin:4px 0 10px;opacity:.7;"></div><input type="range" id="hueBriSl" min="1" max="100" style="width:100%;height:36px;" oninput="hueBriInput(this.value)" onchange="hueBriChange(this.value)"><div style="display:flex;gap:8px;margin-top:12px;"><button class="btn" onclick="hueBriToggle(true)">An</button><button class="btn" onclick="hueBriToggle(false)">Aus</button><button class="btn" onclick="hueBriClose()">Fertig</button></div></div></div>
 
   <div id="huePlanEd" class="hidden">
@@ -1639,6 +1657,7 @@
         <div class="pad-card"><div class="pad-h">🍽️ Essen</div><div id="padMeal"></div></div>
       </div>
       <div id="padTodos" class="pad-people"></div>
+      <div class="pad-card hidden" id="padShowCard"><div id="padShow"><img alt=""><img alt=""></div></div>
       <div class="pad-card hidden" id="padHueCard"><div class="pad-h">💡 Licht</div><div id="padHue"></div></div>
     </div>
     <div id="padPlans"></div>
@@ -1756,6 +1775,15 @@
       <div class="set-note" style="margin-top:0;">Der Benutzer «Pad» zeigt auf einem iPad an der Wand Uhr, Termine, Essen und alle offenen Aufgaben – nur anzeigen, nichts änderbar. In der Testphase erscheint die Anmeldung «Pad» nur, wo du sie hier einschaltest.</div>
       <label class="set-row"><span>Pad-Anmeldung auf diesem Gerät zeigen</span><span class="switch"><input type="checkbox" id="padVis" onchange="padVisToggle(this.checked)"><span class="slider"></span></span></label>
       <div class="set-note" style="word-break:break-all;" id="padLink"></div>
+    </div>
+    <div class="card hidden" id="fotoCard">
+      <details>
+      <summary style="cursor:pointer;" class="card-title">📸 Diashow</summary>
+      <div class="set-note" style="margin-top:0;">Fotos, die alle hochladen, laufen im Pad-Modus unten rechts.</div>
+      <label class="set-row"><span>Diashow anzeigen</span><span class="switch"><input type="checkbox" id="fotoOn" onchange="fotoCfgSave()"><span class="slider"></span></span></label>
+      <div class="field" style="margin-top:8px;"><label for="fotoSec">Sekunden pro Foto</label><select id="fotoSec" onchange="fotoCfgSave()"><option>5</option><option>8</option><option>10</option><option>15</option><option>30</option><option>60</option></select></div>
+      <button class="btn" onclick="openFotos()" style="margin-top:8px;">Alle Fotos verwalten</button>
+      </details>
     </div>
     <div class="card hidden" id="hueCard">
       <details>
@@ -3012,6 +3040,7 @@
     document.getElementById('tileRezepte').classList.toggle('hidden', !hasFeature('essen'));
     document.getElementById('tileChat').classList.toggle('hidden', !(cloudEnabled && hasFeature('chat')));
     document.getElementById('tileHue').classList.toggle('hidden', !(cloudEnabled && isAdmin()));
+    document.getElementById('tileFotos').classList.toggle('hidden', !cloudEnabled);
     if (cloudEnabled && hasFeature('chat')) chatCheck();
     if (hasFeature('essen')) loadEssenSub();
     updateHomeInfo(); pushRefresh();
@@ -3056,7 +3085,7 @@
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
-    renderThemes(); gcalRender(); pushRender(); odRender(); padRender();
+    renderThemes(); gcalRender(); pushRender(); odRender(); padRender(); fotoSettings();
     if (isAdmin()) renderSettings();
     applyAvatars();
   }
@@ -6977,8 +7006,86 @@
     hueSettings();
     document.getElementById('padLink').textContent = 'Direkter Link für das iPad: ' + location.origin + location.pathname.replace(/index\.html$/, '') + '#pad';
   }
+  // ---- Fotos / Diashow ----
+  async function fotoSettings() {
+    const c = document.getElementById('fotoCard'); if (!c) return;
+    c.classList.toggle('hidden', !isAdmin() || !cloudEnabled);
+    if (!isAdmin() || !cloudEnabled) return;
+    try {
+      const cfg = (await cloudApi.padcfgGet()) || {};
+      document.getElementById('fotoOn').checked = cfg.on !== false;
+      document.getElementById('fotoSec').value = String(cfg.interval || 10);
+    } catch (e) {}
+  }
+  async function fotoCfgSave() {
+    try { await cloudApi.padcfgSet({ on: document.getElementById('fotoOn').checked, interval: Number(document.getElementById('fotoSec').value) || 10 }); showToast('Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen'); }
+  }
+  let fotoList = [];
+  async function openFotos() {
+    document.getElementById('fotoSheet').classList.remove('hidden');
+    const box = document.getElementById('fotoBox');
+    if (!box.dataset.init) {
+      box.dataset.init = '1';
+      box.addEventListener('click', async ev => {
+        const b = ev.target.closest('button[data-del]'); if (!b) return;
+        if (!window.confirm('Dieses Foto löschen?')) return;
+        try { await cloudApi.fotoDelete(b.dataset.del); } catch (e) { showToast('Löschen fehlgeschlagen'); }
+        fotosRender();
+      });
+    }
+    fotosRender();
+  }
+  function closeFotos() { document.getElementById('fotoSheet').classList.add('hidden'); }
+  async function fotosRender() {
+    const box = document.getElementById('fotoBox');
+    box.innerHTML = '<div class="sub" style="margin-top:10px;">Lädt …</div>';
+    try { fotoList = await withTimeout(cloudApi.fotosList(), 25000); } catch (e) { box.innerHTML = '<div class="sub" style="margin-top:10px;">Fotos nicht ladbar</div>'; return; }
+    const me = userKey(currentUser), all = isAdmin();
+    const mine = fotoList.filter(f => all || f.from === me);
+    box.innerHTML = mine.length ? '<div class="foto-grid">' + mine.map(f => '<div class="foto"><img loading="lazy" alt="" src="' + f.data + '"><button data-del="' + f.id + '" aria-label="Löschen">✕</button>' + (all ? '<span>' + escapeHtml(f.from) + '</span>' : '') + '</div>').join('') + '</div>' : '<div class="sub" style="margin-top:10px;">Noch keine Fotos.</div>';
+  }
+  async function fotoUpload(inp) {
+    const files = [...(inp.files || [])].slice(0, 12); inp.value = '';
+    let ok = 0;
+    for (let i = 0; i < files.length; i++) {
+      showToast('Foto ' + (i + 1) + ' von ' + files.length + ' …');
+      try {
+        const data = await chatCompress(files[i]);
+        await withTimeout(cloudApi.fotoPut('f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), { from: userKey(currentUser), data, at: Date.now() }), 30000);
+        ok++;
+      } catch (e) {}
+    }
+    showToast(ok === files.length ? ok + ' Foto' + (ok === 1 ? '' : 's') + ' hinzugefügt' : ok + ' von ' + files.length + ' hochgeladen');
+    fotosRender();
+  }
+  // Pad: Diashow
+  let padShowList = [], padShowIdx = 0, padShowTimer = null, padShowCfg = { on: true, interval: 10 }, padShowSide = 0;
+  async function padShowLoad() {
+    try {
+      const [cfg, list] = await Promise.all([cloudApi.padcfgGet(), cloudApi.fotosList()]);
+      if (cfg) padShowCfg = { on: cfg.on !== false, interval: Math.min(120, Math.max(3, Number(cfg.interval) || 10)) };
+      padShowList = list.map(x => x.data).filter(Boolean);
+      for (let i = padShowList.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [padShowList[i], padShowList[j]] = [padShowList[j], padShowList[i]]; }
+    } catch (e) { return; }
+    padShowStart();
+  }
+  function padShowStart() {
+    clearInterval(padShowTimer); padShowTimer = null;
+    const card = document.getElementById('padShowCard'); if (!card) return;
+    if (!padShowCfg.on || !padShowList.length) { card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+    padShowIdx = 0; padShowNext(true);
+    if (padShowList.length > 1) padShowTimer = setInterval(padShowNext, padShowCfg.interval * 1000);
+  }
+  function padShowNext(first) {
+    const imgs = document.querySelectorAll('#padShow img'); if (!imgs.length || !padShowList.length) return;
+    const nxt = imgs[padShowSide ^ 1], cur = imgs[padShowSide];
+    nxt.onload = () => { nxt.classList.add('on'); if (cur !== nxt) cur.classList.remove('on'); };
+    nxt.src = padShowList[padShowIdx % padShowList.length];
+    padShowIdx++; padShowSide ^= 1;
+  }
   // ---- Philips Hue (über den Worker) ----
-  let hueTimer = null, hueBusy = 0;
+  let hueTimer = null, hueBusy = 0, padShowRefresh = null;
   async function hueApi(path, body) {
     const tok = await cloudApi.idToken();
     const r = await fetch(PUSH_URL + path, { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify(body || {}) });
@@ -7247,6 +7354,8 @@
     padUnsub = cloudApi.todosListen(list => { padTodos = list; padRenderTodos(); }, () => {});
     padSlowLoad();
     padSlow = setInterval(padSlowLoad, 30 * 60000);
+    padShowLoad();
+    padShowRefresh = setInterval(padShowLoad, 60 * 60000);
     padHueInit(); padHueLoad(); hueTimer = setInterval(padHueLoad, 20000);
     padWakeLock();
     const clock = document.getElementById('padClock');
@@ -7258,7 +7367,7 @@
   }
   function padStop(keep) {
     if (padUnsub) { try { padUnsub(); } catch (e) {} padUnsub = null; }
-    clearInterval(padTick); clearInterval(padSlow); clearInterval(hueTimer); padTick = padSlow = hueTimer = null;
+    clearInterval(padTick); clearInterval(padSlow); clearInterval(hueTimer); clearInterval(padShowTimer); clearInterval(padShowRefresh); padShowTimer = padShowRefresh = null; padTick = padSlow = hueTimer = null;
     if (padWake) { try { padWake.release(); } catch (e) {} padWake = null; }
     if (!keep) { document.body.classList.remove('pad-mode'); document.getElementById('padScreen').classList.add('hidden'); }
   }
@@ -7591,6 +7700,11 @@
         photoPut: (id, d) => F.setDoc(F.doc(db, 'chatPhotos', id), d),
         photoGet: async (id) => { const d = await F.getDoc(F.doc(db, 'chatPhotos', id)); return d.exists() ? d.data().data : null; },
         photoDelete: id => F.deleteDoc(F.doc(db, 'chatPhotos', id)),
+        fotoPut: (id, d) => F.setDoc(F.doc(db, 'fotos', id), d),
+        fotoDelete: id => F.deleteDoc(F.doc(db, 'fotos', id)),
+        fotosList: async () => { const sn = await F.getDocs(F.query(F.collection(db, 'fotos'), F.orderBy('at', 'desc'), F.limit(60))); const o = []; sn.forEach(d => o.push({ id: d.id, ...d.data() })); return o; },
+        padcfgGet: async () => { const d = await F.getDoc(F.doc(db, 'padcfg', 'main')); return d.exists() ? d.data() : null; },
+        padcfgSet: d => F.setDoc(F.doc(db, 'padcfg', 'main'), d),
         kvList: async (col) => {
           const sn = await F.getDocs(F.collection(db, col));
           const out = [];
@@ -7629,7 +7743,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.15';
+  const APP_VERSION = '2.16';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

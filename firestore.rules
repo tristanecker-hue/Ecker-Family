@@ -136,6 +136,26 @@ service cloud.firestore {
       allow delete: if canChat() && (resource.data.from == uname() || uname() in ['tristan', 'claudia']);
     }
 
+    // Familienfotos für die Diashow am Wand-iPad: alle Familienmitglieder und das Pad lesen,
+    // jede Person lädt eigene hoch und löscht eigene, Tristan löscht alle
+    match /fotos/{id} {
+      allow read: if isFamily() || isPad();
+      allow create: if isFamily()
+        && request.resource.data.keys().hasOnly(['from', 'data', 'at'])
+        && request.resource.data.from == uname()
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 950000
+        && request.resource.data.at is number;
+      allow update: if false;
+      allow delete: if isFamily() && (resource.data.from == uname() || isTristan());
+    }
+
+    // Diashow-Einstellungen (Dauer, an/aus): lesen Familie und Pad, ändern nur Tristan
+    match /padcfg/{id} {
+      allow read: if isFamily() || isPad();
+      allow write: if isTristan();
+    }
+
     // Spiele-Rekorde: alle lesen, jede Person schreibt nur die eigenen Bestwerte
     match /scores/{id} {
       allow read: if isFamily();
