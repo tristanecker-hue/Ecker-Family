@@ -205,7 +205,9 @@
   #padTabs button.on { background:#FFD84D; }
   #padScreen.tab-l .pad-col, #padScreen.tab-l .pad-people { display:none; }
   #padScreen:not(.tab-l) #padHueCard { display:none !important; }
-  #padScreen.tab-l #padHue .hue-plan img { max-height:64vh; }
+  #padScreen.tab-l #padHue .hue-plan img { max-height:72vh; }
+  #padHue.hp { grid-template-columns: 1fr; }
+  #padHue.hp .hue-list { display:none; }
   #padScreen .pad-main #padHueCard { grid-column: 1 / -1; }
   #padHue, #hueBox { display:grid; grid-template-columns: minmax(0,5fr) minmax(0,6fr); gap:16px; align-items:start; }
   #padHue:has(.hue-planwrap:empty), #hueBox:has(.hue-planwrap:empty) { grid-template-columns: 1fr; }
@@ -6987,6 +6989,7 @@
       const im = pw.querySelector('img'); if (im.dataset.v !== String(huePlan.img.length)) { im.src = huePlan.img; im.dataset.v = String(huePlan.img.length); }
       pw.querySelector('.hue-pins').innerHTML = huePinsHtml(huePlan.pins, st);
     } else pw.innerHTML = '';
+    box.classList.toggle('hp', !!(huePlan && huePlan.img && huePlan.pins && huePlan.pins.length));
     const chip = l => '<button data-lt="' + l.id + '" data-on="' + (l.on ? 1 : 0) + '" style="' + (l.on ? 'background:#FFD84D;' : '') + '">' + (l.on ? '💡 ' : '') + escapeHtml(l.name) + '</button>';
     const sub = (id, inner, extra) => {
       if (!inner) return '';
@@ -7549,7 +7552,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.11';
+  const APP_VERSION = '2.12';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
