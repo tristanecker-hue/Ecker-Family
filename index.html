@@ -1425,10 +1425,6 @@
         <div class="account-name">Chat</div>
         <div class="account-hint" id="chatBadge"></div>
       </div>
-      <div class="account-btn hidden" id="tileFotos" role="button" tabindex="0" onclick="openFotos()" onkeydown="if(event.key==='Enter'||event.key===' '){openFotos()}">
-        <div class="account-avatar" style="background:#8E6BD8;">📸</div>
-        <div class="account-name">Fotos</div>
-      </div>
       <div class="account-btn hidden" id="tilePunkte" role="button" tabindex="0" onclick="openPunkte()" onkeydown="if(event.key==='Enter'||event.key===' '){openPunkte()}">
         <div class="account-avatar" style="background:#E5A823;">⭐</div>
         <div class="account-name">Sterne</div>
@@ -1781,11 +1777,13 @@
     </div>
     <div class="card hidden" id="fotoCard">
       <details>
-      <summary style="cursor:pointer;" class="card-title">📸 Diashow</summary>
+      <summary style="cursor:pointer;" class="card-title">📸 Fotos &amp; Diashow</summary>
       <div class="set-note" style="margin-top:0;">Fotos, die alle hochladen, laufen im Pad-Modus unten rechts.</div>
+      <button class="btn" onclick="openFotos()" style="margin-top:4px;">＋ Fotos hinzufügen / eigene verwalten</button>
+      <div id="fotoAdmin" class="hidden">
       <label class="set-row"><span>Diashow anzeigen</span><span class="switch"><input type="checkbox" id="fotoOn" onchange="fotoCfgSave()"><span class="slider"></span></span></label>
       <div class="field" style="margin-top:8px;"><label for="fotoSec">Sekunden pro Foto</label><select id="fotoSec" onchange="fotoCfgSave()"><option>5</option><option>8</option><option>10</option><option>15</option><option>30</option><option>60</option></select></div>
-      <button class="btn" onclick="openFotos()" style="margin-top:8px;">Alle Fotos verwalten</button>
+      </div>
       </details>
     </div>
     <div class="card hidden" id="hueCard">
@@ -3043,7 +3041,6 @@
     document.getElementById('tileRezepte').classList.toggle('hidden', !hasFeature('essen'));
     document.getElementById('tileChat').classList.toggle('hidden', !(cloudEnabled && hasFeature('chat')));
     document.getElementById('tileHue').classList.toggle('hidden', !(cloudEnabled && isAdmin()));
-    document.getElementById('tileFotos').classList.toggle('hidden', !cloudEnabled);
     if (cloudEnabled && hasFeature('chat')) chatCheck();
     if (hasFeature('essen')) loadEssenSub();
     updateHomeInfo(); pushRefresh();
@@ -7012,7 +7009,8 @@
   // ---- Fotos / Diashow ----
   async function fotoSettings() {
     const c = document.getElementById('fotoCard'); if (!c) return;
-    c.classList.toggle('hidden', !isAdmin() || !cloudEnabled);
+    c.classList.toggle('hidden', !cloudEnabled);
+    document.getElementById('fotoAdmin').classList.toggle('hidden', !isAdmin());
     if (!isAdmin() || !cloudEnabled) return;
     try {
       const cfg = (await cloudApi.padcfgGet()) || {};
@@ -7748,7 +7746,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.19';
+  const APP_VERSION = '2.20';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
