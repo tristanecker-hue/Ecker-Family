@@ -109,6 +109,24 @@ async function pushToMany(env, v, to, msg) {
 }
 
 // Fällige Erinnerungen versenden (wird vom Cron-Trigger alle paar Minuten aufgerufen)
+// Zeitzonen-Hilfen: nächster Tag zur gleichen Ortszeit (Sommerzeit-fest)
+const tzOffset = (ts, tz) => {
+  const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }).formatToParts(ts).reduce((a, x) => (a[x.type] = x.value, a), {});
+  return Date.UTC(+p.year, p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - Math.floor(ts / 1000) * 1000;
+};
+const goodTz = tz => { try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return true; } catch (e) { return false; } };
+const nextDayAt = (prev, tz, days) => {
+  const o = tzOffset(prev, tz), loc = new Date(prev + o);
+  loc.setUTCDate(loc.getUTCDate() + days);
+  const guess = loc.getTime();
+  return guess - tzOffset(guess - o, tz);
+};
+const putRem = async (env, id, at, val) => {
+  const key = 'rem:' + String(Math.floor(at / 1000)).padStart(11, '0') + ':' + id;
+  await env.KV.put(key, JSON.stringify(val));
+  await env.KV.put('remid:' + id, key);
+};
+
 async function runDue(env) {
   const now = Date.now(), v = await getVapid(env);
   const list = await env.KV.list({ prefix: 'rem:', limit: 200 });
@@ -118,7 +136,14 @@ async function runDue(env) {
     const val = await env.KV.get(k.name, 'json');
     await env.KV.delete(k.name);
     if (val && val.id) await env.KV.delete('remid:' + val.id);
-    if (!val || now - at > 6 * 3600000) continue;   // zu alt (z. B. Pause) – nicht mehr senden
+    if (!val) continue;
+    // Wiederholte Erinnerung (z. B. «überfällig»): am nächsten Tag zur gleichen Ortszeit erneut einplanen
+    if (val.repeat && val.id) {
+      let nx = at;
+      do { nx = nextDayAt(nx, val.tz || 'UTC', val.repeat); } while (nx <= now);
+      if (!val.until || nx <= val.until) await putRem(env, val.id, nx, val);
+    }
+    if (now - at > 6 * 3600000) continue;   // zu alt (z. B. Pause) – nicht mehr senden
     await pushToMany(env, v, val.to, val.msg);
   }
 }
@@ -163,9 +188,15 @@ export default {
         if (!/^[A-Za-z0-9_-]{1,100}$/.test(id) || !to.length || !(at > now - 60000) || at > now + 400 * 86400000) return json({ error: 'ungültig' }, 400);
         const old = await env.KV.get('remid:' + id);
         if (old) await env.KV.delete(old);
-        const key = 'rem:' + String(Math.floor(at / 1000)).padStart(11, '0') + ':' + id;
-        await env.KV.put(key, JSON.stringify({ id, to, msg: cleanMsg({ title: data.title || '⏰ Erinnerung', body: data.body, url: data.url }) }));
-        await env.KV.put('remid:' + id, key);
+        const rec = { id, to, msg: cleanMsg({ title: data.title || '⏰ Erinnerung', body: data.body, url: data.url }) };
+        const rep = Math.floor(Number(data.repeat) || 0);
+        if (rep >= 1 && rep <= 7) {
+          const tz = String(data.tz || 'Europe/Zurich');
+          if (!goodTz(tz)) return json({ error: 'ungültig' }, 400);
+          rec.repeat = rep; rec.tz = tz;
+          rec.until = Math.min(Number(data.until) || at + 60 * 86400000, at + 120 * 86400000);
+        }
+        await putRem(env, id, at, rec);
         return json({ ok: true });
       }
       if (path === '/remind-cancel') {

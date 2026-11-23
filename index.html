@@ -1604,6 +1604,12 @@
       <div class="set-note" style="margin-top:0;">Gilt für dich auf diesem Gerät.</div>
       <div class="theme-list" id="themeList"></div>
     </div>
+    <div class="card hidden" id="overdueCard">
+      <div class="card-title">Überfällige Aufgaben</div>
+      <div class="set-note" style="margin-top:0;">Wer eine offene Aufgabe hat, deren Termin vorbei ist, bekommt jeden Tag eine Erinnerung per Push, bis sie erledigt ist.</div>
+      <label class="set-row"><span>Täglich erinnern</span><span class="switch"><input type="checkbox" id="odOn" onchange="odSaveUi()"><span class="slider"></span></span></label>
+      <div class="field" style="margin-top:8px;"><label for="odTime">Uhrzeit</label><input type="time" id="odTime" onchange="odSaveUi()"></div>
+    </div>
     <div class="card" id="pushCard">
       <div class="card-title">Mitteilungen</div>
       <div class="set-note" style="margin-top:0;" id="pushNote"></div>
@@ -2309,6 +2315,7 @@
     if (cloudEnabled) await loadAvatars();
     applyAvatars();
     await updateTodoBadge();
+    overdueResyncAll(false);
     if (pendingGo) { runPendingGo(); return; }
     showTodoPopup();
   }
@@ -2802,6 +2809,8 @@
     const base = defaultSettings();
     const out = {};
     Object.keys(base).forEach(k => { out[k] = Array.isArray(d && d[k]) ? d[k] : base[k]; });
+    const od = (d && d.overdue) || {};
+    out.overdue = { on: od.on !== false, time: /^\d\d:\d\d$/.test(od.time || '') ? od.time : '08:00' };
     settings = out;
     TIME_USERS = USERS.filter(n => settings.zeit.includes(userKey(n)));
   }
@@ -2888,7 +2897,7 @@
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
-    renderThemes(); gcalRender(); pushRender();
+    renderThemes(); gcalRender(); pushRender(); odRender();
     if (isAdmin()) renderSettings();
     applyAvatars();
   }
@@ -6310,14 +6319,59 @@
     d.setHours(h, m, 0, 0);
     return d.getTime();
   }
-  function remindSync(t) {
+  function pushPost(path, body) {
+    try { Promise.resolve(cloudApi.idToken()).then(tok => fetch(PUSH_URL + path, { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify(body) })).catch(() => {}); } catch (e) {}
+  }
+  const todoTo = t => t.assigneeKey === POOL ? Object.keys(ACCOUNTS) : [t.assigneeKey];
+  function remindSync(t, explicit, bulk) {
     if (!PUSH_AKTIV || !cloudEnabled || !cloudApi) return;
-    const at = remindAt(t);
-    const to = t.assigneeKey === POOL ? Object.keys(ACCOUNTS) : [t.assigneeKey];
-    const body = at > Date.now() ? { id: t.id, to, at, title: '⏰ Erinnerung', body: t.text + (t.assigneeKey === POOL ? ' (Zusatzaufgabe)' : ''), url: './#todos' } : null;
-    try {
-      Promise.resolve(cloudApi.idToken()).then(tok => fetch(PUSH_URL + (body ? '/remind' : '/remind-cancel'), { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify(body || { id: t.id }) })).catch(() => {});
-    } catch (e) {}
+    if (t.remind || explicit) {
+      const at = remindAt(t);
+      const body = at > Date.now() ? { id: t.id, to: todoTo(t), at, title: '⏰ Erinnerung', body: t.text + (t.assigneeKey === POOL ? ' (Zusatzaufgabe)' : ''), url: './#todos' } : null;
+      if (!bulk) pushPost(body ? '/remind' : '/remind-cancel', body || { id: t.id });
+    }
+    overdueSync(t, bulk);
+  }
+  // Tägliche Erinnerung bei überfälligen Aufgaben (Uhrzeit und Ein/Aus: Einstellungen, nur Tristan)
+  const overdueCfg = () => { if (!settings) applySettingsData(null); return settings.overdue || { on: true, time: '08:00' }; };
+  const odSigs = () => { try { return JSON.parse(localStorage.getItem('ef-od-sig') || '{}'); } catch (e) { return {}; } };
+  function overdueSync(t, bulk) {
+    if (!PUSH_AKTIV || !cloudEnabled || !cloudApi) return;
+    const cfg = overdueCfg(), id = 'od_' + t.id, sigs = odSigs();
+    const active = !!(cfg.on && t.dueAt && !t.done && !t.claimedAt && t.assigneeKey);
+    let sig = '', body = null;
+    if (active) {
+      const [h, m] = cfg.time.split(':').map(Number);
+      const d = dParse(t.dueAt); d.setDate(d.getDate() + 1); d.setHours(h, m, 0, 0);
+      let at = d.getTime();
+      if (at <= Date.now() + 60000) { const n = new Date(); n.setHours(h, m, 0, 0); if (n.getTime() <= Date.now() + 60000) n.setDate(n.getDate() + 1); at = n.getTime(); }
+      const [y, mo, da] = t.dueAt.split('-');
+      sig = [cfg.time, t.dueAt, t.assigneeKey, t.text].join('|');
+      body = { id, to: todoTo(t), at, title: '⚠ Aufgabe überfällig', body: t.text + ' (fällig seit ' + da + '.' + mo + '.)', url: './#todos', repeat: 1, tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Zurich'), until: at + 60 * 86400000 };
+    }
+    if (bulk) { if (active ? sigs[id] === sig : !sigs[id]) return; }
+    pushPost(active ? '/remind' : '/remind-cancel', body || { id });
+    if (active) sigs[id] = sig; else delete sigs[id];
+    try { localStorage.setItem('ef-od-sig', JSON.stringify(sigs)); } catch (e) {}
+  }
+  // alle offenen Aufgaben abgleichen (beim Start einer Elternperson und wenn Tristan die Einstellung ändert)
+  function overdueResyncAll(force) {
+    if (!PUSH_AKTIV || !cloudEnabled || !isParentU()) return;
+    if (force) try { localStorage.removeItem('ef-od-sig'); } catch (e) {}
+    todos.forEach(t => overdueSync(t, !force));
+  }
+  async function odSaveUi() {
+    settings.overdue = { on: document.getElementById('odOn').checked, time: document.getElementById('odTime').value || '08:00' };
+    await saveSettings();
+    await loadTodos();
+    overdueResyncAll(true);
+  }
+  function odRender() {
+    const c = document.getElementById('overdueCard'); if (!c) return;
+    c.classList.toggle('hidden', !isAdmin());
+    const cfg = overdueCfg();
+    document.getElementById('odOn').checked = cfg.on;
+    document.getElementById('odTime').value = cfg.time;
   }
   // Wenn eine wiederkehrende Aufgabe erledigt wird, entsteht die nächste (feste Nummer: kein Doppel)
   async function spawnNext(t) {
@@ -6343,6 +6397,7 @@
       if (cloudEnabled) await withTimeout(cloudApi.updateTodo(id, { assigneeKey: me }, t.privat));
       t.assigneeKey = me; t.pool = true;
       if (!cloudEnabled) persistTodosLocal();
+      remindSync(t);
     } catch (e) { showToast('Geht nicht – hat es schon jemand genommen?'); await refreshTodos(); return; }
     pushSend([{ to: Object.keys(ACCOUNTS).filter(k => k !== me), title: (ACCOUNTS[me] || me) + ' übernimmt', body: t.text, url: './#todos' }]);
     showToast('Super! Die Aufgabe ist jetzt bei dir 💪');
@@ -6575,8 +6630,8 @@
       return;
     }
     if (!t.privat) pushSend(pushTodoMsgs(before, t));
-    if (t.done) { remindSync(t); await spawnNext(t); }
-    else if (before.done) remindSync(t);
+    remindSync(t);
+    if (t.done) await spawnNext(t);
     if (kidClaim) showToast(t.claimedAt ? '⏳ Gemeldet – Mama oder Papa bestätigt' : 'Meldung zurückgenommen');
     renderTodos();
     updateTodoBadge();
@@ -6592,6 +6647,7 @@
       if (!cloudEnabled) persistTodosLocal();
     } catch (e) { showToast('Änderung fehlgeschlagen – bitte Verbindung prüfen'); return; }
     pushSend(pushTodoMsgs(before, t));
+    remindSync(t);
     renderTodos(); updateTodoBadge();
     showToast('Zurück an ' + (ACCOUNTS[t.assigneeKey] || t.assigneeKey));
   }
@@ -6623,7 +6679,7 @@
       Object.assign(t, patch);
       if (!cloudEnabled) persistTodosLocal();
     } catch (e) { showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); return; }
-    remindSync(t);
+    remindSync(t, true);
     closeTodoEdit();
     renderTodos();
     showToast('Pendenz geändert');
@@ -6634,7 +6690,7 @@
     const gone = todos.find(x => x.id === id);
     try {
       if (cloudEnabled) await withTimeout(cloudApi.deleteTodo(id, tPriv(id)));
-      if (gone) remindSync({ ...gone, done: true });
+      if (gone) remindSync({ ...gone, done: true }, true);
       todos = todos.filter(x => x.id !== id);
       if (!cloudEnabled) persistTodosLocal();
     } catch (e) {
@@ -6736,7 +6792,8 @@
       Object.assign(t, patch);
       if (!cloudEnabled) persistTodosLocal();
       if (!t.privat) pushSend(pushTodoMsgs(before, t));
-      if (t.done) { remindSync(t); await spawnNext(t); }
+      remindSync(t);
+      if (t.done) await spawnNext(t);
       showToast(kidClaim ? '⏳ Gemeldet – Mama oder Papa bestätigt' : 'Als erledigt markiert');
     } catch (e) { showToast('Änderung fehlgeschlagen – bitte Verbindung prüfen'); }
   }
@@ -7046,7 +7103,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.97';
+  const APP_VERSION = '1.98';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
