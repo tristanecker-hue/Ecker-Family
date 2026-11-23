@@ -191,6 +191,20 @@
   #hueSheet { position:fixed; inset:0; z-index:60; background:rgba(38,35,25,.5); display:flex; align-items:flex-end; justify-content:center; }
   #hueSheet .hs { background:var(--paper,#fffdf6); width:100%; max-width:520px; max-height:85vh; overflow:auto; border-radius:22px 22px 0 0; padding:16px 16px 28px; border:3px solid #262319; border-bottom:0; }
   #hueSheet .hs h3 { margin:0 0 6px; display:flex; justify-content:space-between; align-items:center; }
+  #padTabs { display:flex; gap:8px; align-self:center; }
+  #padTabs button { border:2.5px solid #262319; background:#fff; border-radius:999px; padding:8px 18px; font-family:inherit; font-weight:700; font-size:clamp(14px,2.2vmin,24px); cursor:pointer; }
+  #padTabs button.on { background:#FFD84D; }
+  #padScreen.tab-l .pad-col, #padScreen.tab-l .pad-people { display:none; }
+  #padScreen:not(.tab-l) #padHueCard { display:none !important; }
+  #padScreen.tab-l #padHue .hue-plan img { max-height:64vh; }
+  #padScreen .pad-main #padHueCard { grid-column: 1 / -1; }
+  #padHue { display:grid; grid-template-columns: minmax(0,5fr) minmax(0,6fr); gap:16px; align-items:start; }
+  #padHue:has(.hue-planwrap:empty) { grid-template-columns: 1fr; }
+  #padHue .hue-plan { width:fit-content; max-width:100%; margin:0 auto; }
+  #padHue .hue-plan img { max-height:44vh; width:auto; max-width:100%; }
+  #padHue .hue-list { display:flex; flex-wrap:wrap; gap:6px 10px; align-content:start; }
+  #padHue .hue-room { border-top:0; padding:2px 0; flex:1 1 44%; }
+  @media (max-width: 760px) { #padHue { grid-template-columns: 1fr; } }
   #padFoot { text-align:center; font-size:12px; opacity:.5; margin-top: 14px; }
   body.pad-mode .wrap { max-width: none; padding: 0; }
   @media (max-width: 760px) { #padScreen .pad-main { grid-template-columns: 1fr; } #padScreen .pad-people { grid-template-columns: 1fr; } }
@@ -1568,15 +1582,16 @@
   <div id="padScreen" class="hidden">
     <div class="pad-top">
       <div id="padClock" title="3 Sekunden gedrückt halten: Pad-Modus beenden">--:--</div>
+      <div id="padTabs" class="hidden"><button id="padTabO" class="on" onclick="padTab('o')">🏠 Übersicht</button><button id="padTabL" onclick="padTab('l')">💡 Licht</button></div>
       <div id="padDate"></div>
     </div>
     <div class="pad-main">
       <div class="pad-col">
         <div class="pad-card"><div class="pad-h">📅 Termine</div><div id="padCal"></div></div>
         <div class="pad-card"><div class="pad-h">🍽️ Essen</div><div id="padMeal"></div></div>
-        <div class="pad-card hidden" id="padHueCard"><div class="pad-h">💡 Licht</div><div id="padHue"></div></div>
       </div>
       <div id="padTodos" class="pad-people"></div>
+      <div class="pad-card hidden" id="padHueCard"><div class="pad-h">💡 Licht</div><div id="padHue"></div></div>
     </div>
     <div id="padFoot"></div>
   </div>
@@ -6983,7 +6998,18 @@
       hueFill(box, st);
     } catch (e) { if (!card) box.innerHTML = '<div class="sub">Licht nicht erreichbar (' + escapeHtml(e.message) + ')</div>'; }
   }
-  const padHueLoad = () => hueLoad(document.getElementById('padHue'), document.getElementById('padHueCard'));
+  function padTab(t) {
+    document.getElementById('padScreen').classList.toggle('tab-l', t === 'l');
+    document.getElementById('padTabO').classList.toggle('on', t !== 'l');
+    document.getElementById('padTabL').classList.toggle('on', t === 'l');
+  }
+  const padHueLoad = async () => {
+    const card = document.getElementById('padHueCard');
+    await hueLoad(document.getElementById('padHue'), card);
+    const off = card.classList.contains('hidden');
+    document.getElementById('padTabs').classList.toggle('hidden', off);
+    if (off) padTab('o');
+  };
   function hueBind(box, reload) {
     if (!box || box.dataset.init) return;
     box.dataset.init = '1';
@@ -7456,7 +7482,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.03';
+  const APP_VERSION = '2.05';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
