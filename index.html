@@ -165,14 +165,14 @@
   #padScreen .pad-row { font-size: clamp(16px, 2.6vmin, 32px); padding: 4px 0; border-top: 1.5px dashed rgba(38,35,25,.25); display:flex; gap:10px; }
   #padScreen .pad-row:first-of-type { border-top: 0; }
   #padScreen .pad-row b { flex: none; min-width: 3.2em; }
-  #padScreen .pad-people { display:grid; grid-template-columns: repeat(2, 1fr); gap: clamp(10px, 2vmin, 24px); }
-  #padScreen .pad-person { border:3px solid var(--kc,#999); background: var(--kbg,#fff); border-radius:22px; padding: clamp(10px, 1.8vmin, 22px); }
-  #padScreen .pad-pn { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size: clamp(22px, 3.6vmin, 46px); font-weight:800; margin-bottom: 6px; }
-  #padScreen .pad-pn span { font-size: clamp(14px, 2.2vmin, 28px); font-weight:700; }
-  #padScreen .pad-t { font-size: clamp(16px, 2.6vmin, 32px); padding: 5px 0; border-top: 1.5px dashed rgba(38,35,25,.2); }
+  #padScreen .pad-people { display:grid; grid-template-columns: repeat(2, 1fr); gap: clamp(8px, 1.4vmin, 16px); }
+  #padScreen .pad-person { border:3px solid var(--kc,#999); background: var(--kbg,#fff); border-radius:18px; padding: clamp(6px, 1.1vmin, 14px) clamp(10px, 1.6vmin, 18px); }
+  #padScreen .pad-pn { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size: clamp(17px, 2.6vmin, 32px); font-weight:800; margin-bottom: 2px; }
+  #padScreen .pad-pn span { font-size: clamp(12px, 1.7vmin, 20px); font-weight:700; }
+  #padScreen .pad-t { font-size: clamp(13px, 2vmin, 24px); padding: 3px 0; border-top: 1.5px dashed rgba(38,35,25,.2); }
   #padScreen .pad-t.late { color:#c0271d; font-weight:800; }
   #padScreen .pad-t small { display:block; font-size: .72em; opacity:.75; }
-  #padScreen .pad-ok { font-size: clamp(16px, 2.6vmin, 32px); padding: 8px 0; }
+  #padScreen .pad-ok { font-size: clamp(13px, 2vmin, 24px); padding: 4px 0; }
   #padScreen .pad-pool { grid-column: 1 / -1; background:#FFF6D6; border:3px solid #262319; }
   .hue-room { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1.5px dashed rgba(38,35,25,.2); flex-wrap:wrap; }
   .hue-tog { flex:1 1 150px; min-height:48px; border-radius:14px; border:2.5px solid #262319; background:#fff; font-weight:700; font-size:clamp(16px,2.4vmin,26px); font-family:inherit; text-align:left; padding:6px 14px; cursor:pointer; }
@@ -232,7 +232,7 @@
   .foto span { position:absolute; left:4px; bottom:4px; background:rgba(255,255,255,.85); border-radius:8px; padding:1px 6px; font-size:11px; font-weight:700; }
   #padScreen .pad-col { grid-row: 1 / span 2; }
   #padShowCard { grid-column: 2; padding:6px; }
-  #padShow { position:relative; height:clamp(220px, 38vh, 520px); border-radius:14px; overflow:hidden; background:#222; }
+  #padShow { position:relative; height:clamp(200px, calc(100vh - 490px), 700px); border-radius:14px; overflow:hidden; background:#222; }
   #padShow img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity 1.2s ease; }
   #padShow img.on { opacity:1; }
   #padScreen.tab-l #padShowCard { display:none; }
@@ -7745,7 +7745,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.17';
+  const APP_VERSION = '2.18';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
