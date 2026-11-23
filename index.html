@@ -238,6 +238,7 @@
   #padShow { position:relative; flex:1 1 auto; min-height:200px; border-radius:14px; overflow:hidden; background:#222; }
   #padShow img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity 1.2s ease; }
   #padShow img.on { opacity:1; }
+  #padShow img.fit { object-fit:contain; }
   #padScreen.tab-l #padShowCard { display:none; }
   @media (max-width: 760px) { #padScreen .pad-main { grid-template-rows:none; } #padShowCard { grid-column: 1; } #padScreen .pad-col { grid-row:auto; } }
   #padTabs { display:flex; gap:8px; align-self:center; }
@@ -7081,7 +7082,7 @@
   function padShowNext(first) {
     const imgs = document.querySelectorAll('#padShow img'); if (!imgs.length || !padShowList.length) return;
     const nxt = imgs[padShowSide ^ 1], cur = imgs[padShowSide];
-    nxt.onload = () => { nxt.classList.add('on'); if (cur !== nxt) cur.classList.remove('on'); };
+    nxt.onload = () => { nxt.classList.toggle('fit', nxt.naturalWidth > nxt.naturalHeight); nxt.classList.add('on'); if (cur !== nxt) cur.classList.remove('on'); };
     nxt.src = padShowList[padShowIdx % padShowList.length];
     padShowIdx++; padShowSide ^= 1;
   }
@@ -7746,7 +7747,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.20';
+  const APP_VERSION = '2.21';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
