@@ -180,6 +180,14 @@
   .hue-bri { flex:1 1 120px; min-width:100px; }
   .hue-sc { flex:1 1 100%; display:flex; gap:6px; flex-wrap:wrap; }
   .hue-sc button { border:2px solid #262319; background:#fff; border-radius:999px; padding:6px 12px; font-weight:600; font-size:clamp(13px,1.9vmin,20px); font-family:inherit; cursor:pointer; }
+  .hue-plan { position:relative; width:100%; margin-bottom:10px; user-select:none; -webkit-user-select:none; }
+  .hue-plan img { width:100%; display:block; border-radius:12px; border:2px solid #262319; }
+  .hue-pin { position:absolute; transform:translate(-50%,-50%); min-width:34px; min-height:34px; border-radius:999px; border:2px solid #262319; background:#fff; font-size:16px; line-height:1; padding:3px 6px; cursor:pointer; display:flex; flex-direction:column; align-items:center; font-family:inherit; }
+  .hue-pin.on { background:#FFD84D; box-shadow:0 0 0 4px rgba(255,216,77,.55), 0 0 18px 6px rgba(255,200,40,.6); }
+  .hue-pin b { font-size:10px; font-weight:700; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hue-pin.sel { outline:3px solid #3FA7D6; }
+  #huePlanEd { position:fixed; inset:0; z-index:70; background:var(--paper,#FFFDF8); overflow:auto; padding:14px; }
+  #huePlanEd .hue-pin { cursor:crosshair; }
   #hueSheet { position:fixed; inset:0; z-index:60; background:rgba(38,35,25,.5); display:flex; align-items:flex-end; justify-content:center; }
   #hueSheet .hs { background:var(--paper,#fffdf6); width:100%; max-width:520px; max-height:85vh; overflow:auto; border-radius:22px 22px 0 0; padding:16px 16px 28px; border:3px solid #262319; border-bottom:0; }
   #hueSheet .hs h3 { margin:0 0 6px; display:flex; justify-content:space-between; align-items:center; }
@@ -1548,6 +1556,15 @@
 
   <div id="hueSheet" class="hidden" onclick="if(event.target===this)closeHueSheet()"><div class="hs"><h3><span>💡 Licht</span><button class="btn" style="width:auto;padding:6px 14px;" onclick="closeHueSheet()">Schliessen</button></h3><div id="hueBox"><div class="sub">Lädt …</div></div></div></div>
 
+  <div id="huePlanEd" class="hidden">
+    <div class="card-title">Plan einrichten</div>
+    <div class="set-note" style="margin-top:0;">1. Bild des Grundrisses wählen. 2. Raum oder Lampe auswählen. 3. Auf den Plan tippen, wo sie liegt. Nochmals tippen verschiebt sie.</div>
+    <input type="file" id="huePlanFile" accept="image/*" style="margin:8px 0;" onchange="hueEdFile(this)">
+    <select id="hueEdSel" style="width:100%;padding:10px;font-size:16px;margin:6px 0;" onchange="hueEdRender()"></select>
+    <div style="display:flex;gap:8px;margin:6px 0;"><button class="btn" onclick="hueEdRemove()">Pin entfernen</button><button class="btn" onclick="hueEdSave()">Speichern</button><button class="btn" onclick="hueEdClose()">Abbrechen</button></div>
+    <div id="hueEdBox" class="hue-plan" onclick="hueEdTap(event)"></div>
+  </div>
+
   <div id="padScreen" class="hidden">
     <div class="pad-top">
       <div id="padClock" title="3 Sekunden gedrückt halten: Pad-Modus beenden">--:--</div>
@@ -1676,6 +1693,7 @@
       <div class="card-title">Philips Hue</div>
       <div class="set-note" style="margin-top:0;" id="hueNote">Lichter im Pad-Modus schalten (Räume und Szenen).</div>
       <div id="hueRooms" style="margin-top:10px;"></div>
+      <button class="btn" onclick="hueEdOpen()" style="margin-top:8px;">🗺️ Plan einrichten</button>
       <button class="btn" id="hueBtn" onclick="hueConnect()" style="margin-top:8px;">Hue verbinden</button>
       <button class="btn" id="hueOff" onclick="hueDisconnect()" style="margin-top:8px;display:none;">Hue trennen</button>
     </div>
@@ -6903,7 +6921,7 @@
     if (!isAdmin() || !cloudEnabled) return;
     try {
       const st = await hueApi('/hue/state', { all: true });
-      document.getElementById('hueRooms').innerHTML = st.connected ? '<div class="set-note" style="margin:0 0 4px;">Diese Räume dürfen gesteuert werden (auch im Pad-Modus):</div>' + st.rooms.map(r => '<label class="set-row"><span>' + escapeHtml(r.name) + '</span><span class="switch"><input type="checkbox" data-room="' + r.id + '"' + (r.enabled ? ' checked' : '') + ' onchange="hueSaveRooms()"><span class="slider"></span></span></label>').join('') : '';
+      document.getElementById('hueRooms').innerHTML = st.connected ? '<div class="set-note" style="margin:0 0 4px;">Diese Räume dürfen gesteuert werden (auch im Pad-Modus):</div>' + st.rooms.map(r => '<label class="set-row"><span>' + escapeHtml(r.name) + '</span><span class="switch"><input type="checkbox" data-room="' + r.id + '"' + (r.enabled ? ' checked' : '') + ' onchange="hueSaveRooms()"><span class="slider"></span></span></label>').join('') + (st.lights.length ? '<div class="set-note" style="margin:10px 0 4px;">Einzelne Lampen:</div>' + st.lights.map(l => '<label class="set-row"><span>' + escapeHtml(l.name) + '</span><span class="switch"><input type="checkbox" data-light="' + l.id + '"' + (l.enabled ? ' checked' : '') + ' onchange="hueSaveRooms()"><span class="slider"></span></span></label>').join('') : '') : '';
       document.getElementById('hueNote').textContent = st.connected ? '✅ Verbunden. Im Pad-Modus erscheint die Kachel «Licht».' : 'Noch nicht verbunden. Du wirst zu Philips Hue geleitet, meldest dich an und gibst die Bridge frei.';
       document.getElementById('hueBtn').textContent = st.connected ? 'Neu verbinden' : 'Hue verbinden';
       document.getElementById('hueOff').style.display = st.connected ? '' : 'none';
@@ -6911,7 +6929,8 @@
   }
   async function hueSaveRooms() {
     const ids = [...document.querySelectorAll('#hueRooms input[data-room]:checked')].map(i => i.dataset.room);
-    try { await hueApi('/hue/config', { rooms: ids }); showToast('Gespeichert'); } catch (e) { showToast('Hue: ' + e.message); }
+    const lids = [...document.querySelectorAll('#hueRooms input[data-light]:checked')].map(i => i.dataset.light);
+    try { await hueApi('/hue/config', { rooms: ids, lights: lids }); showToast('Gespeichert'); } catch (e) { showToast('Hue: ' + e.message); }
   }
   async function hueConnect() {
     try { const j = await hueApi('/hue/start'); location.href = j.url; } catch (e) { showToast('Hue: ' + e.message); }
@@ -6920,18 +6939,44 @@
     if (!window.confirm('Hue trennen?')) return;
     try { await hueApi('/hue/disconnect'); showToast('Hue getrennt'); hueSettings(); } catch (e) { showToast('Hue: ' + e.message); }
   }
+  let hueSt = null, huePlan = null, huePlanAt = 0;
+  function huePinsHtml(pins, st, editSel) {
+    const roomOf = id => st.rooms.find(r => r.id === id), lightOf = id => st.lights.find(l => l.id === id);
+    return pins.map(p => {
+      const it = p.k === 'room' ? roomOf(p.id) : lightOf(p.id); if (!it) return '';
+      return '<button class="hue-pin' + (it.on ? ' on' : '') + (editSel === p.k + ':' + p.id ? ' sel' : '') + '" style="left:' + (p.x * 100) + '%;top:' + (p.y * 100) + '%" data-pk="' + p.k + '" data-pid="' + p.id + '"><span>' + (p.k === 'room' ? '🏠' : '💡') + '</span><b>' + escapeHtml(it.name) + '</b></button>';
+    }).join('');
+  }
   function hueFill(box, st) {
+    hueSt = st;
     if (box.contains(document.activeElement) && document.activeElement.type === 'range') return;
-    box.innerHTML = st.rooms.map(r => {
+    if (!box.querySelector('.hue-list')) box.innerHTML = '<div class="hue-planwrap"></div><div class="hue-list"></div>';
+    const pw = box.querySelector('.hue-planwrap');
+    if (huePlan && huePlan.img && huePlan.pins && huePlan.pins.length) {
+      if (!pw.querySelector('img')) pw.innerHTML = '<div class="hue-plan"><img alt="Plan"><div class="hue-pins"></div></div>';
+      const im = pw.querySelector('img'); if (im.dataset.v !== String(huePlan.img.length)) { im.src = huePlan.img; im.dataset.v = String(huePlan.img.length); }
+      pw.querySelector('.hue-pins').innerHTML = huePinsHtml(huePlan.pins, st);
+    } else pw.innerHTML = '';
+    box.querySelector('.hue-list').innerHTML = st.rooms.map(r => {
       const sc = st.scenes.filter(x => x.room === r.id).slice(0, 5);
+      const ls = st.lights.filter(l => l.room === r.id);
       return '<div class="hue-room"><button class="hue-tog' + (r.on ? ' on' : '') + '" data-gl="' + r.gl + '" data-on="' + (r.on ? 1 : 0) + '">' + (r.on ? '💡 ' : '⚫ ') + escapeHtml(r.name) + '</button>' +
         (r.on && r.bri != null ? '<input type="range" class="hue-bri" min="1" max="100" value="' + r.bri + '" data-gl="' + r.gl + '">' : '') +
-        (sc.length ? '<div class="hue-sc">' + sc.map(x => '<button data-sc="' + x.id + '">' + escapeHtml(x.name) + '</button>').join('') + '</div>' : '') + '</div>';
-    }).join('') || '<div class="sub">Keine Räume gefunden</div>';
+        (sc.length ? '<div class="hue-sc">' + sc.map(x => '<button data-sc="' + x.id + '">' + escapeHtml(x.name) + '</button>').join('') + '</div>' : '') +
+        (ls.length ? '<div class="hue-sc">' + ls.map(l => '<button data-lt="' + l.id + '" data-on="' + (l.on ? 1 : 0) + '" style="' + (l.on ? 'background:#FFD84D;' : '') + '">' + (l.on ? '💡 ' : '') + escapeHtml(l.name) + '</button>').join('') + '</div>' : '') + '</div>';
+    }).join('') || '<div class="sub">Keine Räume freigegeben</div>';
+    // Lampen ohne Raum oder ohne freigegebenen Raum
+    const rest = st.lights.filter(l => !st.rooms.some(r => r.id === l.room));
+    if (rest.length) box.querySelector('.hue-list').insertAdjacentHTML('beforeend', '<div class="hue-room"><div class="hue-sc">' + rest.map(l => '<button data-lt="' + l.id + '" data-on="' + (l.on ? 1 : 0) + '" style="' + (l.on ? 'background:#FFD84D;' : '') + '">' + (l.on ? '💡 ' : '') + escapeHtml(l.name) + '</button>').join('') + '</div></div>');
+  }
+  async function huePlanFetch(force) {
+    if (!force && huePlanAt && Date.now() - huePlanAt < 300000) return;
+    try { huePlan = await hueApi('/hue/plan'); huePlanAt = Date.now(); } catch (e) {}
   }
   async function hueLoad(box, card) {
     if (hueBusy > Date.now()) return;
     try {
+      await huePlanFetch();
       const st = await hueApi('/hue/state');
       if (!st.connected) { if (card) card.classList.add('hidden'); else box.innerHTML = '<div class="sub">Hue ist noch nicht verbunden (Einstellungen → Philips Hue).</div>'; return; }
       if (card) card.classList.remove('hidden');
@@ -6945,10 +6990,62 @@
     const act = async (path, body) => { hueBusy = Date.now() + 3000; try { await hueApi(path, body); } catch (e) { showToast('Licht: ' + e.message); } hueBusy = 0; reload(); };
     box.addEventListener('click', ev => {
       const t = ev.target.closest('button'); if (!t) return;
-      if (t.dataset.sc) act('/hue/scene', { id: t.dataset.sc });
+      if (t.dataset.pk && hueSt) {
+        if (t.dataset.pk === 'room') { const r = hueSt.rooms.find(x => x.id === t.dataset.pid); if (r) { t.classList.toggle('on'); act('/hue/set', { gl: r.gl, on: !r.on }); } }
+        else { const l = hueSt.lights.find(x => x.id === t.dataset.pid); if (l) { t.classList.toggle('on'); act('/hue/setlight', { id: l.id, on: !l.on }); } }
+      }
+      else if (t.dataset.lt) act('/hue/setlight', { id: t.dataset.lt, on: t.dataset.on !== '1' });
+      else if (t.dataset.sc) act('/hue/scene', { id: t.dataset.sc });
       else if (t.dataset.gl) { t.classList.toggle('on'); act('/hue/set', { gl: t.dataset.gl, on: t.dataset.on !== '1' }); }
     });
     box.addEventListener('change', ev => { const t = ev.target; if (t.type === 'range') act('/hue/set', { gl: t.dataset.gl, on: true, bri: Number(t.value) }); });
+  }
+  // ---- Plan einrichten (Tristan) ----
+  let edImg = null, edPins = [], edSt = null, edCur = '';
+  async function hueEdOpen() {
+    try {
+      edSt = await hueApi('/hue/state', { all: true });
+      if (!edSt.connected) { showToast('Hue zuerst verbinden'); return; }
+      await huePlanFetch(true);
+      edImg = null; edPins = JSON.parse(JSON.stringify((huePlan && huePlan.pins) || []));
+      const sel = document.getElementById('hueEdSel');
+      sel.innerHTML = edSt.rooms.filter(r => r.enabled).map(r => '<option value="room:' + r.id + '">🏠 ' + escapeHtml(r.name) + '</option>').join('') + edSt.lights.filter(l => l.enabled).map(l => '<option value="light:' + l.id + '">💡 ' + escapeHtml(l.name) + '</option>').join('');
+      document.getElementById('huePlanEd').classList.remove('hidden');
+      hueEdRender();
+    } catch (e) { showToast('Hue: ' + e.message); }
+  }
+  function hueEdClose() { document.getElementById('huePlanEd').classList.add('hidden'); }
+  function hueEdRender() {
+    const box = document.getElementById('hueEdBox'), img = edImg || (huePlan && huePlan.img) || '';
+    edCur = document.getElementById('hueEdSel').value;
+    if (!img) { box.innerHTML = '<div class="sub">Noch kein Bild gewählt.</div>'; return; }
+    const names = {}; edSt.rooms.forEach(r => names['room:' + r.id] = r.name); edSt.lights.forEach(l => names['light:' + l.id] = l.name);
+    box.innerHTML = '<img alt="Plan" src="' + img + '">' + edPins.map(p => '<button class="hue-pin' + (edCur === p.k + ':' + p.id ? ' sel' : '') + '" style="left:' + (p.x * 100) + '%;top:' + (p.y * 100) + '%"><span>' + (p.k === 'room' ? '🏠' : '💡') + '</span><b>' + escapeHtml(names[p.k + ':' + p.id] || '?') + '</b></button>').join('');
+  }
+  function hueEdTap(ev) {
+    const im = document.querySelector('#hueEdBox img'); if (!im || !edCur) return;
+    const r = im.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+    const [k, id] = edCur.split(':');
+    const e = edPins.find(p => p.k === k && p.id === id);
+    if (e) { e.x = x; e.y = y; } else edPins.push({ k, id, x, y });
+    hueEdRender();
+  }
+  function hueEdRemove() { const [k, id] = edCur.split(':'); edPins = edPins.filter(p => !(p.k === k && p.id === id)); hueEdRender(); }
+  function hueEdFile(inp) {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    const im = new Image(), url = URL.createObjectURL(f);
+    im.onload = () => {
+      let w = im.naturalWidth, h = im.naturalHeight; const sc = Math.min(1, 1400 / Math.max(w, h)); w = Math.round(w * sc); h = Math.round(h * sc);
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(im, 0, 0, w, h);
+      let q = 0.8, d = c.toDataURL('image/jpeg', q); while (d.length > 1200000 && q > 0.3) { q -= 0.1; d = c.toDataURL('image/jpeg', q); }
+      URL.revokeObjectURL(url); edImg = d; hueEdRender();
+    };
+    im.onerror = () => showToast('Bild konnte nicht gelesen werden');
+    im.src = url;
+  }
+  async function hueEdSave() {
+    try { await hueApi('/hue/plan-save', { img: edImg || undefined, pins: edPins }); await huePlanFetch(true); showToast('Plan gespeichert'); hueEdClose(); } catch (e) { showToast('Hue: ' + e.message); }
   }
   function padHueInit() { hueBind(document.getElementById('padHue'), padHueLoad); }
   let hueSheetTimer = null;
@@ -7359,7 +7456,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.02';
+  const APP_VERSION = '2.03';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

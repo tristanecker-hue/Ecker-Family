@@ -194,7 +194,7 @@ async function hueCallback(env, url) {
   } catch (e) { return page('Verbindung mit Hue fehlgeschlagen.', false); }
 }
 async function hueState(env, all) {
-  const [rooms, gls, scenes] = await Promise.all([hueCall(env, 'GET', 'room'), hueCall(env, 'GET', 'grouped_light'), hueCall(env, 'GET', 'scene')]);
+  const [rooms, gls, scenes, lts] = await Promise.all([hueCall(env, 'GET', 'room'), hueCall(env, 'GET', 'grouped_light'), hueCall(env, 'GET', 'scene'), hueCall(env, 'GET', 'light')]);
   if (!rooms) return { connected: false };
   const gm = {}; (gls || []).forEach(g => gm[g.id] = g);
   const out = (rooms || []).map(r => {
@@ -205,8 +205,14 @@ async function hueState(env, all) {
   const okIds = cfg && Array.isArray(cfg.rooms) ? cfg.rooms : null;
   if (all) out.forEach(r => r.enabled = !okIds || okIds.includes(r.id));
   else if (okIds) for (let i = out.length - 1; i >= 0; i--) if (!okIds.includes(out[i].id)) out.splice(i, 1);
+  const dev2room = {}; (rooms || []).forEach(r => (r.children || []).forEach(c => { dev2room[c.rid] = r.id; }));
+  const okLights = cfg && Array.isArray(cfg.lights) ? cfg.lights : null;
+  let lights = (lts || []).map(l => ({ id: l.id, name: (l.metadata && l.metadata.name) || '?', on: !!(l.on && l.on.on), bri: l.dimming ? Math.round(l.dimming.brightness) : null, room: dev2room[l.owner && l.owner.rid] || null }));
+  if (all) lights.forEach(l => l.enabled = !okLights || okLights.includes(l.id));
+  else if (okLights) lights = lights.filter(l => okLights.includes(l.id));
+  lights.sort((a, b) => a.name.localeCompare(b.name, 'de'));
   const sc = (scenes || []).map(x => ({ id: x.id, name: (x.metadata && x.metadata.name) || '?', room: x.group && x.group.rid })).filter(x => out.some(r => r.id === x.room));
-  return { connected: true, rooms: out, scenes: sc };
+  return { connected: true, rooms: out, scenes: sc, lights };
 }
 
 const goodSub = s => s && typeof s.endpoint === 'string' && s.endpoint.startsWith('https://') && s.keys && typeof s.keys.p256dh === 'string' && typeof s.keys.auth === 'string';
@@ -241,7 +247,30 @@ export default {
         if (path === '/hue/config') {
           if (hu !== 'tristan') return json({ error: 'nur Tristan' }, 403);
           const ids = (Array.isArray(d.rooms) ? d.rooms : []).map(String).filter(x => GID.test(x)).slice(0, 100);
-          await env.KV.put('huecfg', JSON.stringify({ rooms: ids })); return json({ ok: true });
+          const nc = { rooms: ids };
+          if (Array.isArray(d.lights)) nc.lights = d.lights.map(String).filter(x => GID.test(x)).slice(0, 300);
+          else { const o = await env.KV.get('huecfg', 'json'); if (o && o.lights) nc.lights = o.lights; }
+          await env.KV.put('huecfg', JSON.stringify(nc)); return json({ ok: true });
+        }
+        if (path === '/hue/setlight') {
+          if (!GID.test(String(d.id))) return json({ error: 'ungültig' }, 400);
+          const sl = await hueState(env);
+          if (!sl.connected || !sl.lights.some(l => l.id === d.id)) return json({ error: 'nicht freigegeben' }, 403);
+          const lb = { on: { on: !!d.on } };
+          if (d.bri != null) lb.dimming = { brightness: Math.max(1, Math.min(100, Number(d.bri) || 1)) };
+          await hueCall(env, 'PUT', 'light/' + d.id, lb); return json({ ok: true });
+        }
+        if (path === '/hue/plan') return json((await env.KV.get('hueplan', 'json')) || {});
+        if (path === '/hue/plan-save') {
+          if (hu !== 'tristan') return json({ error: 'nur Tristan' }, 403);
+          const old = (await env.KV.get('hueplan', 'json')) || {};
+          let img = old.img || '';
+          if (typeof d.img === 'string' && d.img) {
+            if (!d.img.startsWith('data:image/jpeg;base64,') || d.img.length > 1500000) return json({ error: 'Bild ungültig oder zu gross' }, 400);
+            img = d.img;
+          }
+          const pins = (Array.isArray(d.pins) ? d.pins : []).filter(p => p && (p.k === 'room' || p.k === 'light') && GID.test(String(p.id)) && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1).slice(0, 150).map(p => ({ k: p.k, id: p.id, x: Math.round(p.x * 10000) / 10000, y: Math.round(p.y * 10000) / 10000 }));
+          await env.KV.put('hueplan', JSON.stringify({ img, pins })); return json({ ok: true });
         }
         if (path === '/hue/set') {
           if (!GID.test(String(d.gl))) return json({ error: 'ungültig' }, 400);
