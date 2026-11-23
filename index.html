@@ -152,6 +152,31 @@
   .pool-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1.5px dashed #bfa84a; }
   .pool-row > div { flex:1; }
   .pool-row .take { border:2px solid #262319; background:#7CCB4A; border-radius:12px; padding:8px 10px; font-weight:800; cursor:pointer; color:#262319; }
+  /* Pad-Modus (Wand-iPad) */
+  #padScreen { padding: clamp(10px, 2vmin, 28px); box-sizing: border-box; min-height: 100vh; }
+  #padScreen .pad-top { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom: clamp(8px, 1.6vmin, 20px); }
+  #padClock { font-size: clamp(54px, 11vmin, 150px); line-height: .95; font-weight: 800; cursor: default; user-select: none; -webkit-user-select: none; }
+  #padDate { font-size: clamp(20px, 3.4vmin, 44px); text-align: right; font-weight: 700; }
+  #padScreen .pad-main { display:grid; grid-template-columns: minmax(260px, 1fr) 2fr; gap: clamp(10px, 2vmin, 24px); align-items:start; }
+  #padScreen .pad-col { display:flex; flex-direction:column; gap: clamp(10px, 2vmin, 24px); }
+  #padScreen .pad-card { background:#fffdf8; border:2.5px solid #262319; border-radius:22px; padding: clamp(12px, 2vmin, 24px); box-shadow: 4px 4px 0 #262319; }
+  #padScreen .pad-h { font-size: clamp(20px, 3.2vmin, 40px); font-weight:800; margin-bottom: 8px; }
+  #padScreen .pad-sub { font-size: clamp(13px, 1.9vmin, 22px); font-weight:800; opacity:.6; margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+  #padScreen .pad-row { font-size: clamp(16px, 2.6vmin, 32px); padding: 4px 0; border-top: 1.5px dashed rgba(38,35,25,.25); display:flex; gap:10px; }
+  #padScreen .pad-row:first-of-type { border-top: 0; }
+  #padScreen .pad-row b { flex: none; min-width: 3.2em; }
+  #padScreen .pad-people { display:grid; grid-template-columns: repeat(2, 1fr); gap: clamp(10px, 2vmin, 24px); }
+  #padScreen .pad-person { border:3px solid var(--kc,#999); background: var(--kbg,#fff); border-radius:22px; padding: clamp(10px, 1.8vmin, 22px); }
+  #padScreen .pad-pn { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size: clamp(22px, 3.6vmin, 46px); font-weight:800; margin-bottom: 6px; }
+  #padScreen .pad-pn span { font-size: clamp(14px, 2.2vmin, 28px); font-weight:700; }
+  #padScreen .pad-t { font-size: clamp(16px, 2.6vmin, 32px); padding: 5px 0; border-top: 1.5px dashed rgba(38,35,25,.2); }
+  #padScreen .pad-t.late { color:#c0271d; font-weight:800; }
+  #padScreen .pad-t small { display:block; font-size: .72em; opacity:.75; }
+  #padScreen .pad-ok { font-size: clamp(16px, 2.6vmin, 32px); padding: 8px 0; }
+  #padScreen .pad-pool { grid-column: 1 / -1; background:#FFF6D6; border:3px solid #262319; }
+  #padFoot { text-align:center; font-size:12px; opacity:.5; margin-top: 14px; }
+  body.pad-mode .wrap { max-width: none; padding: 0; }
+  @media (max-width: 760px) { #padScreen .pad-main { grid-template-columns: 1fr; } #padScreen .pad-people { grid-template-columns: 1fr; } }
   #chatRec { display:none; width:100%; align-items:center; gap:8px; background:#fff; border:2px solid #262319; border-radius:16px; padding:8px 10px; box-sizing:border-box; }
   #chatRec.on { display:flex; }
   #chatRec .rec-dot { width:12px; height:12px; border-radius:50%; background:#e0342b; animation:recp 1s infinite; }
@@ -1508,6 +1533,21 @@
     <datalist id="essenSuggest"></datalist>
   </div>
 
+  <div id="padScreen" class="hidden">
+    <div class="pad-top">
+      <div id="padClock" title="3 Sekunden gedrückt halten: Pad-Modus beenden">--:--</div>
+      <div id="padDate"></div>
+    </div>
+    <div class="pad-main">
+      <div class="pad-col">
+        <div class="pad-card"><div class="pad-h">📅 Termine</div><div id="padCal"></div></div>
+        <div class="pad-card"><div class="pad-h">🍽️ Essen</div><div id="padMeal"></div></div>
+      </div>
+      <div id="padTodos" class="pad-people"></div>
+    </div>
+    <div id="padFoot"></div>
+  </div>
+
   <div id="rezScreen" class="hidden">
     <div class="summary-header">
       <button class="back-btn" onclick="goHome()">←</button>
@@ -1609,6 +1649,12 @@
       <div class="set-note" style="margin-top:0;">Wer eine offene Aufgabe hat, deren Termin vorbei ist, bekommt jeden Tag eine Erinnerung per Push, bis sie erledigt ist.</div>
       <label class="set-row"><span>Täglich erinnern</span><span class="switch"><input type="checkbox" id="odOn" onchange="odSaveUi()"><span class="slider"></span></span></label>
       <div class="field" style="margin-top:8px;"><label for="odTime">Uhrzeit</label><input type="time" id="odTime" onchange="odSaveUi()"></div>
+    </div>
+    <div class="card hidden" id="padCard">
+      <div class="card-title">Pad-Modus (Wand-iPad)</div>
+      <div class="set-note" style="margin-top:0;">Der Benutzer «Pad» zeigt auf einem iPad an der Wand Uhr, Termine, Essen und alle offenen Aufgaben – nur anzeigen, nichts änderbar. In der Testphase erscheint die Anmeldung «Pad» nur, wo du sie hier einschaltest.</div>
+      <label class="set-row"><span>Pad-Anmeldung auf diesem Gerät zeigen</span><span class="switch"><input type="checkbox" id="padVis" onchange="padVisToggle(this.checked)"><span class="slider"></span></span></label>
+      <div class="set-note" style="word-break:break-all;" id="padLink"></div>
     </div>
     <div class="card" id="pushCard">
       <div class="card-title">Mitteilungen</div>
@@ -2213,6 +2259,7 @@
         </div>
         <div class="account-name">${escapeHtml(n)}</div>
       </div>`).join('');
+    if (cloudEnabled && padVisible()) grid.insertAdjacentHTML('beforeend', `<div class="account-btn" role="button" tabindex="0" data-user="Pad"><div class="account-avatar-wrap"><div class="account-avatar" style="display:flex;align-items:center;justify-content:center;font-size:40px;background:#fff3d6;">📺</div></div><div class="account-name">Pad</div></div>`);
     const open = n => (cloudEnabled ? (resumeName === n ? selectAccount(n) : chooseUser(n)) : selectAccount(n));
     grid.querySelectorAll('.account-btn').forEach(el => {
       el.addEventListener('click', () => open(el.dataset.user));
@@ -2897,7 +2944,7 @@
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
-    renderThemes(); gcalRender(); pushRender(); odRender();
+    renderThemes(); gcalRender(); pushRender(); odRender(); padRender();
     if (isAdmin()) renderSettings();
     applyAvatars();
   }
@@ -3796,7 +3843,7 @@
     el.innerHTML = '<div class="set-note" style="margin:0 0 6px;">Wer sieht den Kalender?</div>' + gcalCals.map((c, i) => {
       const al = calAllowed(c);
       return `<div style="padding:6px 0;border-top:1px solid rgba(0,0,0,.12);"><div style="display:flex;align-items:center;gap:8px;"><span style="width:12px;height:12px;border-radius:50%;background:${escapeHtml(c.backgroundColor || '#888')};display:inline-block;"></span><b>${escapeHtml(c.summaryOverride || c.summary || c.id)}</b></div><div style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px;">` +
-        USERS.map(n => `<label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" data-i="${i}" data-u="${escapeHtml(userKey(n))}" ${al.includes(userKey(n)) ? 'checked' : ''} onchange="gcalPick(${i})">${escapeHtml(n)}</label>`).join('') + '</div></div>';
+        USERS.concat(['Pad']).map(n => `<label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" data-i="${i}" data-u="${escapeHtml(userKey(n))}" ${al.includes(userKey(n)) ? 'checked' : ''} onchange="gcalPick(${i})">${escapeHtml(n)}</label>`).join('') + '</div></div>';
     }).join('');
   }
   async function gcalPick(i) {
@@ -6800,10 +6847,118 @@
 
   // Beim Zurückkehren in die App aktuelle To-Do's holen
   document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && document.body.classList.contains('pad-mode')) { padWakeLock(); padSlowLoad(); return; }
     if (document.visibilityState !== 'visible' || !currentUser) return;
     if (!document.getElementById('todoScreen').classList.contains('hidden')) refreshTodos();
     else if (!document.getElementById('homeScreen').classList.contains('hidden')) updateTodoBadge();
   });
+
+  // ---------- Pad-Modus (Wand-iPad, nur anzeigen) ----------
+  let padUnsub = null, padTodos = [], padTick = null, padSlow = null, padCal = [], padMeals = {}, padWake = null, padDay = '', padHold = null;
+  const padVisible = () => { try { return localStorage.getItem('ef-pad-visible') === '1'; } catch (e) { return false; } };
+  function padVisToggle(on) { try { localStorage.setItem('ef-pad-visible', on ? '1' : '0'); } catch (e) {} renderAccountCards(); showToast(on ? 'Pad-Anmeldung wird auf diesem Gerät gezeigt' : 'Pad-Anmeldung ausgeblendet'); }
+  function padRender() {
+    const c = document.getElementById('padCard'); if (!c) return;
+    c.classList.toggle('hidden', !isAdmin());
+    document.getElementById('padVis').checked = padVisible();
+    document.getElementById('padLink').textContent = 'Direkter Link für das iPad: ' + location.origin + location.pathname.replace(/index\.html$/, '') + '#pad';
+  }
+  // Link mit #pad: Pad-Anmeldung direkt zeigen und auf diesem Gerät merken
+  function padHashCheck() {
+    if (!cloudEnabled || (location.hash || '') !== '#pad') return;
+    try { localStorage.setItem('ef-pad-visible', '1'); history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    renderAccountCards(); chooseUser('Pad');
+  }
+  async function enterPad() {
+    hideAllScreens();
+    ['accountScreen', 'homeScreen', 'mainScreen', 'summaryScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    setLoginBackground(false);
+    document.body.classList.add('pad-mode');
+    document.getElementById('padScreen').classList.remove('hidden');
+    document.getElementById('padFoot').textContent = "Ecker's Family · Pad · Version " + APP_VERSION;
+    padStop(true);
+    padClock(true);
+    padTick = setInterval(padClock, 10000);
+    padUnsub = cloudApi.todosListen(list => { padTodos = list; padRenderTodos(); }, () => {});
+    padSlowLoad();
+    padSlow = setInterval(padSlowLoad, 30 * 60000);
+    padWakeLock();
+    const clock = document.getElementById('padClock');
+    if (!clock.dataset.hold) {
+      clock.dataset.hold = '1';
+      clock.addEventListener('pointerdown', () => { padHold = setTimeout(padExit, 3000); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => clock.addEventListener(ev, () => clearTimeout(padHold)));
+    }
+  }
+  function padStop(keep) {
+    if (padUnsub) { try { padUnsub(); } catch (e) {} padUnsub = null; }
+    clearInterval(padTick); clearInterval(padSlow); padTick = padSlow = null;
+    if (padWake) { try { padWake.release(); } catch (e) {} padWake = null; }
+    if (!keep) { document.body.classList.remove('pad-mode'); document.getElementById('padScreen').classList.add('hidden'); }
+  }
+  async function padExit() {
+    if (!window.confirm('Pad-Modus beenden und abmelden?')) return;
+    padStop();
+    try { await cloudApi.logout(); } catch (e) {}
+  }
+  async function padWakeLock() {
+    try { if (navigator.wakeLock && document.visibilityState === 'visible') padWake = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  function padClock(force) {
+    const n = new Date(), pad2 = x => String(x).padStart(2, '0');
+    document.getElementById('padClock').textContent = pad2(n.getHours()) + ':' + pad2(n.getMinutes());
+    document.getElementById('padDate').textContent = n.toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' });
+    const day = isoDate(n);
+    if (padDay && padDay !== day) { padSlowLoad(); padRenderTodos(); }
+    padDay = day;
+  }
+  async function padSlowLoad() {
+    try {
+      const now = new Date(), weeks = {};
+      for (const off of [0, 7]) { const m = mondayOf(new Date(now.getTime() + off * 86400000)); weeks[isoDate(m)] = await kvGet('meals', isoDate(m)); }
+      padMeals = weeks;
+    } catch (e) {}
+    try { padCal = await withTimeout(cloudApi.calList('pad')); } catch (e) {}
+    padRenderInfo();
+  }
+  function padRenderInfo() {
+    const now = new Date(), a = new Date(); a.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(a.getTime() + 86400000), end = new Date(a.getTime() + 2 * 86400000), p2 = x => String(x).padStart(2, '0');
+    const rows = [];
+    padCal.forEach(d => (d.events || []).forEach(e => {
+      const st = e.a ? new Date(e.s + 'T00:00:00') : new Date(e.s), en = e.a ? new Date(e.e + 'T00:00:00') : new Date(e.e);
+      if (en > now && st < end) rows.push({ e, st });
+    }));
+    rows.sort((x, y) => x.st - y.st);
+    const ev = (label, list) => list.length ? `<div class="pad-sub">${label}</div>` + list.map(x => `<div class="pad-row"><b>${x.e.a ? 'ganztägig' : p2(x.st.getHours()) + ':' + p2(x.st.getMinutes())}</b><span>${escapeHtml(x.e.t || '')}</span></div>`).join('') : '';
+    const today = rows.filter(x => x.st < tomorrow).slice(0, 7), morrow = rows.filter(x => x.st >= tomorrow).slice(0, 5);
+    document.getElementById('padCal').innerHTML = (ev('Heute', today) + ev('Morgen', morrow)) || '<div class="pad-ok">Keine Termine heute und morgen</div>';
+    const meal = (off, label) => {
+      const day = new Date(now.getTime() + off * 86400000), mon = isoDate(mondayOf(day));
+      const k = DAYS[(day.getDay() + 6) % 7][0], v = padMeals[mon] && padMeals[mon].days && padMeals[mon].days[k];
+      if (!v || (!v.m && !v.a)) return '';
+      return `<div class="pad-sub">${label}</div>` + (v.m ? `<div class="pad-row"><b>Mittag</b><span>${escapeHtml(v.m)}</span></div>` : '') + (v.a ? `<div class="pad-row"><b>Abend</b><span>${escapeHtml(v.a)}</span></div>` : '');
+    };
+    document.getElementById('padMeal').innerHTML = (meal(0, 'Heute') + meal(1, 'Morgen')) || '<div class="pad-ok">Noch nichts geplant</div>';
+  }
+  function padRenderTodos() {
+    const el = document.getElementById('padTodos'); if (!el) return;
+    const today = todayStr(), nameOf = k => ACCOUNTS[k] || k;
+    const byDue = (x, y) => (x.dueAt || '9999').localeCompare(y.dueAt || '9999') || (x.createdAt || 0) - (y.createdAt || 0);
+    const row = t => {
+      const late = t.dueAt && t.dueAt < today;
+      const sub = t.claimedAt ? '⏳ gemeldet, wartet auf Bestätigung' : (late ? '⚠ überfällig seit ' + t.dueAt.split('-').reverse().slice(0, 2).join('.') + '.' : (t.dueAt === today ? 'heute fällig' : (t.dueAt ? 'bis ' + t.dueAt.split('-').reverse().slice(0, 2).join('.') + '.' : '')));
+      return `<div class="pad-t ${late ? 'late' : ''}">${escapeHtml(t.text)}${sub ? `<small>${sub}</small>` : ''}</div>`;
+    };
+    const cards = Object.keys(ACCOUNTS).map(k => {
+      const st = KID_STYLE[k] || KID_STYLE.claudia;
+      const open = padTodos.filter(t => t.assigneeKey === k && !t.done).sort(byDue);
+      return `<div class="pad-person" style="--kc:${st.kc};--kbg:${st.kbg}"><div class="pad-pn">${escapeHtml(nameOf(k))}<span>${open.length ? open.length + ' offen' : '✅ alles fertig'}</span></div>${open.slice(0, 6).map(row).join('')}${open.length > 6 ? `<div class="pad-t">… und ${open.length - 6} weitere</div>` : ''}</div>`;
+    }).join('');
+    const pool = padTodos.filter(t => t.assigneeKey === POOL && !t.done).sort(byDue);
+    const poolHtml = pool.length ? `<div class="pad-person pad-pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>wer zuerst kommt!</span></div>${pool.slice(0, 6).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
+    el.innerHTML = cards + poolHtml;
+  }
 
   // ---------- Login (Cloud-Modus) ----------
 
@@ -6814,7 +6969,9 @@
     document.getElementById('homeScreen').classList.add('hidden');
     document.getElementById('summaryScreen').classList.add('hidden');
     setLoginBackground(true);
+    padStop();
     if (!loginTarget) backToTiles();
+    padHashCheck();
   }
 
   function chooseUser(name) {
@@ -6889,6 +7046,7 @@
         return;
       }
       const uname = (user.email || '').split('@')[0].toLowerCase();
+      if (uname === 'pad') { freshLogin = false; await enterPad(); return; }
       const name = ACCOUNTS[uname];
       if (!name) {
         await cloudApi.logout();
@@ -7018,6 +7176,7 @@
           const sn = await F.getDocs(F.collection(db, 'todos'));
           return sn.docs.map(d => d.data());
         },
+        todosListen: (cb, eb) => F.onSnapshot(F.collection(db, 'todos'), sn => cb(sn.docs.map(d => d.data())), e => { if (eb) eb(e); }),
         listTodosPriv: async () => { const sn = await F.getDocs(F.collection(db, 'todosPrivat')); return sn.docs.map(d => d.data()); },
         addTodo: t => { const { privat, ...data } = t; return F.setDoc(F.doc(db, privat ? 'todosPrivat' : 'todos', t.id), data); },
         updateTodo: (id, patch, priv) => F.updateDoc(F.doc(db, priv ? 'todosPrivat' : 'todos', id), patch),
@@ -7103,7 +7262,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.98';
+  const APP_VERSION = '1.99';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

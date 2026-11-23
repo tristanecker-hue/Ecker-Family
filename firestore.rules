@@ -14,6 +14,10 @@ service cloud.firestore {
     function isTristan() {
       return signedIn() && mail() == 'tristan@ecker.ch';
     }
+    // Wand-iPad: darf nur lesen (Aufgaben, Essen, freigegebene Kalender)
+    function isPad() {
+      return signedIn() && mail() == 'pad@ecker.ch';
+    }
     function isFamily() {
       return signedIn() && mail() in [
         'tristan@ecker.ch',
@@ -63,7 +67,7 @@ service cloud.firestore {
     // "Erledigt" ein- und ausschalten darf, wer zuordnen darf, und die zugeordnete Person
     // (diese vermerkt ausserdem, dass sie die Pendenz gesehen hat).
     match /todos/{id} {
-      allow read: if canTodo();
+      allow read: if canTodo() || isPad();
       allow create: if canAssign();
       allow update: if
         (canAssign()
@@ -94,7 +98,7 @@ service cloud.firestore {
 
     // Essen (Wochenplan): alle Freigeschalteten lesen, Eltern tragen ein
     match /meals/{id} {
-      allow read: if canMeals();
+      allow read: if canMeals() || isPad();
       allow write: if canAssign();
     }
 
@@ -145,7 +149,7 @@ service cloud.firestore {
 
     // Kalender: Tristan schreibt (Sync aus Google), gelesen wird nur, wer im Feld "allowed" steht
     match /calendars/{id} {
-      allow read: if isTristan() || (isFamily() && uname() in resource.data.allowed);
+      allow read: if isTristan() || (isFamily() && uname() in resource.data.allowed) || (isPad() && 'pad' in resource.data.allowed);
       allow write: if isTristan();
     }
 
