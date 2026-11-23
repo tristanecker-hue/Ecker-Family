@@ -231,12 +231,15 @@
   .foto button { position:absolute; top:4px; right:4px; width:30px; height:30px; border-radius:50%; border:2px solid #262319; background:#fff; font-weight:800; cursor:pointer; padding:0; }
   .foto span { position:absolute; left:4px; bottom:4px; background:rgba(255,255,255,.85); border-radius:8px; padding:1px 6px; font-size:11px; font-weight:700; }
   #padScreen .pad-col { grid-row: 1 / span 2; }
-  #padShowCard { grid-column: 2; padding:6px; }
-  #padShow { position:relative; height:clamp(200px, calc(100vh - 490px), 700px); border-radius:14px; overflow:hidden; background:#222; }
+  #padScreen:not(.hidden) { display:flex; flex-direction:column; min-height:100vh; box-sizing:border-box; }
+  #padScreen .pad-main { flex:1 1 auto; grid-template-rows:auto minmax(0,1fr); }
+  #padShowCard { grid-column: 2; padding:6px; align-self:stretch; display:flex; flex-direction:column; min-height:220px; }
+  #padShowCard.hidden { display:none; }
+  #padShow { position:relative; flex:1 1 auto; min-height:200px; border-radius:14px; overflow:hidden; background:#222; }
   #padShow img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity 1.2s ease; }
   #padShow img.on { opacity:1; }
   #padScreen.tab-l #padShowCard { display:none; }
-  @media (max-width: 760px) { #padShowCard { grid-column: 1; } #padScreen .pad-col { grid-row:auto; } }
+  @media (max-width: 760px) { #padScreen .pad-main { grid-template-rows:none; } #padShowCard { grid-column: 1; } #padScreen .pad-col { grid-row:auto; } }
   #padTabs { display:flex; gap:8px; align-self:center; }
   #padTabs button { border:2.5px solid #262319; background:#fff; border-radius:999px; padding:8px 18px; font-family:inherit; font-weight:700; font-size:clamp(14px,2.2vmin,24px); cursor:pointer; }
   #padTabs button.on { background:#FFD84D; }
@@ -7745,7 +7748,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.18';
+  const APP_VERSION = '2.19';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
