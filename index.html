@@ -192,13 +192,13 @@
   .hue-chev { border:2.5px solid #262319; background:#fff; border-radius:14px; min-height:48px; min-width:48px; font-size:18px; cursor:pointer; font-family:inherit; }
   .hue-sub { flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px; }
   .hue-room, .hue-pin, .hue-tog { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
-  .hue-stopwrap { display:flex; flex-direction:column; align-items:center; gap:10px; padding:16px 0 8px; }
-  .hue-stop { width:84px; height:84px; border-radius:50%; border:4px solid #262319; cursor:pointer; padding:0; font-family:inherit; font-weight:800; font-size:20px; letter-spacing:1px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.5);
+  .hue-stopwrap { display:flex; flex-direction:row; align-items:center; gap:12px; padding:6px 10px 10px 6px; }
+  .hue-stop { width:46px; height:46px; border-radius:50%; border:3px solid #262319; cursor:pointer; padding:0; font-family:inherit; font-weight:800; font-size:12px; letter-spacing:.5px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.5);
     background: radial-gradient(circle at 35% 28%, #ff7a6b 0%, #e0221a 45%, #9a0d06 100%);
-    box-shadow: 0 0 0 9px #FFD84D, 0 0 0 13px #262319, 0 12px 0 13px #262319, inset 0 -6px 10px rgba(0,0,0,.35), inset 0 4px 6px rgba(255,255,255,.35);
-    transition: transform .08s, box-shadow .08s; -webkit-tap-highlight-color: transparent; margin-bottom:12px; }
-  .hue-stop:active { transform: translateY(8px); box-shadow: 0 0 0 9px #FFD84D, 0 0 0 13px #262319, 0 4px 0 13px #262319, inset 0 -3px 8px rgba(0,0,0,.4); }
-  .hue-stoplbl { font-weight:800; font-size:13px; letter-spacing:.5px; opacity:.8; }
+    box-shadow: 0 0 0 5px #FFD84D, 0 0 0 8px #262319, 0 6px 0 8px #262319, inset 0 -4px 6px rgba(0,0,0,.35), inset 0 3px 4px rgba(255,255,255,.35);
+    transition: transform .08s, box-shadow .08s; -webkit-tap-highlight-color: transparent; }
+  .hue-stop:active { transform: translateY(5px); box-shadow: 0 0 0 5px #FFD84D, 0 0 0 8px #262319, 0 1px 0 8px #262319, inset 0 -2px 5px rgba(0,0,0,.4); }
+  .hue-stoplbl { font-weight:800; font-size:11px; letter-spacing:.5px; opacity:.7; }
   .hue-pin.sm { min-width:26px; min-height:26px; padding:2px 4px; font-size:13px; }
   .hue-pin.sm.on { box-shadow:0 0 0 3px rgba(255,216,77,.55), 0 0 12px 4px rgba(255,200,40,.6); }
   .hue-pin.sel { outline:3px solid #3FA7D6; }
@@ -207,12 +207,31 @@
   #hueSheet { position:fixed; inset:0; z-index:60; background:rgba(38,35,25,.5); display:flex; align-items:flex-end; justify-content:center; }
   #hueSheet .hs { background:var(--paper,#fffdf6); width:100%; max-width:1100px; max-height:92vh; overflow:auto; border-radius:22px 22px 0 0; padding:16px 16px 28px; border:3px solid #262319; border-bottom:0; }
   #hueSheet .hs h3 { margin:0 0 6px; display:flex; justify-content:space-between; align-items:center; }
+  #padScreen.tab-p .pad-main { display:none; }
+  #padScreen:not(.tab-p) #padPlans { display:none; }
+  #padPlans { display:grid; grid-template-columns: 1fr 1fr; gap:14px; align-items:start; }
+  #padPlans .compare-avatar { display:none; }
+  #padPlans .card { margin:0; }
+  #padPlans .blk-scroll { overflow:visible; }
+  @media (max-width: 900px) { #padPlans { grid-template-columns: 1fr; } }
+  #padWeek { position:fixed; inset:0; z-index:50; background:var(--paper,#FFFDF8); padding:14px; overflow:auto; }
+  .pw-top { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
+  .pw-top button { border:2.5px solid #262319; background:#fff; border-radius:999px; padding:8px 18px; font-family:inherit; font-weight:700; font-size:20px; cursor:pointer; }
+  #padWeekTitle { font-weight:800; font-size:clamp(20px,3.2vmin,36px); }
+  #padWeekGrid { display:grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap:8px; align-items:start; }
+  .pw-day { border:2.5px solid #262319; border-radius:14px; padding:8px; min-height:120px; background:#fff; }
+  .pw-day.today { background:#FFF2B3; border-width:4px; }
+  .pw-day h4 { margin:0 0 6px; font-size:clamp(14px,2.2vmin,22px); }
+  .pw-ev { font-size:clamp(12px,1.9vmin,19px); padding:4px 0; border-top:1.5px dashed rgba(38,35,25,.25); word-break:break-word; }
+  .pw-ev b { display:block; font-size:.85em; opacity:.75; }
+  @media (max-width: 900px) { #padWeekGrid { grid-template-columns: 1fr; } }
   #padTabs { display:flex; gap:8px; align-self:center; }
   #padTabs button { border:2.5px solid #262319; background:#fff; border-radius:999px; padding:8px 18px; font-family:inherit; font-weight:700; font-size:clamp(14px,2.2vmin,24px); cursor:pointer; }
   #padTabs button.on { background:#FFD84D; }
   #padScreen.tab-l .pad-col, #padScreen.tab-l .pad-people { display:none; }
   #padScreen:not(.tab-l) #padHueCard { display:none !important; }
-  #padScreen.tab-l #padHue .hue-plan img { max-height:52vh; }
+  #padScreen.tab-l #padHue .hue-plan img { max-height:calc(100vh - 215px); }
+  #padScreen.tab-l #padHueCard { padding-bottom:6px; }
   #padHue.hp { grid-template-columns: 1fr; }
   #padHue.hp .hue-list { display:none; }
   #padScreen .pad-main #padHueCard { grid-column: 1 / -1; }
@@ -222,14 +241,16 @@
   #padHue .hue-plan img, #hueBox .hue-plan img { max-height:44vh; width:auto; max-width:100%; }
   #padHue .hue-list, #hueBox .hue-list { display:flex; flex-wrap:wrap; gap:6px 10px; align-content:start; }
   #padHue .hue-room, #hueBox .hue-room { border-top:0; padding:2px 0; flex:1 1 44%; }
-  #padHue .hue-planwrap, #hueBox .hue-planwrap { grid-column:1; grid-row:1; }
-  #padHue .hue-list, #hueBox .hue-list { grid-column:2; grid-row:1; }
-  #padHue .hue-stopwrap, #hueBox .hue-stopwrap { grid-column:1 / -1; grid-row:2; }
-  #padHue:has(.hue-planwrap:empty) .hue-list, #hueBox:has(.hue-planwrap:empty) .hue-list { grid-column:1 / -1; grid-row:2; }
-  #padHue:has(.hue-planwrap:empty) .hue-stopwrap, #hueBox:has(.hue-planwrap:empty) .hue-stopwrap { grid-row:1; }
+  #padHue .hue-stopwrap, #hueBox .hue-stopwrap { grid-column:1 / -1; grid-row:1; }
+  #padHue .hue-planwrap, #hueBox .hue-planwrap { grid-column:1; grid-row:2; }
+  #padHue .hue-list, #hueBox .hue-list { grid-column:2; grid-row:2; }
+  #padHue:has(.hue-planwrap:empty) .hue-list, #hueBox:has(.hue-planwrap:empty) .hue-list { grid-column:1 / -1; }
   #padHue.hp .hue-list { grid-column:1; }
+  #padHueCard { position:relative; }
+  #padScreen.tab-l #padHue .hue-stopwrap { position:absolute; left:22px; top:64px; z-index:5; padding:0; }
+  #padScreen.tab-l #padHue .hue-planwrap { grid-row:1; }
   #hueBox .hue-plan img { max-height:62vh; }
-  @media (max-width: 760px) { #padHue, #hueBox { grid-template-columns: 1fr !important; } #padHue .hue-list, #hueBox .hue-list { grid-column:1 !important; grid-row:3 !important; } #hueBox .hue-room { flex:1 1 100%; } #hueBox .hue-plan img { max-height:none; } }
+  @media (max-width: 760px) { #padHue, #hueBox { grid-template-columns: 1fr !important; } #padHue .hue-list, #hueBox .hue-list { grid-column:1 !important; grid-row:3 !important; } #padScreen.tab-l #padHue .hue-stopwrap { position:static; } #padScreen.tab-l #padHue .hue-planwrap { grid-row:2; } #hueBox .hue-room { flex:1 1 100%; } #hueBox .hue-plan img { max-height:none; } }
   #padFoot { text-align:center; font-size:12px; opacity:.5; margin-top: 14px; }
   body.pad-mode .wrap { max-width: none; padding: 0; }
   @media (max-width: 760px) { #padScreen .pad-main { grid-template-columns: 1fr; } #padScreen .pad-people { grid-template-columns: 1fr; } }
@@ -1609,18 +1630,23 @@
   <div id="padScreen" class="hidden">
     <div class="pad-top">
       <div id="padClock" title="3 Sekunden gedrückt halten: Pad-Modus beenden">--:--</div>
-      <div id="padTabs" class="hidden"><button id="padTabO" class="on" onclick="padTab('o')">🏠 Übersicht</button><button id="padTabL" onclick="padTab('l')">💡 Licht</button></div>
+      <div id="padTabs"><button id="padTabO" class="on" onclick="padTab('o')">🏠 Übersicht</button><button id="padTabP" onclick="padTab('p')">📚 Stundenplan</button><button id="padTabL" class="hidden" onclick="padTab('l')">💡 Licht</button></div>
       <div id="padDate"></div>
     </div>
     <div class="pad-main">
       <div class="pad-col">
-        <div class="pad-card"><div class="pad-h">📅 Termine</div><div id="padCal"></div></div>
+        <div class="pad-card" onclick="padWeekOpen()" style="cursor:pointer;"><div class="pad-h">📅 Termine <small style="font-weight:600;opacity:.5;font-size:.6em;">· Woche ▸</small></div><div id="padCal"></div></div>
         <div class="pad-card"><div class="pad-h">🍽️ Essen</div><div id="padMeal"></div></div>
       </div>
       <div id="padTodos" class="pad-people"></div>
       <div class="pad-card hidden" id="padHueCard"><div class="pad-h">💡 Licht</div><div id="padHue"></div></div>
     </div>
+    <div id="padPlans"></div>
     <div id="padFoot"></div>
+    <div id="padWeek" class="hidden">
+      <div class="pw-top"><button onclick="padWeekGo(-1)">‹</button><div id="padWeekTitle"></div><button onclick="padWeekGo(1)">›</button><button onclick="padWeekClose()" style="margin-left:auto;">✕ Schliessen</button></div>
+      <div id="padWeekGrid"></div>
+    </div>
   </div>
 
   <div id="rezScreen" class="hidden">
@@ -6315,10 +6341,9 @@
         </div>`;
   }
 
-  function renderPlans() {
-    const wd = new Date().getDay();            // 1 = Montag
-    const todayCol = (wd >= 1 && wd <= 5) ? wd - 1 : -1;
-    document.getElementById('planLists').innerHTML = visibleKids().map(n => {
+  function planCardHtml(n) {
+      const wd = new Date().getDay();            // 1 = Montag
+      const todayCol = (wd >= 1 && wd <= 5) ? wd - 1 : -1;
       const key = userKey(n);
       const plan = planOf(key);
       if (plan.kind === 'blocks') return renderBlocksPlan(n, plan);
@@ -6369,7 +6394,9 @@
           ${table}
           ${edit ? `<button class="save-btn plan-save" onclick="savePlan('${escapeHtml(key)}')">Stundenplan speichern</button>` : ''}
         </div>`;
-    }).join('');
+  }
+  function renderPlans() {
+    document.getElementById('planLists').innerHTML = visibleKids().map(planCardHtml).join('');
     applyAvatars();
   }
 
@@ -6995,7 +7022,7 @@
   function hueFill(box, st) {
     hueSt = st;
     if (box.contains(document.activeElement) && document.activeElement.type === 'range') return;
-    if (!box.querySelector('.hue-list')) box.innerHTML = '<div class="hue-planwrap"></div><div class="hue-stopwrap"><button class="hue-stop" data-stop="1" aria-label="Alle Lichter aus"><span>AUS</span></button><div class="hue-stoplbl">NOT-AUS · alle Lichter aus</div></div><div class="hue-list"></div>';
+    if (!box.querySelector('.hue-list')) box.innerHTML = '<div class="hue-stopwrap"><button class="hue-stop" data-stop="1" aria-label="Alle Lichter aus"><span>AUS</span></button><div class="hue-stoplbl">NOT-AUS</div></div><div class="hue-planwrap"></div><div class="hue-list"></div>';
     const pw = box.querySelector('.hue-planwrap');
     if (huePlan && huePlan.img && huePlan.pins && huePlan.pins.length) {
       if (!pw.querySelector('img')) pw.innerHTML = '<div class="hue-plan"><img alt="Plan"><div class="hue-pins"></div></div>';
@@ -7038,16 +7065,45 @@
     } catch (e) { if (!card) box.innerHTML = '<div class="sub">Licht nicht erreichbar (' + escapeHtml(e.message) + ')</div>'; }
   }
   function padTab(t) {
-    document.getElementById('padScreen').classList.toggle('tab-l', t === 'l');
-    document.getElementById('padTabO').classList.toggle('on', t !== 'l');
+    const sc = document.getElementById('padScreen');
+    sc.classList.toggle('tab-l', t === 'l'); sc.classList.toggle('tab-p', t === 'p');
+    document.getElementById('padTabO').classList.toggle('on', t !== 'l' && t !== 'p');
+    document.getElementById('padTabP').classList.toggle('on', t === 'p');
     document.getElementById('padTabL').classList.toggle('on', t === 'l');
+    if (t === 'p') padRenderPlans();
+  }
+  function padRenderPlans() {
+    try { document.getElementById('padPlans').innerHTML = PLAN_KIDS.map(planCardHtml).join(''); } catch (e) {}
+  }
+  let padWeekStart = null;
+  function padWeekOpen() { const m = mondayOf(new Date()); padWeekStart = new Date(m.getFullYear(), m.getMonth(), m.getDate()); document.getElementById('padWeek').classList.remove('hidden'); padWeekRender(); }
+  function padWeekClose() { document.getElementById('padWeek').classList.add('hidden'); }
+  function padWeekGo(d) { padWeekStart = new Date(padWeekStart.getFullYear(), padWeekStart.getMonth(), padWeekStart.getDate() + 7 * d); padWeekRender(); }
+  function padWeekRender() {
+    const p2 = x => String(x).padStart(2, '0'), names = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+    const w0 = padWeekStart, w6 = new Date(w0.getFullYear(), w0.getMonth(), w0.getDate() + 6), todayIso = isoDate(new Date());
+    document.getElementById('padWeekTitle').textContent = w0.toLocaleDateString('de-CH', { day: 'numeric', month: 'long' }) + ' – ' + w6.toLocaleDateString('de-CH', { day: 'numeric', month: 'long', year: 'numeric' });
+    const evs = [];
+    padCal.forEach(d => (d.events || []).forEach(e => {
+      const st = e.a ? new Date(e.s + 'T00:00:00') : new Date(e.s), en = e.a ? new Date(e.e + 'T00:00:00') : new Date(e.e);
+      evs.push({ e, st, en });
+    }));
+    evs.sort((x, y) => (x.e.a ? 0 : 1) - (y.e.a ? 0 : 1) || x.st - y.st);
+    let html = '';
+    for (let i = 0; i < 7; i++) {
+      const ds = new Date(w0.getFullYear(), w0.getMonth(), w0.getDate() + i), de = new Date(ds.getFullYear(), ds.getMonth(), ds.getDate() + 1);
+      const list = evs.filter(x => x.st < de && x.en > ds);
+      html += '<div class="pw-day' + (isoDate(ds) === todayIso ? ' today' : '') + '"><h4>' + names[i] + ' ' + ds.getDate() + '.' + (ds.getMonth() + 1) + '.</h4>' +
+        (list.map(x => '<div class="pw-ev"><b>' + (x.e.a ? 'ganztägig' : p2(x.st.getHours()) + ':' + p2(x.st.getMinutes()) + ' – ' + p2(x.en.getHours()) + ':' + p2(x.en.getMinutes())) + '</b>' + escapeHtml(x.e.t || '') + '</div>').join('') || '<div class="sub" style="opacity:.5;">–</div>') + '</div>';
+    }
+    document.getElementById('padWeekGrid').innerHTML = html;
   }
   const padHueLoad = async () => {
     const card = document.getElementById('padHueCard');
     await hueLoad(document.getElementById('padHue'), card);
     const off = card.classList.contains('hidden');
-    document.getElementById('padTabs').classList.toggle('hidden', off);
-    if (off) padTab('o');
+    document.getElementById('padTabL').classList.toggle('hidden', off);
+    if (off && document.getElementById('padScreen').classList.contains('tab-l')) padTab('o');
   };
   function hueItem(t) {
     if (!hueSt) return null;
@@ -7230,6 +7286,7 @@
     } catch (e) {}
     try { padCal = await withTimeout(cloudApi.calList('pad')); } catch (e) {}
     padRenderInfo();
+    if (!document.getElementById('padWeek').classList.contains('hidden')) padWeekRender();
   }
   function padRenderInfo() {
     const now = new Date(), a = new Date(); a.setHours(0, 0, 0, 0);
@@ -7572,7 +7629,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.13';
+  const APP_VERSION = '2.15';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
