@@ -335,6 +335,6 @@ export default {
         return json({ ok: true });
       }
       return json({ error: 'not found' }, 404);
-    } catch (e) { return json({ error: 'Fehler' }, 500); }
+    } catch (e) { return json({ error: 'Fehler', detail: String((e && e.message) || e).slice(0, 80) }, 500); }
   }
 };
