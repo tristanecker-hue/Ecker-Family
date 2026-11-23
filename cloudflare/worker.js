@@ -193,7 +193,7 @@ async function hueCallback(env, url) {
     return page('Hue ist verbunden. Du kannst dieses Fenster schliessen.', true);
   } catch (e) { return page('Verbindung mit Hue fehlgeschlagen.', false); }
 }
-async function hueState(env) {
+async function hueState(env, all) {
   const [rooms, gls, scenes] = await Promise.all([hueCall(env, 'GET', 'room'), hueCall(env, 'GET', 'grouped_light'), hueCall(env, 'GET', 'scene')]);
   if (!rooms) return { connected: false };
   const gm = {}; (gls || []).forEach(g => gm[g.id] = g);
@@ -201,6 +201,10 @@ async function hueState(env) {
     const sv = (r.services || []).find(x => x.rtype === 'grouped_light'); const g = sv && gm[sv.rid];
     return g ? { id: r.id, name: (r.metadata && r.metadata.name) || '?', gl: g.id, on: !!(g.on && g.on.on), bri: g.dimming ? Math.round(g.dimming.brightness) : null } : null;
   }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  const cfg = await env.KV.get('huecfg', 'json');
+  const okIds = cfg && Array.isArray(cfg.rooms) ? cfg.rooms : null;
+  if (all) out.forEach(r => r.enabled = !okIds || okIds.includes(r.id));
+  else if (okIds) for (let i = out.length - 1; i >= 0; i--) if (!okIds.includes(out[i].id)) out.splice(i, 1);
   const sc = (scenes || []).map(x => ({ id: x.id, name: (x.metadata && x.metadata.name) || '?', room: x.group && x.group.rid })).filter(x => out.some(r => r.id === x.room));
   return { connected: true, rooms: out, scenes: sc };
 }
@@ -233,15 +237,24 @@ export default {
           if (hu !== 'tristan') return json({ error: 'nur Tristan' }, 403);
           await env.KV.delete('hue'); return json({ ok: true });
         }
-        if (path === '/hue/state') return json(await hueState(env));
+        if (path === '/hue/state') return json(await hueState(env, d.all === true && hu === 'tristan'));
+        if (path === '/hue/config') {
+          if (hu !== 'tristan') return json({ error: 'nur Tristan' }, 403);
+          const ids = (Array.isArray(d.rooms) ? d.rooms : []).map(String).filter(x => GID.test(x)).slice(0, 100);
+          await env.KV.put('huecfg', JSON.stringify({ rooms: ids })); return json({ ok: true });
+        }
         if (path === '/hue/set') {
           if (!GID.test(String(d.gl))) return json({ error: 'ungültig' }, 400);
+          const stt = await hueState(env);
+          if (!stt.connected || !stt.rooms.some(r => r.gl === d.gl)) return json({ error: 'nicht freigegeben' }, 403);
           const b = { on: { on: !!d.on } };
           if (d.bri != null) b.dimming = { brightness: Math.max(1, Math.min(100, Number(d.bri) || 1)) };
           await hueCall(env, 'PUT', 'grouped_light/' + d.gl, b); return json({ ok: true });
         }
         if (path === '/hue/scene') {
           if (!GID.test(String(d.id))) return json({ error: 'ungültig' }, 400);
+          const st2 = await hueState(env);
+          if (!st2.connected || !st2.scenes.some(x => x.id === d.id)) return json({ error: 'nicht freigegeben' }, 403);
           await hueCall(env, 'PUT', 'scene/' + d.id, { recall: { action: 'active' } }); return json({ ok: true });
         }
         return json({ error: 'not found' }, 404);
