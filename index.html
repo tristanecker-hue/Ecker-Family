@@ -174,6 +174,12 @@
   #padScreen .pad-t small { display:block; font-size: .72em; opacity:.75; }
   #padScreen .pad-ok { font-size: clamp(16px, 2.6vmin, 32px); padding: 8px 0; }
   #padScreen .pad-pool { grid-column: 1 / -1; background:#FFF6D6; border:3px solid #262319; }
+  #padScreen .hue-room { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1.5px dashed rgba(38,35,25,.2); flex-wrap:wrap; }
+  #padScreen .hue-tog { flex:1 1 150px; min-height:48px; border-radius:14px; border:2.5px solid #262319; background:#fff; font-weight:700; font-size:clamp(16px,2.4vmin,26px); font-family:inherit; text-align:left; padding:6px 14px; cursor:pointer; }
+  #padScreen .hue-tog.on { background:#FFD84D; }
+  #padScreen .hue-bri { flex:1 1 120px; min-width:100px; }
+  #padScreen .hue-sc { flex:1 1 100%; display:flex; gap:6px; flex-wrap:wrap; }
+  #padScreen .hue-sc button { border:2px solid #262319; background:#fff; border-radius:999px; padding:6px 12px; font-weight:600; font-size:clamp(13px,1.9vmin,20px); font-family:inherit; cursor:pointer; }
   #padFoot { text-align:center; font-size:12px; opacity:.5; margin-top: 14px; }
   body.pad-mode .wrap { max-width: none; padding: 0; }
   @media (max-width: 760px) { #padScreen .pad-main { grid-template-columns: 1fr; } #padScreen .pad-people { grid-template-columns: 1fr; } }
@@ -1542,6 +1548,7 @@
       <div class="pad-col">
         <div class="pad-card"><div class="pad-h">📅 Termine</div><div id="padCal"></div></div>
         <div class="pad-card"><div class="pad-h">🍽️ Essen</div><div id="padMeal"></div></div>
+        <div class="pad-card hidden" id="padHueCard"><div class="pad-h">💡 Licht</div><div id="padHue"></div></div>
       </div>
       <div id="padTodos" class="pad-people"></div>
     </div>
@@ -1655,6 +1662,12 @@
       <div class="set-note" style="margin-top:0;">Der Benutzer «Pad» zeigt auf einem iPad an der Wand Uhr, Termine, Essen und alle offenen Aufgaben – nur anzeigen, nichts änderbar. In der Testphase erscheint die Anmeldung «Pad» nur, wo du sie hier einschaltest.</div>
       <label class="set-row"><span>Pad-Anmeldung auf diesem Gerät zeigen</span><span class="switch"><input type="checkbox" id="padVis" onchange="padVisToggle(this.checked)"><span class="slider"></span></span></label>
       <div class="set-note" style="word-break:break-all;" id="padLink"></div>
+    </div>
+    <div class="card hidden" id="hueCard">
+      <div class="card-title">Philips Hue</div>
+      <div class="set-note" style="margin-top:0;" id="hueNote">Lichter im Pad-Modus schalten (Räume und Szenen).</div>
+      <button class="btn" id="hueBtn" onclick="hueConnect()" style="margin-top:8px;">Hue verbinden</button>
+      <button class="btn" id="hueOff" onclick="hueDisconnect()" style="margin-top:8px;display:none;">Hue trennen</button>
     </div>
     <div class="card" id="pushCard">
       <div class="card-title">Mitteilungen</div>
@@ -6861,7 +6874,63 @@
     const c = document.getElementById('padCard'); if (!c) return;
     c.classList.toggle('hidden', !isAdmin());
     document.getElementById('padVis').checked = padVisible();
+    hueSettings();
     document.getElementById('padLink').textContent = 'Direkter Link für das iPad: ' + location.origin + location.pathname.replace(/index\.html$/, '') + '#pad';
+  }
+  // ---- Philips Hue (über den Worker) ----
+  let hueTimer = null, hueBusy = 0;
+  async function hueApi(path, body) {
+    const tok = await cloudApi.idToken();
+    const r = await fetch(PUSH_URL + path, { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify(body || {}) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Fehler');
+    return j;
+  }
+  async function hueSettings() {
+    const c = document.getElementById('hueCard'); if (!c) return;
+    c.classList.toggle('hidden', !isAdmin() || !cloudEnabled);
+    if (!isAdmin() || !cloudEnabled) return;
+    try {
+      const st = await hueApi('/hue/state');
+      document.getElementById('hueNote').textContent = st.connected ? '✅ Verbunden. Im Pad-Modus erscheint die Kachel «Licht».' : 'Noch nicht verbunden. Du wirst zu Philips Hue geleitet, meldest dich an und gibst die Bridge frei.';
+      document.getElementById('hueBtn').textContent = st.connected ? 'Neu verbinden' : 'Hue verbinden';
+      document.getElementById('hueOff').style.display = st.connected ? '' : 'none';
+    } catch (e) { document.getElementById('hueNote').textContent = 'Status nicht abrufbar (' + e.message + ').'; }
+  }
+  async function hueConnect() {
+    try { const j = await hueApi('/hue/start'); location.href = j.url; } catch (e) { showToast('Hue: ' + e.message); }
+  }
+  async function hueDisconnect() {
+    if (!window.confirm('Hue trennen?')) return;
+    try { await hueApi('/hue/disconnect'); showToast('Hue getrennt'); hueSettings(); } catch (e) { showToast('Hue: ' + e.message); }
+  }
+  async function padHueLoad() {
+    if (hueBusy > Date.now()) return;
+    const card = document.getElementById('padHueCard'); if (!card) return;
+    try {
+      const st = await hueApi('/hue/state');
+      if (!st.connected) { card.classList.add('hidden'); return; }
+      card.classList.remove('hidden');
+      const box = document.getElementById('padHue');
+      if (box.contains(document.activeElement) && document.activeElement.type === 'range') return;
+      box.innerHTML = st.rooms.map(r => {
+        const sc = st.scenes.filter(x => x.room === r.id).slice(0, 5);
+        return '<div class="hue-room"><button class="hue-tog' + (r.on ? ' on' : '') + '" data-gl="' + r.gl + '" data-on="' + (r.on ? 1 : 0) + '">' + (r.on ? '💡 ' : '⚫ ') + escapeHtml(r.name) + '</button>' +
+          (r.on && r.bri != null ? '<input type="range" class="hue-bri" min="1" max="100" value="' + r.bri + '" data-gl="' + r.gl + '">' : '') +
+          (sc.length ? '<div class="hue-sc">' + sc.map(x => '<button data-sc="' + x.id + '">' + escapeHtml(x.name) + '</button>').join('') + '</div>' : '') + '</div>';
+      }).join('') || '<div class="sub">Keine Räume gefunden</div>';
+    } catch (e) {}
+  }
+  function padHueInit() {
+    const box = document.getElementById('padHue'); if (!box || box.dataset.init) return;
+    box.dataset.init = '1';
+    const act = async (path, body) => { hueBusy = Date.now() + 3000; try { await hueApi(path, body); } catch (e) { showToast('Licht: ' + e.message); } hueBusy = 0; padHueLoad(); };
+    box.addEventListener('click', ev => {
+      const t = ev.target.closest('button'); if (!t) return;
+      if (t.dataset.sc) act('/hue/scene', { id: t.dataset.sc });
+      else if (t.dataset.gl) { t.classList.toggle('on'); act('/hue/set', { gl: t.dataset.gl, on: t.dataset.on !== '1' }); }
+    });
+    box.addEventListener('change', ev => { const t = ev.target; if (t.type === 'range') act('/hue/set', { gl: t.dataset.gl, on: true, bri: Number(t.value) }); });
   }
   // Link mit #pad: Pad-Anmeldung direkt zeigen und auf diesem Gerät merken
   function padHashCheck() {
@@ -6882,6 +6951,7 @@
     padUnsub = cloudApi.todosListen(list => { padTodos = list; padRenderTodos(); }, () => {});
     padSlowLoad();
     padSlow = setInterval(padSlowLoad, 30 * 60000);
+    padHueInit(); padHueLoad(); hueTimer = setInterval(padHueLoad, 20000);
     padWakeLock();
     const clock = document.getElementById('padClock');
     if (!clock.dataset.hold) {
@@ -6892,7 +6962,7 @@
   }
   function padStop(keep) {
     if (padUnsub) { try { padUnsub(); } catch (e) {} padUnsub = null; }
-    clearInterval(padTick); clearInterval(padSlow); padTick = padSlow = null;
+    clearInterval(padTick); clearInterval(padSlow); clearInterval(hueTimer); padTick = padSlow = hueTimer = null;
     if (padWake) { try { padWake.release(); } catch (e) {} padWake = null; }
     if (!keep) { document.body.classList.remove('pad-mode'); document.getElementById('padScreen').classList.add('hidden'); }
   }
@@ -7262,7 +7332,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '1.99';
+  const APP_VERSION = '2.00';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

@@ -15,7 +15,7 @@ const cors = () => ({ 'Access-Control-Allow-Origin': ORIGIN, 'Access-Control-All
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', ...cors() } });
 
 // ---- Firebase-Anmeldung prüfen (ID-Token, RS256) ----
-async function verifyUser(req) {
+async function verifyUser(req, allowPad) {
   const m = /^Bearer (.+)$/.exec(req.headers.get('Authorization') || '');
   if (!m) return null;
   const parts = m[1].split('.');
@@ -35,7 +35,7 @@ async function verifyUser(req) {
     if (claims.aud !== PROJECT || claims.iss !== 'https://securetoken.google.com/' + PROJECT || claims.exp < now || claims.iat > now + 300) return null;
     const email = String(claims.email || '').toLowerCase();
     const user = email.split('@')[0];
-    if (!email.endsWith('@ecker.ch') || !FAMILY.includes(user)) return null;
+    if (!email.endsWith('@ecker.ch') || !(FAMILY.includes(user) || (allowPad && user === 'pad'))) return null;
     return user;
   } catch (e) { return null; }
 }
@@ -148,6 +148,63 @@ async function runDue(env) {
   }
 }
 
+
+// ---- Philips Hue (Remote API, Anmeldung einmalig durch Tristan) ----
+const HUE = 'https://api.meethue.com';
+const hueBasic = env => 'Basic ' + btoa(env.HUE_CLIENT_ID + ':' + env.HUE_CLIENT_SECRET);
+async function hueToken(env, form) {
+  const r = await fetch(HUE + '/v2/oauth2/token', { method: 'POST', headers: { Authorization: hueBasic(env), 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(form).toString() });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) throw new Error('hue-token');
+  return j;
+}
+async function hueAccess(env) {
+  const h = await env.KV.get('hue', 'json');
+  if (!h || !h.refresh || !h.user) return null;
+  if (h.exp > Date.now() + 60000) return h;
+  const j = await hueToken(env, { grant_type: 'refresh_token', refresh_token: h.refresh });
+  const n = { ...h, access: j.access_token, refresh: j.refresh_token || h.refresh, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 };
+  await env.KV.put('hue', JSON.stringify(n));
+  return n;
+}
+async function hueCall(env, method, path, body) {
+  const h = await hueAccess(env);
+  if (!h) return null;
+  const r = await fetch(HUE + '/route/clip/v2/resource/' + path, { method, headers: { Authorization: 'Bearer ' + h.access, 'hue-application-key': h.user, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error('hue-' + r.status);
+  return j.data || [];
+}
+const page = (t, ok) => new Response('<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><body style="font:20px system-ui;text-align:center;padding:60px 20px"><div style="font-size:60px">' + (ok ? '💡' : '⚠️') + '</div><p>' + t + '</p><p><a href="' + SUBJECT + '">Zurück zur App</a></p>', { status: ok ? 200 : 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+async function hueCallback(env, url) {
+  const code = url.searchParams.get('code'), state = url.searchParams.get('state') || '';
+  if (!env.HUE_CLIENT_ID || !env.HUE_CLIENT_SECRET) return page('Hue ist im Worker nicht eingerichtet (Secrets fehlen).', false);
+  if (!code || !/^[A-Za-z0-9_-]{10,80}$/.test(state) || !(await env.KV.get('huestate:' + state))) return page('Ungültige oder abgelaufene Anfrage. Bitte in der App nochmals auf «Hue verbinden» tippen.', false);
+  await env.KV.delete('huestate:' + state);
+  try {
+    const j = await hueToken(env, { grant_type: 'authorization_code', code });
+    const auth = { Authorization: 'Bearer ' + j.access_token, 'Content-Type': 'application/json' };
+    await fetch(HUE + '/route/api/0/config', { method: 'PUT', headers: auth, body: JSON.stringify({ linkbutton: true }) });
+    const r = await fetch(HUE + '/route/api/', { method: 'POST', headers: auth, body: JSON.stringify({ devicetype: 'ecker-family' }) });
+    const k = await r.json().catch(() => []);
+    const user = k && k[0] && k[0].success && k[0].success.username;
+    if (!user) return page('Die Hue Bridge hat die Verbindung nicht freigegeben.', false);
+    await env.KV.put('hue', JSON.stringify({ access: j.access_token, refresh: j.refresh_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000, user }));
+    return page('Hue ist verbunden. Du kannst dieses Fenster schliessen.', true);
+  } catch (e) { return page('Verbindung mit Hue fehlgeschlagen.', false); }
+}
+async function hueState(env) {
+  const [rooms, gls, scenes] = await Promise.all([hueCall(env, 'GET', 'room'), hueCall(env, 'GET', 'grouped_light'), hueCall(env, 'GET', 'scene')]);
+  if (!rooms) return { connected: false };
+  const gm = {}; (gls || []).forEach(g => gm[g.id] = g);
+  const out = (rooms || []).map(r => {
+    const sv = (r.services || []).find(x => x.rtype === 'grouped_light'); const g = sv && gm[sv.rid];
+    return g ? { id: r.id, name: (r.metadata && r.metadata.name) || '?', gl: g.id, on: !!(g.on && g.on.on), bri: g.dimming ? Math.round(g.dimming.brightness) : null } : null;
+  }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  const sc = (scenes || []).map(x => ({ id: x.id, name: (x.metadata && x.metadata.name) || '?', room: x.group && x.group.rid })).filter(x => out.some(r => r.id === x.room));
+  return { connected: true, rooms: out, scenes: sc };
+}
+
 const goodSub = s => s && typeof s.endpoint === 'string' && s.endpoint.startsWith('https://') && s.keys && typeof s.keys.p256dh === 'string' && typeof s.keys.auth === 'string';
 
 export default {
@@ -158,7 +215,37 @@ export default {
     try {
       if (path === '/' ) return json({ ok: true, name: 'ecker-family-push' });
       if (path === '/vapid') return json({ pub: (await getVapid(env)).pub });
+      if (path === '/hue/callback') return hueCallback(env, new URL(req.url));
       if (req.method !== 'POST') return json({ error: 'not found' }, 404);
+      if (path.startsWith('/hue/')) {
+        const hu = await verifyUser(req, true);
+        if (!hu) return json({ error: 'nicht angemeldet' }, 401);
+        const d = await req.json().catch(() => ({}));
+        const GID = /^[0-9a-f-]{36}$/;
+        if (path === '/hue/start') {
+          if (hu !== 'tristan') return json({ error: 'nur Tristan' }, 403);
+          if (!env.HUE_CLIENT_ID || !env.HUE_CLIENT_SECRET) return json({ error: 'Hue-Secrets fehlen im Worker' }, 400);
+          const st = b64u(crypto.getRandomValues(new Uint8Array(18)));
+          await env.KV.put('huestate:' + st, '1', { expirationTtl: 600 });
+          return json({ url: HUE + '/v2/oauth2/authorize?client_id=' + encodeURIComponent(env.HUE_CLIENT_ID) + '&response_type=code&state=' + st });
+        }
+        if (path === '/hue/disconnect') {
+          if (hu !== 'tristan') return json({ error: 'nur Tristan' }, 403);
+          await env.KV.delete('hue'); return json({ ok: true });
+        }
+        if (path === '/hue/state') return json(await hueState(env));
+        if (path === '/hue/set') {
+          if (!GID.test(String(d.gl))) return json({ error: 'ungültig' }, 400);
+          const b = { on: { on: !!d.on } };
+          if (d.bri != null) b.dimming = { brightness: Math.max(1, Math.min(100, Number(d.bri) || 1)) };
+          await hueCall(env, 'PUT', 'grouped_light/' + d.gl, b); return json({ ok: true });
+        }
+        if (path === '/hue/scene') {
+          if (!GID.test(String(d.id))) return json({ error: 'ungültig' }, 400);
+          await hueCall(env, 'PUT', 'scene/' + d.id, { recall: { action: 'active' } }); return json({ ok: true });
+        }
+        return json({ error: 'not found' }, 404);
+      }
       const user = await verifyUser(req);
       if (!user) return json({ error: 'nicht angemeldet' }, 401);
       const data = await req.json().catch(() => ({}));

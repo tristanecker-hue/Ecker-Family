@@ -50,4 +50,14 @@ jobs:
           sed -i 's/^ *//' cloudflare/wrangler.toml
       - name: Worker veröffentlichen
         working-directory: cloudflare
-        run: npx --yes wrangler@3 deploy
+        env:
+          HUE_CLIENT_ID: ${{ secrets.HUE_CLIENT_ID }}
+          HUE_CLIENT_SECRET: ${{ secrets.HUE_CLIENT_SECRET }}
+        run: |
+          npx --yes wrangler@3 deploy
+          if [ -n "$HUE_CLIENT_ID" ] && [ -n "$HUE_CLIENT_SECRET" ]; then
+            printf %s "$HUE_CLIENT_ID" | tr -d '[:space:]' | npx --yes wrangler@3 secret put HUE_CLIENT_ID
+            printf %s "$HUE_CLIENT_SECRET" | tr -d '[:space:]' | npx --yes wrangler@3 secret put HUE_CLIENT_SECRET
+          else
+            echo "Hue-Secrets nicht gesetzt - Hue bleibt aus"
+          fi
