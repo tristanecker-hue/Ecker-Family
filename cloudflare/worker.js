@@ -260,6 +260,16 @@ export default {
           if (d.bri != null) lb.dimming = { brightness: Math.max(1, Math.min(100, Number(d.bri) || 1)) };
           await hueCall(env, 'PUT', 'light/' + d.id, lb); return json({ ok: true });
         }
+        if (path === '/hue/alloff') {
+          const st = await hueState(env);
+          if (!st.connected) return json({ error: 'nicht verbunden' }, 400);
+          const offRooms = st.rooms.filter(r => r.on);
+          const covered = new Set(offRooms.map(r => r.id));
+          const jobs = offRooms.map(r => hueCall(env, 'PUT', 'grouped_light/' + r.gl, { on: { on: false } }));
+          st.lights.filter(l => l.on && !covered.has(l.room)).forEach(l => jobs.push(hueCall(env, 'PUT', 'light/' + l.id, { on: { on: false } })));
+          const res = await Promise.allSettled(jobs);
+          return json({ ok: true, n: jobs.length, failed: res.filter(x => x.status === 'rejected').length });
+        }
         if (path === '/hue/plan') return json((await env.KV.get('hueplan', 'json')) || {});
         if (path === '/hue/plan-save') {
           if (hu !== 'tristan') return json({ error: 'nur Tristan' }, 403);

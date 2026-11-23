@@ -192,6 +192,13 @@
   .hue-chev { border:2.5px solid #262319; background:#fff; border-radius:14px; min-height:48px; min-width:48px; font-size:18px; cursor:pointer; font-family:inherit; }
   .hue-sub { flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px; }
   .hue-room, .hue-pin, .hue-tog { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+  .hue-stopwrap { display:flex; flex-direction:column; align-items:center; gap:10px; padding:16px 0 8px; }
+  .hue-stop { width:84px; height:84px; border-radius:50%; border:4px solid #262319; cursor:pointer; padding:0; font-family:inherit; font-weight:800; font-size:20px; letter-spacing:1px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.5);
+    background: radial-gradient(circle at 35% 28%, #ff7a6b 0%, #e0221a 45%, #9a0d06 100%);
+    box-shadow: 0 0 0 9px #FFD84D, 0 0 0 13px #262319, 0 12px 0 13px #262319, inset 0 -6px 10px rgba(0,0,0,.35), inset 0 4px 6px rgba(255,255,255,.35);
+    transition: transform .08s, box-shadow .08s; -webkit-tap-highlight-color: transparent; margin-bottom:12px; }
+  .hue-stop:active { transform: translateY(8px); box-shadow: 0 0 0 9px #FFD84D, 0 0 0 13px #262319, 0 4px 0 13px #262319, inset 0 -3px 8px rgba(0,0,0,.4); }
+  .hue-stoplbl { font-weight:800; font-size:13px; letter-spacing:.5px; opacity:.8; }
   .hue-pin.sm { min-width:26px; min-height:26px; padding:2px 4px; font-size:13px; }
   .hue-pin.sm.on { box-shadow:0 0 0 3px rgba(255,216,77,.55), 0 0 12px 4px rgba(255,200,40,.6); }
   .hue-pin.sel { outline:3px solid #3FA7D6; }
@@ -205,7 +212,7 @@
   #padTabs button.on { background:#FFD84D; }
   #padScreen.tab-l .pad-col, #padScreen.tab-l .pad-people { display:none; }
   #padScreen:not(.tab-l) #padHueCard { display:none !important; }
-  #padScreen.tab-l #padHue .hue-plan img { max-height:72vh; }
+  #padScreen.tab-l #padHue .hue-plan img { max-height:52vh; }
   #padHue.hp { grid-template-columns: 1fr; }
   #padHue.hp .hue-list { display:none; }
   #padScreen .pad-main #padHueCard { grid-column: 1 / -1; }
@@ -215,8 +222,14 @@
   #padHue .hue-plan img, #hueBox .hue-plan img { max-height:44vh; width:auto; max-width:100%; }
   #padHue .hue-list, #hueBox .hue-list { display:flex; flex-wrap:wrap; gap:6px 10px; align-content:start; }
   #padHue .hue-room, #hueBox .hue-room { border-top:0; padding:2px 0; flex:1 1 44%; }
+  #padHue .hue-planwrap, #hueBox .hue-planwrap { grid-column:1; grid-row:1; }
+  #padHue .hue-list, #hueBox .hue-list { grid-column:2; grid-row:1; }
+  #padHue .hue-stopwrap, #hueBox .hue-stopwrap { grid-column:1 / -1; grid-row:2; }
+  #padHue:has(.hue-planwrap:empty) .hue-list, #hueBox:has(.hue-planwrap:empty) .hue-list { grid-column:1 / -1; grid-row:2; }
+  #padHue:has(.hue-planwrap:empty) .hue-stopwrap, #hueBox:has(.hue-planwrap:empty) .hue-stopwrap { grid-row:1; }
+  #padHue.hp .hue-list { grid-column:1; }
   #hueBox .hue-plan img { max-height:62vh; }
-  @media (max-width: 760px) { #padHue, #hueBox { grid-template-columns: 1fr !important; } #hueBox .hue-room { flex:1 1 100%; } #hueBox .hue-plan img { max-height:none; } }
+  @media (max-width: 760px) { #padHue, #hueBox { grid-template-columns: 1fr !important; } #padHue .hue-list, #hueBox .hue-list { grid-column:1 !important; grid-row:3 !important; } #hueBox .hue-room { flex:1 1 100%; } #hueBox .hue-plan img { max-height:none; } }
   #padFoot { text-align:center; font-size:12px; opacity:.5; margin-top: 14px; }
   body.pad-mode .wrap { max-width: none; padding: 0; }
   @media (max-width: 760px) { #padScreen .pad-main { grid-template-columns: 1fr; } #padScreen .pad-people { grid-template-columns: 1fr; } }
@@ -6982,7 +6995,7 @@
   function hueFill(box, st) {
     hueSt = st;
     if (box.contains(document.activeElement) && document.activeElement.type === 'range') return;
-    if (!box.querySelector('.hue-list')) box.innerHTML = '<div class="hue-planwrap"></div><div class="hue-list"></div>';
+    if (!box.querySelector('.hue-list')) box.innerHTML = '<div class="hue-planwrap"></div><div class="hue-stopwrap"><button class="hue-stop" data-stop="1" aria-label="Alle Lichter aus"><span>AUS</span></button><div class="hue-stoplbl">NOT-AUS · alle Lichter aus</div></div><div class="hue-list"></div>';
     const pw = box.querySelector('.hue-planwrap');
     if (huePlan && huePlan.img && huePlan.pins && huePlan.pins.length) {
       if (!pw.querySelector('img')) pw.innerHTML = '<div class="hue-plan"><img alt="Plan"><div class="hue-pins"></div></div>';
@@ -7079,6 +7092,13 @@
     box.addEventListener('click', ev => {
       if (fired) { fired = false; return; }
       const t = ev.target.closest('button'); if (!t) return;
+      if (t.dataset.stop) {
+        if (t.dataset.busy) return; t.dataset.busy = '1';
+        document.querySelectorAll('.hue-pin.on, .hue-tog.on').forEach(x => x.classList.remove('on'));
+        hueBusy = Date.now() + 4000;
+        hueApi('/hue/alloff').then(j => showToast(j.failed ? 'Nicht alle Lichter konnten ausgeschaltet werden' : 'Alle Lichter aus'), e => showToast('Licht: ' + e.message)).finally(() => { hueBusy = 0; delete t.dataset.busy; reload(); });
+        return;
+      }
       if (t.dataset.exp) {
         const id = t.dataset.exp; if (hueOpen.has(id)) hueOpen.delete(id); else hueOpen.add(id);
         const sub = box.querySelector('[data-sub="' + id + '"]'); if (sub) sub.style.display = hueOpen.has(id) ? 'flex' : 'none';
@@ -7552,7 +7572,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.12';
+  const APP_VERSION = '2.13';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
