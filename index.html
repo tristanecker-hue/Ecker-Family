@@ -369,6 +369,13 @@
   body.pad-mode .app-version { display:none; }
   body.pad-mode { overflow:hidden; }
   #padScreen { transform-origin: 0 0; }
+  #padPhoto { position:fixed; inset:0; z-index:80; background:#000; display:flex; align-items:center; justify-content:center; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #padPhoto.hidden { display:none; }
+  #padPhoto img { max-width:100%; max-height:100%; object-fit:contain; transition:transform .25s ease, opacity .25s ease; pointer-events:none; }
+  #padPhoto .pv-x { position:absolute; top:max(14px,env(safe-area-inset-top)); right:max(14px,env(safe-area-inset-right)); z-index:2; width:clamp(48px,7vmin,76px); height:clamp(48px,7vmin,76px); border-radius:50%; border:3px solid #262319; background:#FFD84D; font-size:clamp(22px,3.6vmin,40px); font-weight:800; cursor:pointer; line-height:1; }
+  #padPhoto .pv-a { position:absolute; top:50%; transform:translateY(-50%); z-index:2; width:clamp(44px,6vmin,68px); height:clamp(60px,10vmin,110px); border:0; border-radius:14px; background:rgba(255,255,255,.22); color:#fff; font-size:clamp(30px,5vmin,56px); cursor:pointer; }
+  #padPhoto .pv-l { left:12px; } #padPhoto .pv-r { right:12px; }
+  #padPhotoN { position:absolute; bottom:12px; left:0; right:0; text-align:center; color:#fffb; font-size:clamp(13px,2vmin,22px); }
   #padFx { position:fixed; inset:0; width:100vw; height:100vh; z-index:40; pointer-events:none; display:none; }
   #padNight { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; z-index:9999; transition:opacity 2.5s ease; }
   #padPop { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:16px; }
@@ -1802,6 +1809,7 @@
     <div id="padFoot"></div>
     <div id="padPop" class="hidden" onclick="if(event.target===this)padPopClose()"><div id="padPopBox"><button class="pp-x" onclick="padPopClose()">✕ Schliessen</button><div id="padPopBody"></div></div></div>
     <div id="padZNew" class="hidden" onclick="padZNewClose()"><div class="pz-note" id="padZNote"><div class="pz-tape"></div><div class="pz-text" id="padZText"></div><img id="padZImg" class="hidden" alt=""><div class="pz-who" id="padZWho"></div></div></div>
+    <div id="padPhoto" class="hidden"><button class="pv-x" onclick="padPhotoClose()" aria-label="Schliessen">✕</button><button class="pv-a pv-l" onclick="padPhotoGo(-1)" aria-label="Vorheriges">‹</button><img id="padPhotoImg" alt=""><button class="pv-a pv-r" onclick="padPhotoGo(1)" aria-label="Nächstes">›</button><div id="padPhotoN"></div></div>
     <canvas id="padFx"></canvas>
     <div id="padNight"></div>
     <div id="padWeek" class="hidden">
@@ -8179,6 +8187,26 @@
     }).join('');
   }
   // Pad: Detail-Fenster beim Antippen einer Kachel
+  // Grosse Foto-Ansicht: wischen (links/rechts), ✕ oben rechts schliesst
+  let padPhIdx = 0, padPhX = null, padPhTimer = null;
+  function padPhotoShow(dir) {
+    const im = document.getElementById('padPhotoImg'), n = padShowList.length; if (!n) return;
+    im.style.opacity = '0'; im.style.transform = 'translateX(' + (dir ? dir * 40 : 0) + 'px)';
+    setTimeout(() => { im.src = padShowList[padPhIdx]; im.style.transform = 'none'; im.style.opacity = '1'; }, dir ? 120 : 0);
+    document.getElementById('padPhotoN').textContent = (padPhIdx + 1) + ' / ' + n;
+    clearTimeout(padPhTimer); padPhTimer = setTimeout(padPhotoClose, 180000);
+  }
+  function padPhotoOpen() {
+    const n = padShowList.length; if (!n) return;
+    padPhIdx = (((padShowIdx - 1) % n) + n) % n;
+    document.getElementById('padPhoto').classList.remove('hidden'); padPhotoShow(0);
+  }
+  function padPhotoGo(d) { const n = padShowList.length; if (!n) return; padPhIdx = (padPhIdx + d + n) % n; padPhotoShow(d); }
+  function padPhotoClose() { clearTimeout(padPhTimer); document.getElementById('padPhoto').classList.add('hidden'); }
+  (() => { const el = document.getElementById('padPhoto'); if (!el) return;
+    el.addEventListener('pointerdown', e => { padPhX = e.target.closest('button') ? null : e.clientX; });
+    el.addEventListener('pointerup', e => { if (padPhX === null) return; const dx = e.clientX - padPhX; padPhX = null; if (Math.abs(dx) > 50) padPhotoGo(dx < 0 ? 1 : -1); });
+    el.addEventListener('pointercancel', () => { padPhX = null; }); })();
   function padPop(what) {
     let h = '';
     if (what.startsWith('t:')) h = padTodosHtml(true, what.slice(2)) || '<div class="pad-ok">Nichts offen</div>';
@@ -8196,8 +8224,7 @@
         return `<div class="pad-row" style="${isT ? 'font-weight:800;' : ''}"><b style="min-width:6em;">${nm}</b><span>${v.m ? 'Mittag: ' + escapeHtml(v.m) : ''}${v.m && v.a ? '<br>' : ''}${v.a ? 'Abend: ' + escapeHtml(v.a) : ''}</span></div>`;
       }).join('')).join('');
     } else if (what === 'show') {
-      const im = document.querySelector('#padShow img.on'); if (!im || !im.src) return;
-      h = `<img id="padPopImg" src="${im.src}" style="display:block;max-width:100%;max-height:82vh;margin:0 auto;border-radius:14px;">`;
+      padPhotoOpen(); return;
     }
     if (!h) return;
     document.getElementById('padPopBody').innerHTML = h;
@@ -8590,7 +8617,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.57';
+  const APP_VERSION = '2.58';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
