@@ -8250,12 +8250,8 @@
         document.getElementById('loginSubtitle').textContent = 'Dieses Konto ist nicht freigegeben.';
         return;
       }
-      if (freshLogin) { freshLogin = false; resumeName = null; await selectAccount(name); return; }
-      // App neu geöffnet: immer zuerst die vier Namen zeigen; die eigene Anmeldung bleibt gemerkt
-      resumeName = name;
-      showLoginForm();
-      try { await loadAvatars(); } catch (e) {}
-      applyAvatars();
+      // Gespeicherte Anmeldung: direkt auf dem eigenen Konto starten (Abmelden wechselt den Benutzer)
+      freshLogin = false; resumeName = null; await selectAccount(name);
     });
   }
 
@@ -8479,7 +8475,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.49';
+  const APP_VERSION = '2.50';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
