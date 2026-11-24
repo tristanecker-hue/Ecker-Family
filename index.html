@@ -270,6 +270,7 @@
   body.pad-mode .app-version { display:none; }
   body.pad-mode { overflow:hidden; }
   #padScreen { transform-origin: 0 0; }
+  #padNight { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; z-index:9999; transition:opacity 2.5s ease; }
   #padFoot { text-align:center; font-size:12px; opacity:.5; margin-top: 14px; }
   body.pad-mode .wrap { max-width: none; padding: 0; }
   @media (max-width: 760px) { #padScreen .pad-main { grid-template-columns: 1fr; } #padScreen .pad-people { grid-template-columns: 1fr; } }
@@ -1658,6 +1659,7 @@
       <div class="pad-col">
         <div class="pad-card" onclick="padWeekOpen()" style="cursor:pointer;"><div class="pad-h">📅 Termine <small style="font-weight:600;opacity:.5;font-size:.6em;">· Woche ▸</small></div><div id="padCal"></div></div>
         <div class="pad-card"><div class="pad-h">🍽️ Essen</div><div id="padMeal"></div></div>
+        <div class="pad-card hidden" id="padBdayCard"><div class="pad-h">🎂 Geburtstage</div><div id="padBday"></div></div>
       </div>
       <div id="padTodos" class="pad-people"></div>
       <div class="pad-card hidden" id="padShowCard"><div id="padShow"><img alt=""><img alt=""></div></div>
@@ -1665,6 +1667,7 @@
     </div>
     <div id="padPlans"></div>
     <div id="padFoot"></div>
+    <div id="padNight"></div>
     <div id="padWeek" class="hidden">
       <div class="pw-top"><button onclick="padWeekGo(-1)">‹</button><div id="padWeekTitle"></div><button onclick="padWeekGo(1)">›</button><button onclick="padWeekClose()" style="margin-left:auto;">✕ Schliessen</button></div>
       <div id="padWeekGrid"></div>
@@ -1794,6 +1797,22 @@
       <label class="set-row"><span>Diashow anzeigen</span><span class="switch"><input type="checkbox" id="fotoOn" onchange="fotoCfgSave()"><span class="slider"></span></span></label>
       <div class="field" style="margin-top:8px;"><label for="fotoSec">Sekunden pro Foto</label><select id="fotoSec" onchange="fotoCfgSave()"><option>5</option><option>8</option><option>10</option><option>15</option><option>30</option><option>60</option></select></div>
       </div>
+      </details>
+    </div>
+    <div class="card hidden" id="bdCard">
+      <details>
+      <summary style="cursor:pointer;" class="card-title">🎂 Geburtstage &amp; 🌙 Nachtmodus</summary>
+      <div class="set-note" style="margin-top:0;">Geburtstage erscheinen im Pad-Modus mit Countdown. Nachts wird das Pad abgedunkelt (Antippen = 1 Minute hell).</div>
+      <div id="bdList"></div>
+      <div class="field" style="margin-top:8px;"><label for="bdName">Name</label><input type="text" id="bdName" list="bdNames" placeholder="z. B. Lina oder Oma"><datalist id="bdNames"><option value="Tristan"><option value="Claudia"><option value="Lina"><option value="Florian"></datalist></div>
+      <div class="field"><label for="bdDate">Geburtsdatum</label><input type="date" id="bdDate"></div>
+      <label class="set-row"><span>Alter anzeigen («wird 12»)</span><span class="switch"><input type="checkbox" id="bdAge" checked><span class="slider"></span></span></label>
+      <button class="btn" onclick="bdAdd()" style="margin-top:6px;">＋ Geburtstag hinzufügen</button>
+      <div class="card-title" style="margin-top:16px;font-size:1em;">🌙 Nachtmodus</div>
+      <label class="set-row"><span>Pad nachts abdunkeln</span><span class="switch"><input type="checkbox" id="nmOn" onchange="nmSave()"><span class="slider"></span></span></label>
+      <div class="field" style="margin-top:8px;"><label for="nmFrom">Von</label><input type="time" id="nmFrom" value="22:00" onchange="nmSave()"></div>
+      <div class="field"><label for="nmTo">Bis</label><input type="time" id="nmTo" value="06:30" onchange="nmSave()"></div>
+      <div class="field"><label for="nmDim">Abdunkeln</label><select id="nmDim" onchange="nmSave()"><option value="0.7">Etwas</option><option value="0.85">Stark</option><option value="0.95">Fast schwarz</option></select></div>
       </details>
     </div>
     <div class="card hidden" id="hueCard">
@@ -3099,7 +3118,7 @@
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
-    renderThemes(); gcalRender(); pushRender(); odRender(); padRender(); fotoSettings();
+    renderThemes(); gcalRender(); pushRender(); odRender(); padRender(); fotoSettings(); bdSettings();
     if (isAdmin()) renderSettings();
     applyAvatars();
   }
@@ -7023,6 +7042,44 @@
     hueSettings();
     document.getElementById('padLink').textContent = 'Direkter Link für das iPad: ' + location.origin + location.pathname.replace(/index\.html$/, '') + '#pad';
   }
+  // ---- Geburtstage & Nachtmodus (Eltern) ----
+  let bdCfg = { bdays: [], night: {} };
+  async function bdSettings() {
+    const c = document.getElementById('bdCard'); if (!c) return;
+    const ok = cloudEnabled && isParentU();
+    c.classList.toggle('hidden', !ok);
+    if (!ok) return;
+    try {
+      const cfg = (await cloudApi.padcfgGet()) || {};
+      bdCfg = { bdays: Array.isArray(cfg.bdays) ? cfg.bdays : [], night: cfg.night || {} };
+    } catch (e) {}
+    const n = bdCfg.night;
+    document.getElementById('nmOn').checked = !!n.on;
+    document.getElementById('nmFrom').value = n.from || '22:00';
+    document.getElementById('nmTo').value = n.to || '06:30';
+    document.getElementById('nmDim').value = String(n.dim || 0.85);
+    bdRenderList();
+  }
+  function bdRenderList() {
+    const l = bdCfg.bdays.slice().sort((a, b) => a.m - b.m || a.d - b.d);
+    document.getElementById('bdList').innerHTML = l.length ? l.map(b => `<div class="set-row"><span>${escapeHtml(b.n)} · ${b.d}.${b.m}.${b.y && b.age ? b.y : ''}</span><button class="btn" style="padding:4px 10px;" onclick="bdDel(${bdCfg.bdays.indexOf(b)})">✕</button></div>`).join('') : '<div class="set-note">Noch keine Geburtstage erfasst.</div>';
+  }
+  async function bdSave() {
+    try { await cloudApi.padcfgSet({ bdays: bdCfg.bdays }); showToast('Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen'); }
+  }
+  function bdAdd() {
+    const n = document.getElementById('bdName').value.trim(), v = document.getElementById('bdDate').value;
+    if (!n || !v) { showToast('Name und Datum eingeben'); return; }
+    const [y, m, d] = v.split('-').map(Number);
+    bdCfg.bdays.push({ n, m, d, y, age: document.getElementById('bdAge').checked });
+    document.getElementById('bdName').value = ''; document.getElementById('bdDate').value = '';
+    bdRenderList(); bdSave();
+  }
+  function bdDel(i) { bdCfg.bdays.splice(i, 1); bdRenderList(); bdSave(); }
+  async function nmSave() {
+    bdCfg.night = { on: document.getElementById('nmOn').checked, from: document.getElementById('nmFrom').value || '22:00', to: document.getElementById('nmTo').value || '06:30', dim: Number(document.getElementById('nmDim').value) || 0.85 };
+    try { await cloudApi.padcfgSet({ night: bdCfg.night }); showToast('Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen'); }
+  }
   // ---- Fotos / Diashow ----
   async function fotoSettings() {
     const c = document.getElementById('fotoCard'); if (!c) return;
@@ -7368,6 +7425,10 @@
     document.getElementById('padFoot').textContent = "Ecker's Family · Pad · Version " + APP_VERSION;
     padStop(true);
     padFitStart();
+    if (!document.getElementById('padScreen').dataset.wake) {
+      document.getElementById('padScreen').dataset.wake = '1';
+      document.getElementById('padScreen').addEventListener('pointerdown', () => { padWakeUntil = Date.now() + 60000; padNightCheck(); setTimeout(padNightCheck, 61000); });
+    }
     padClock(true);
     padTick = setInterval(padClock, 10000);
     padUnsub = cloudApi.todosListen(list => { padTodos = list; padRenderTodos(); }, () => {});
@@ -7437,8 +7498,38 @@
     const day = isoDate(n);
     if (padDay && padDay !== day) { padSlowLoad(); padRenderTodos(); }
     padDay = day;
+    padNightCheck(); padRenderBday();
+  }
+  let padBd = [], padNightCfg = {}, padWakeUntil = 0;
+  async function padCfgLoad() {
+    try { const c = (await cloudApi.padcfgGet()) || {}; padBd = Array.isArray(c.bdays) ? c.bdays : []; padNightCfg = c.night || {}; } catch (e) {}
+    padRenderBday(); padNightCheck();
+  }
+  function padRenderBday() {
+    const card = document.getElementById('padBdayCard'); if (!card) return;
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    const list = padBd.map(b => {
+      let y = t.getFullYear(), nx = new Date(y, b.m - 1, b.d);
+      if (nx < t) { y++; nx = new Date(y, b.m - 1, b.d); }
+      return { b, days: Math.round((nx - t) / 86400000), age: b.y && b.age ? y - b.y : null };
+    }).sort((x, y) => x.days - y.days).slice(0, 3);
+    card.classList.toggle('hidden', !list.length);
+    document.getElementById('padBday').innerHTML = list.map(x => {
+      const when = x.days === 0 ? '🎉 heute!' : x.days === 1 ? 'morgen' : 'noch ' + x.days + ' Tage';
+      return `<div class="pad-row"><span>${escapeHtml(x.b.n)}${x.age ? ' wird ' + x.age : ''}</span><b style="margin-left:auto;text-align:right;${x.days === 0 ? 'color:#c0271d;' : ''}">${when}</b></div>`;
+    }).join('');
+  }
+  function padNightCheck() {
+    const el = document.getElementById('padNight'); if (!el) return;
+    const n = padNightCfg || {}, now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
+    const tm = v => { const p = String(v || '').split(':').map(Number); return (p[0] || 0) * 60 + (p[1] || 0); };
+    const f = tm(n.from || '22:00'), to = tm(n.to || '06:30');
+    const inNight = f <= to ? (cur >= f && cur < to) : (cur >= f || cur < to);
+    const dark = !!n.on && inNight && Date.now() > padWakeUntil;
+    el.style.opacity = dark ? String(n.dim || 0.85) : '0';
   }
   async function padSlowLoad() {
+    padCfgLoad();
     try {
       const now = new Date(), weeks = {};
       for (const off of [0, 7]) { const m = mondayOf(new Date(now.getTime() + off * 86400000)); weeks[isoDate(m)] = await kvGet('meals', isoDate(m)); }
@@ -7755,7 +7846,7 @@
         fotoDelete: id => F.deleteDoc(F.doc(db, 'fotos', id)),
         fotosList: async () => { const sn = await F.getDocs(F.query(F.collection(db, 'fotos'), F.orderBy('at', 'desc'), F.limit(60))); const o = []; sn.forEach(d => o.push({ id: d.id, ...d.data() })); return o; },
         padcfgGet: async () => { const d = await F.getDoc(F.doc(db, 'padcfg', 'main')); return d.exists() ? d.data() : null; },
-        padcfgSet: d => F.setDoc(F.doc(db, 'padcfg', 'main'), d),
+        padcfgSet: d => F.setDoc(F.doc(db, 'padcfg', 'main'), d, { merge: true }),
         kvList: async (col) => {
           const sn = await F.getDocs(F.collection(db, col));
           const out = [];
@@ -7794,7 +7885,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.26';
+  const APP_VERSION = '2.27';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
