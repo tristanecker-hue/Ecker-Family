@@ -171,6 +171,16 @@
   #padScreen .pz-row { display:flex; flex-wrap:wrap; gap:clamp(8px,1.4vmin,16px); }
   #padScreen .pz-n { flex:1 1 clamp(120px,22vmin,260px); max-width:clamp(160px,34vmin,340px); padding:8px 10px 6px; border-radius:2px; box-shadow:2px 3px 7px rgba(0,0,0,.25); transform:rotate(var(--r,0deg)); font-size:calc(clamp(13px,2.1vmin,24px) * var(--zs,1)); line-height:1.2; word-break:break-word; cursor:pointer; }
   #padScreen .pz-n small { display:block; font-size:.7em; opacity:.65; margin-top:4px; }
+  #zHomeNew { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:20px; }
+  #zHomeNew.hidden { display:none; }
+  #zHomeNew .zh-note { position:relative; width:100%; max-width:480px; padding:30px 22px 18px; border-radius:3px; box-shadow:6px 10px 28px rgba(0,0,0,.5); transform:rotate(-4deg); cursor:pointer; animation:zhIn .35s ease-out; }
+  @keyframes zhIn { from { transform:rotate(-14deg) scale(.6); opacity:0; } to { transform:rotate(-4deg) scale(1); opacity:1; } }
+  #zHomeNew .zh-tape { position:absolute; top:-14px; left:50%; width:84px; height:28px; background:rgba(255,255,255,.6); transform:translateX(-50%) rotate(3deg); box-shadow:0 1px 4px rgba(0,0,0,.2); }
+  #zHomeNew .zh-text { font-size:26px; line-height:1.15; font-weight:700; white-space:pre-wrap; word-break:break-word; }
+  #zHomeNew .zh-who { font-size:14px; opacity:.65; margin-top:12px; }
+  #zHomeNew .zh-hint { font-size:13px; font-weight:800; margin-top:10px; }
+  #zHomeNew img { display:block; max-width:100%; max-height:34vh; margin:12px auto 0; border-radius:8px; }
+  #zHomeNew .zh-x { position:absolute; top:-12px; right:-8px; width:34px; height:34px; border-radius:50%; border:2px solid #262319; background:#fff; font-weight:800; font-size:16px; cursor:pointer; }
   #padZNew { position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:3vmin; }
   #padZNew.hidden { display:none; }
   #padZNew .pz-note { position:relative; width:min(86vw,1100px); padding:5vmin 5vmin 3.5vmin; box-shadow:8px 12px 30px rgba(0,0,0,.5); border-radius:3px; transform:rotate(-2deg); }
@@ -1767,6 +1777,7 @@
 
   <div id="bdCrop" class="hidden"><div class="bc-box"><div class="bc-h">Foto anpassen</div><div class="bc-sub">Mit dem Finger verschieben, mit dem Regler vergrössern.</div><div id="bdCropAsp" class="zt-chips hidden" style="justify-content:center;margin-bottom:8px;"></div><div class="bc-stage" id="bdCropStage"><canvas id="bdCropCv" width="280" height="280"></canvas><div class="bc-ring" id="bdCropRing"></div></div><input type="range" id="bdCropZ" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><div class="zt-actions"><button class="btn" onclick="bdCropClose()">Abbrechen</button><button class="btn hidden" id="bdCropSkip" onclick="bdCropSkip()">Original</button><button class="btn" onclick="bdCropApply()" style="flex:1;">✓ Übernehmen</button></div></div></div>
 
+<div id="zHomeNew" class="hidden"><div class="zh-note" id="zhNote" onclick="zHomeOpen()"><div class="zh-tape"></div><button class="zh-x" onclick="event.stopPropagation();zHomeClose()" aria-label="Schliessen">✕</button><div class="zh-text" id="zhText"></div><img id="zhImg" class="hidden" alt=""><div class="zh-who" id="zhWho"></div><div class="zh-hint" id="zhHint"></div></div></div>
   <div id="padScreen" class="hidden">
     <div class="pad-top">
       <div id="padClock" title="1× antippen: App aktualisieren · 4× antippen: Pad-Modus beenden">--:--</div>
@@ -4087,8 +4098,33 @@
       const b = document.getElementById('chatBadge');
       if (b) b.textContent = n ? '📌 ' + n + ' offen' : '';
       homeZettelRender(list);
+      const shown = zShownGet(me);
+      list.filter(z => !z.done && z.from !== me && !hid.has(z.id) && !shown.has(z.id) && Date.now() - z.at < 7 * 86400000 && !zHomeQ.includes(z.id) && z.id !== zHomeCur).sort((x, y) => y.at - x.at).forEach(z => { zHomeQ.push(z.id); zHomeData[z.id] = z; });
+      zHomeNext();
     } catch (e) {}
   }
+  // Neuer Zettel: Post-it schräg über der Startseite, Tipp öffnet die Kachel
+  let zHomeQ = [], zHomeCur = null; const zHomeData = {};
+  const zShownKey = who => 'ef-zettel-shown-' + who;
+  const zShownGet = who => { try { return new Set(JSON.parse(localStorage.getItem(zShownKey(who)) || '[]')); } catch (e) { return new Set(); } };
+  const zShownAdd = (who, id) => { const h = zShownGet(who); h.add(id); try { localStorage.setItem(zShownKey(who), JSON.stringify([...h].slice(-200))); } catch (e) {} };
+  async function zHomeNext() {
+    const ov = document.getElementById('zHomeNew'), home = document.getElementById('homeScreen');
+    if (!ov || !home || home.classList.contains('hidden') || !ov.classList.contains('hidden') || !zHomeQ.length) return;
+    const id = zHomeQ.shift(), z = zHomeData[id]; if (!z) return zHomeNext();
+    zHomeCur = id; zShownAdd(userKey(currentUser), id);
+    const note = document.getElementById('zhNote'); note.style.background = z.color || ZCOL[0];
+    const t = document.getElementById('zhText'); t.textContent = z.text || (z.photo ? '📷 Foto' : ''); t.style.fontSize = (26 * zSz(z)) + 'px'; t.style.fontFamily = zFam(z).split(';')[0]; t.style.fontWeight = /900/.test(zFam(z)) ? '900' : '';
+    document.getElementById('zhWho').textContent = '— ' + (z.name || zName(z.from)) + ' an ' + zToText(z, userKey(currentUser));
+    document.getElementById('zhHint').textContent = '👆 Tippen zum Öffnen' + (zHomeQ.length ? ' · +' + zHomeQ.length + ' weitere' : '');
+    const im = document.getElementById('zhImg'); im.classList.add('hidden'); im.removeAttribute('src');
+    ov.classList.remove('hidden');
+    if (z.photo) { const src = await ztPhotoSrc(z.id); if (src && zHomeCur === id) { im.src = src; im.classList.remove('hidden'); } }
+  }
+  function zHomeClose() { document.getElementById('zHomeNew').classList.add('hidden'); zHomeCur = null; if (zHomeQ.length) setTimeout(zHomeNext, 300); }
+  function zHomeOpen() { document.getElementById('zHomeNew').classList.add('hidden'); zHomeCur = null; zHomeQ = []; openZettel(); }
+  setInterval(() => { if (document.visibilityState === 'visible' && currentUser && cloudEnabled && !document.getElementById('homeScreen').classList.contains('hidden') && hasFeature('chat')) zettelCheck(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && currentUser && cloudEnabled && !document.getElementById('homeScreen').classList.contains('hidden') && hasFeature('chat')) zettelCheck(); });
   function zettelStop() { zUnsubs.forEach(u => { try { u(); } catch (e) {} }); zUnsubs = []; }
   async function openZettel() {
     if (!currentUser || !cloudEnabled) return;
@@ -8434,7 +8470,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.45';
+  const APP_VERSION = '2.46';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
