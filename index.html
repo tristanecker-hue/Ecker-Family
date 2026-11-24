@@ -8194,7 +8194,8 @@
     im.style.opacity = '0'; im.style.transform = 'translateX(' + (dir ? dir * 40 : 0) + 'px)';
     setTimeout(() => { im.src = padShowList[padPhIdx]; im.style.transform = 'none'; im.style.opacity = '1'; }, dir ? 120 : 0);
     document.getElementById('padPhotoN').textContent = (padPhIdx + 1) + ' / ' + n;
-    clearTimeout(padPhTimer); padPhTimer = setTimeout(padPhotoClose, 180000);
+    // Diashow läuft in der Grossansicht weiter; nach jedem Wischen beginnt die Zeit pro Foto neu
+    clearInterval(padPhTimer); padPhTimer = n > 1 ? setInterval(() => padPhotoGo(1), Math.max(3, padShowCfg.interval || 10) * 1000) : null;
   }
   function padPhotoOpen() {
     const n = padShowList.length; if (!n) return;
@@ -8202,7 +8203,7 @@
     document.getElementById('padPhoto').classList.remove('hidden'); padPhotoShow(0);
   }
   function padPhotoGo(d) { const n = padShowList.length; if (!n) return; padPhIdx = (padPhIdx + d + n) % n; padPhotoShow(d); }
-  function padPhotoClose() { clearTimeout(padPhTimer); document.getElementById('padPhoto').classList.add('hidden'); }
+  function padPhotoClose() { clearInterval(padPhTimer); document.getElementById('padPhoto').classList.add('hidden'); }
   (() => { const el = document.getElementById('padPhoto'); if (!el) return;
     el.addEventListener('pointerdown', e => { padPhX = e.target.closest('button') ? null : e.clientX; });
     el.addEventListener('pointerup', e => { if (padPhX === null) return; const dx = e.clientX - padPhX; padPhX = null; if (Math.abs(dx) > 50) padPhotoGo(dx < 0 ? 1 : -1); });
@@ -8617,7 +8618,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.58';
+  const APP_VERSION = '2.59';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
