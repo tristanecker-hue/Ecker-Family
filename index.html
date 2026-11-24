@@ -8208,10 +8208,10 @@
     const cards = Object.keys(ACCOUNTS).filter(k => !only || only === k).map(k => {
       const st = KID_STYLE[k] || KID_STYLE.claudia;
       const open = padTodos.filter(t => t.assigneeKey === k && !t.done).sort(byDue);
-      return `<div class="pad-person" data-k="${k}" style="--kc:${st.kc};--kbg:${st.kbg}"><div class="pad-pn">${escapeHtml(nameOf(k))}<span>${open.length ? open.length + ' offen' : '✅ alles fertig'}</span></div>${open.slice(0, L).map(row).join('')}${open.length > L ? `<div class="pad-t">… und ${open.length - L} weitere</div>` : ''}</div>`;
+      return `<div class="pad-person" data-k="${k}" style="--kc:${st.kc};--kbg:${st.kbg}"><div class="pad-pn">${escapeHtml(nameOf(k))}<span>${open.length ? open.length + ' offen' : '✅ alles fertig'}</span></div>${full ? open.slice(0, L).map(row).join('') : ''}</div>`;
     }).join('');
     const pool = padTodos.filter(t => t.assigneeKey === POOL && !t.done).sort(byDue);
-    const poolHtml = pool.length && (!only || only === 'pool') ? `<div class="pad-person pad-pool" data-k="pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>wer zuerst kommt!</span></div>${pool.slice(0, L).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
+    const poolHtml = pool.length && (!only || only === 'pool') ? `<div class="pad-person pad-pool" data-k="pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>${full ? 'wer zuerst kommt!' : pool.length + ' offen'}</span></div>${(full ? pool.slice(0, L) : []).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
     const zl = (!only && !full) ? padZ.filter(z => !z.done && !zHidGet('pad').has(z.id)).sort((x, y) => y.at - x.at).slice(0, 6) : [];
     const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Zettel</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))} → ${escapeHtml(zToText(z, null))}</small></div>`).join('')}</div></div>` : '';
     return cards + poolHtml + zHtml;
@@ -8536,7 +8536,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.55';
+  const APP_VERSION = '2.56';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
