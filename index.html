@@ -7534,7 +7534,7 @@
       return { b, days: Math.round((nx - t) / 86400000), age: b.y && b.age ? y - b.y : null, nx };
     }).sort((x, y) => x.days - y.days).slice(0, max).map(x => {
       const when = x.days === 0 ? '🎉 heute!' : x.days === 1 ? 'morgen' : 'noch ' + x.days + ' Tage';
-      return `<div class="pad-row"><span>${escapeHtml(x.b.n)}${x.age ? ' wird ' + x.age : ''}${max > 3 ? ' <small style="opacity:.6">· ' + x.b.d + '.' + x.b.m + '.</small>' : ''}</span><b style="margin-left:auto;text-align:right;${x.days === 0 ? 'color:#c0271d;' : ''}">${when}</b></div>`;
+      return `<div class="pad-row"><span>${escapeHtml(x.b.n)}${x.age && max > 3 ? ' wird ' + x.age : ''}${max > 3 ? ' <small style="opacity:.6">· ' + x.b.d + '.' + x.b.m + '.</small>' : ''}</span><b style="margin-left:auto;text-align:right;${x.days === 0 ? 'color:#c0271d;' : ''}">${when}</b></div>`;
     }).join('');
   }
   // Pad: Detail-Fenster beim Antippen einer Kachel
@@ -7925,7 +7925,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.30';
+  const APP_VERSION = '2.31';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
