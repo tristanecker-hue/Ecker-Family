@@ -250,6 +250,8 @@
   #hueBriDlg .hb { background:#fffdf6; border:3px solid #262319; border-radius:22px; padding:18px; width:100%; max-width:380px; }
   .hue-row { display:flex; gap:6px; align-items:center; flex:1 1 100%; }
   .hue-row .hue-tog { flex:1 1 auto; }
+  .hue-lhead { flex:1 1 100%; width:100%; border:2.5px solid #262319; background:#fff; border-radius:14px; min-height:48px; padding:8px 14px; font:inherit; font-size:16px; font-weight:800; cursor:pointer; display:flex; justify-content:space-between; align-items:center; box-sizing:border-box; }
+  .hue-lcl .hue-list .hue-room { display:none; }
   .hue-chev { border:2.5px solid #262319; background:#fff; border-radius:14px; min-height:48px; min-width:48px; font-size:18px; cursor:pointer; font-family:inherit; }
   .hue-sub { flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px; }
   .hue-room, .hue-pin, .hue-tog { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
@@ -7640,6 +7642,8 @@
   }
   let hueSt = null, huePlan = null, huePlanAt = 0;
   const hueOpen = new Set();
+  let hueListClosed = false; try { hueListClosed = localStorage.getItem('ef-hue-list-closed') === '1'; } catch (e) {}
+  const hueLhead = () => '<button class="hue-lhead" data-lh="1"><span>💡 Lampen &amp; Räume</span><span>' + (hueListClosed ? '▾' : '▴') + '</span></button>';
   function huePinsHtml(pins, st, editSel) {
     const roomOf = id => st.rooms.find(r => r.id === id), lightOf = id => st.lights.find(l => l.id === id);
     return pins.map(p => {
@@ -7665,7 +7669,8 @@
       return '<button class="hue-chev" data-exp="' + id + '" aria-label="Details">' + (open ? '▴' : '▾') + '</button>';
     };
     const list = box.querySelector('.hue-list');
-    list.innerHTML = st.rooms.map(r => {
+    box.classList.toggle('hue-lcl', hueListClosed);
+    list.innerHTML = hueLhead() + st.rooms.map(r => {
       const sc = st.scenes.filter(x => x.room === r.id).slice(0, 5);
       const ls = st.lights.filter(l => l.room === r.id);
       const inner = (sc.length ? '<div class="hue-sc">' + sc.map(x => '<button data-sc="' + x.id + '">' + escapeHtml(x.name) + '</button>').join('') + '</div>' : '') + (ls.length ? '<div class="hue-sc">' + ls.map(chip).join('') + '</div>' : '');
@@ -7823,6 +7828,11 @@
         document.querySelectorAll('.hue-pin.on, .hue-tog.on').forEach(x => x.classList.remove('on'));
         hueBusy = Date.now() + 4000;
         hueApi('/hue/alloff').then(j => showToast(j.failed ? 'Nicht alle Lichter konnten ausgeschaltet werden' : 'Alle Lichter aus'), e => showToast('Licht: ' + e.message)).finally(() => { hueBusy = 0; delete t.dataset.busy; reload(); });
+        return;
+      }
+      if (t.dataset.lh) {
+        hueListClosed = !hueListClosed; try { localStorage.setItem('ef-hue-list-closed', hueListClosed ? '1' : '0'); } catch (e) {}
+        document.querySelectorAll('#hueBox, #padHue').forEach(b => { b.classList.toggle('hue-lcl', hueListClosed); b.querySelectorAll('.hue-lhead span:last-child').forEach(x => x.textContent = hueListClosed ? '▾' : '▴'); });
         return;
       }
       if (t.dataset.exp) {
@@ -8470,7 +8480,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.46';
+  const APP_VERSION = '2.47';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
