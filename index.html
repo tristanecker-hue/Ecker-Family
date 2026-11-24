@@ -271,6 +271,14 @@
   body.pad-mode { overflow:hidden; }
   #padScreen { transform-origin: 0 0; }
   #padNight { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; z-index:9999; transition:opacity 2.5s ease; }
+  #padPop { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:16px; }
+  #padPop.hidden { display:none; }
+  #padPopBox { background:var(--paper,#FFFDF8); border:2.5px solid #262319; border-radius:22px; padding:clamp(14px,2.4vmin,28px); width:min(900px,100%); max-height:92vh; overflow:auto; box-shadow:6px 6px 0 #262319; }
+  #padPopBox .pp-x { border:2.5px solid #262319; background:#FFD84D; border-radius:999px; padding:8px 18px; font-family:inherit; font-weight:700; font-size:clamp(14px,2.2vmin,24px); cursor:pointer; display:block; margin:0 0 10px auto; }
+  #padPopBody .pad-person { margin:0; }
+  #padPopBody .pad-pn { font-size:clamp(24px,4vmin,44px); }
+  #padPopBody .pad-t { font-size:clamp(18px,3vmin,34px); padding:6px 0; }
+  #padPopBody .pad-row { font-size:clamp(18px,3vmin,34px); }
   #padFoot { text-align:center; font-size:12px; opacity:.5; margin-top: 14px; }
   body.pad-mode .wrap { max-width: none; padding: 0; }
   @media (max-width: 760px) { #padScreen .pad-main { grid-template-columns: 1fr; } #padScreen .pad-people { grid-template-columns: 1fr; } }
@@ -1658,15 +1666,16 @@
     <div class="pad-main">
       <div class="pad-col">
         <div class="pad-card" onclick="padWeekOpen()" style="cursor:pointer;"><div class="pad-h">📅 Termine <small style="font-weight:600;opacity:.5;font-size:.6em;">· Woche ▸</small></div><div id="padCal"></div></div>
-        <div class="pad-card"><div class="pad-h">🍽️ Essen</div><div id="padMeal"></div></div>
-        <div class="pad-card hidden" id="padBdayCard"><div class="pad-h">🎂 Geburtstage</div><div id="padBday"></div></div>
+        <div class="pad-card" onclick="padPop('meal')" style="cursor:pointer;"><div class="pad-h">🍽️ Essen</div><div id="padMeal"></div></div>
+        <div class="pad-card hidden" id="padBdayCard" onclick="padPop('bday')" style="cursor:pointer;"><div class="pad-h">🎂 Geburtstage</div><div id="padBday"></div></div>
       </div>
-      <div id="padTodos" class="pad-people"></div>
-      <div class="pad-card hidden" id="padShowCard"><div id="padShow"><img alt=""><img alt=""></div></div>
+      <div id="padTodos" class="pad-people" onclick="const c=event.target.closest('.pad-person');if(c)padPop('t:'+c.dataset.k)"></div>
+      <div class="pad-card hidden" id="padShowCard" onclick="padPop('show')"><div id="padShow"><img alt=""><img alt=""></div></div>
       <div class="pad-card hidden" id="padHueCard"><div class="pad-h">💡 Licht</div><div id="padHue"></div></div>
     </div>
     <div id="padPlans"></div>
     <div id="padFoot"></div>
+    <div id="padPop" class="hidden" onclick="if(event.target===this)padPopClose()"><div id="padPopBox"><button class="pp-x" onclick="padPopClose()">✕ Schliessen</button><div id="padPopBody"></div></div></div>
     <div id="padNight"></div>
     <div id="padWeek" class="hidden">
       <div class="pw-top"><button onclick="padWeekGo(-1)">‹</button><div id="padWeekTitle"></div><button onclick="padWeekGo(1)">›</button><button onclick="padWeekClose()" style="margin-left:auto;">✕ Schliessen</button></div>
@@ -7513,18 +7522,42 @@
   }
   function padRenderBday() {
     const card = document.getElementById('padBdayCard'); if (!card) return;
+    const list = padBdHtml(3);
+    card.classList.toggle('hidden', !padBd.length);
+    document.getElementById('padBday').innerHTML = list;
+  }
+  function padBdHtml(max) {
     const t = new Date(); t.setHours(0, 0, 0, 0);
-    const list = padBd.map(b => {
+    return padBd.map(b => {
       let y = t.getFullYear(), nx = new Date(y, b.m - 1, b.d);
       if (nx < t) { y++; nx = new Date(y, b.m - 1, b.d); }
-      return { b, days: Math.round((nx - t) / 86400000), age: b.y && b.age ? y - b.y : null };
-    }).sort((x, y) => x.days - y.days).slice(0, 3);
-    card.classList.toggle('hidden', !list.length);
-    document.getElementById('padBday').innerHTML = list.map(x => {
+      return { b, days: Math.round((nx - t) / 86400000), age: b.y && b.age ? y - b.y : null, nx };
+    }).sort((x, y) => x.days - y.days).slice(0, max).map(x => {
       const when = x.days === 0 ? '🎉 heute!' : x.days === 1 ? 'morgen' : 'noch ' + x.days + ' Tage';
-      return `<div class="pad-row"><span>${escapeHtml(x.b.n)}${x.age ? ' wird ' + x.age : ''}</span><b style="margin-left:auto;text-align:right;${x.days === 0 ? 'color:#c0271d;' : ''}">${when}</b></div>`;
+      return `<div class="pad-row"><span>${escapeHtml(x.b.n)}${x.age ? ' wird ' + x.age : ''}${max > 3 ? ' <small style="opacity:.6">· ' + x.b.d + '.' + x.b.m + '.</small>' : ''}</span><b style="margin-left:auto;text-align:right;${x.days === 0 ? 'color:#c0271d;' : ''}">${when}</b></div>`;
     }).join('');
   }
+  // Pad: Detail-Fenster beim Antippen einer Kachel
+  function padPop(what) {
+    let h = '';
+    if (what.startsWith('t:')) h = padTodosHtml(true, what.slice(2)) || '<div class="pad-ok">Nichts offen</div>';
+    else if (what === 'bday') h = '<div class="pad-h">🎂 Geburtstage</div>' + (padBdHtml(99) || '<div class="pad-ok">Keine erfasst</div>');
+    else if (what === 'meal') {
+      const todayD = new Date(), p = [0, 7].map(off => { const m = mondayOf(new Date(todayD.getTime() + off * 86400000)); return { m, v: padMeals[isoDate(m)] }; });
+      h = '<div class="pad-h">🍽️ Essen</div>' + p.map((w, i) => `<div class="pad-sub">${i ? 'Nächste Woche' : 'Diese Woche'}</div>` + DAYS.map(([k, nm]) => {
+        const v = w.v && w.v.days && w.v.days[k]; if (!v || (!v.m && !v.a)) return '';
+        const isT = i === 0 && isoDate(new Date()) === isoDate(new Date(w.m.getFullYear(), w.m.getMonth(), w.m.getDate() + DAYS.findIndex(d => d[0] === k)));
+        return `<div class="pad-row" style="${isT ? 'font-weight:800;' : ''}"><b style="min-width:6em;">${nm}</b><span>${v.m ? 'Mittag: ' + escapeHtml(v.m) : ''}${v.m && v.a ? '<br>' : ''}${v.a ? 'Abend: ' + escapeHtml(v.a) : ''}</span></div>`;
+      }).join('')).join('');
+    } else if (what === 'show') {
+      const im = document.querySelector('#padShow img.on'); if (!im || !im.src) return;
+      h = `<img src="${im.src}" style="display:block;max-width:100%;max-height:82vh;margin:0 auto;border-radius:14px;">`;
+    }
+    if (!h) return;
+    document.getElementById('padPopBody').innerHTML = h;
+    document.getElementById('padPop').classList.remove('hidden');
+  }
+  function padPopClose() { document.getElementById('padPop').classList.add('hidden'); }
   function padNightCheck() {
     const el = document.getElementById('padNight'); if (!el) return;
     const n = padNightCfg || {}, now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
@@ -7565,8 +7598,8 @@
     };
     document.getElementById('padMeal').innerHTML = (meal(0, 'Heute') + meal(1, 'Morgen')) || '<div class="pad-ok">Noch nichts geplant</div>';
   }
-  function padRenderTodos() {
-    const el = document.getElementById('padTodos'); if (!el) return;
+  function padRenderTodos() { const el = document.getElementById('padTodos'); if (el) el.innerHTML = padTodosHtml(false); }
+  function padTodosHtml(full, only) {
     const today = todayStr(), nameOf = k => ACCOUNTS[k] || k;
     const byDue = (x, y) => (x.dueAt || '9999').localeCompare(y.dueAt || '9999') || (x.createdAt || 0) - (y.createdAt || 0);
     const row = t => {
@@ -7574,14 +7607,15 @@
       const sub = t.claimedAt ? '⏳ gemeldet, wartet auf Bestätigung' : (late ? '⚠ überfällig seit ' + t.dueAt.split('-').reverse().slice(0, 2).join('.') + '.' : (t.dueAt === today ? 'heute fällig' : (t.dueAt ? 'bis ' + t.dueAt.split('-').reverse().slice(0, 2).join('.') + '.' : '')));
       return `<div class="pad-t ${late ? 'late' : ''}">${escapeHtml(t.text)}${sub ? `<small>${sub}</small>` : ''}</div>`;
     };
-    const cards = Object.keys(ACCOUNTS).map(k => {
+    const L = full ? 999 : 6;
+    const cards = Object.keys(ACCOUNTS).filter(k => !only || only === k).map(k => {
       const st = KID_STYLE[k] || KID_STYLE.claudia;
       const open = padTodos.filter(t => t.assigneeKey === k && !t.done).sort(byDue);
-      return `<div class="pad-person" style="--kc:${st.kc};--kbg:${st.kbg}"><div class="pad-pn">${escapeHtml(nameOf(k))}<span>${open.length ? open.length + ' offen' : '✅ alles fertig'}</span></div>${open.slice(0, 6).map(row).join('')}${open.length > 6 ? `<div class="pad-t">… und ${open.length - 6} weitere</div>` : ''}</div>`;
+      return `<div class="pad-person" data-k="${k}" style="--kc:${st.kc};--kbg:${st.kbg}"><div class="pad-pn">${escapeHtml(nameOf(k))}<span>${open.length ? open.length + ' offen' : '✅ alles fertig'}</span></div>${open.slice(0, L).map(row).join('')}${open.length > L ? `<div class="pad-t">… und ${open.length - L} weitere</div>` : ''}</div>`;
     }).join('');
     const pool = padTodos.filter(t => t.assigneeKey === POOL && !t.done).sort(byDue);
-    const poolHtml = pool.length ? `<div class="pad-person pad-pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>wer zuerst kommt!</span></div>${pool.slice(0, 6).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
-    el.innerHTML = cards + poolHtml;
+    const poolHtml = pool.length && (!only || only === 'pool') ? `<div class="pad-person pad-pool" data-k="pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>wer zuerst kommt!</span></div>${pool.slice(0, L).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
+    return cards + poolHtml;
   }
 
   // ---------- Login (Cloud-Modus) ----------
@@ -7891,7 +7925,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.28';
+  const APP_VERSION = '2.29';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
