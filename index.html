@@ -232,6 +232,10 @@
   #padScreen .pad-pn span { font-size: clamp(12px, 1.7vmin, 20px); font-weight:700; }
   #padScreen .pad-t { font-size: clamp(13px, 2vmin, 24px); padding: 3px 0; border-top: 1.5px dashed rgba(38,35,25,.2); }
   #padScreen .pad-t.late { color:#c0271d; font-weight:800; }
+  #padScreen .pad-t.hasck, #padPopBody .pad-t.hasck { display:flex; gap:clamp(6px,1.2vmin,14px); align-items:flex-start; }
+  .pad-ck { flex:none; min-width:clamp(30px,4.6vmin,52px); height:clamp(30px,4.6vmin,52px); border:2.5px solid #262319; border-radius:10px; background:#fff; font-size:clamp(16px,2.6vmin,30px); line-height:1; cursor:pointer; padding:0 4px; font-family:inherit; }
+  .pad-ck.wait { background:#FFE9A8; } .pad-ck.arm { background:#9BE08C; font-weight:800; }
+  .pad-tt { min-width:0; flex:1; }
   #padScreen .pad-t small { display:block; font-size: .72em; opacity:.75; }
   #padScreen .pad-ok { font-size: clamp(13px, 2vmin, 24px); padding: 4px 0; }
   #padScreen .pad-pool { grid-column: 1 / -1; background:#FFF6D6; border:3px solid #262319; }
@@ -8132,16 +8136,41 @@
       if (!v || (!v.m && !v.a)) return '';
       return `<div class="pad-sub">${label}</div>` + (v.m ? `<div class="pad-row"><b>Mittag</b><span>${escapeHtml(v.m)}</span></div>` : '') + (v.a ? `<div class="pad-row"><b>Abend</b><span>${escapeHtml(v.a)}</span></div>` : '');
     };
-    document.getElementById('padMeal').innerHTML = (meal(0, 'Heute') + meal(1, 'Morgen')) || '<div class="pad-ok">Noch nichts geplant</div>';
+    const mo = now.getHours() >= 20 ? 1 : 0;   // ab 20 Uhr: Menü von morgen (und übermorgen)
+    document.getElementById('padMeal').innerHTML = (meal(mo, mo ? 'Morgen' : 'Heute') + meal(mo + 1, mo ? 'Übermorgen' : 'Morgen')) || '<div class="pad-ok">Noch nichts geplant</div>';
   }
   function padRenderTodos() { const el = document.getElementById('padTodos'); if (el) el.innerHTML = padTodosHtml(false); }
+  // Pendenzen auf dem Pad abhaken (gleiche Regeln wie in der App): Kinder melden nur «erledigt» (Eltern bestätigen),
+  // Aufgaben von Tristan und Claudia werden direkt erledigt (zweiter Tipp zur Sicherheit). Wiederkehrende und Zusatzaufgaben: nur am Handy.
+  let padCkArm = null;
+  async function padTodoTap(id, ev) {
+    if (ev) ev.stopPropagation();
+    const t = padTodos.find(x => x.id === id); if (!t || t.done || !cloudEnabled) return;
+    const kid = KIDS.map(userKey).includes(t.assigneeKey);
+    if (!kid && (t.repeat || !['tristan', 'claudia'].includes(t.assigneeKey))) return;
+    if (!kid && !(padCkArm && padCkArm.id === id && Date.now() < padCkArm.until)) {
+      padCkArm = { id, until: Date.now() + 4000 };
+      document.querySelectorAll('.pad-ck[data-ck="' + id + '"]').forEach(b => { b.textContent = '✔?'; b.classList.add('arm'); });
+      setTimeout(() => { if (padCkArm && padCkArm.id === id) { padCkArm = null; padRenderTodos(); } }, 4100);
+      return;
+    }
+    padCkArm = null;
+    const patch = kid ? { claimedAt: t.claimedAt ? null : Date.now() } : { done: true, doneAt: Date.now(), claimedAt: null }, before = { ...t };
+    try { await withTimeout(cloudApi.updateTodo(id, patch, false)); } catch (e) { showToast('Abhaken fehlgeschlagen – Verbindung prüfen'); return; }
+    Object.assign(t, patch);
+    try { pushSend(pushTodoMsgs(before, t)); if (t.done && cloudApi.idToken) Promise.resolve(cloudApi.idToken()).then(tok => fetch(PUSH_URL + '/remind-cancel', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify({ id: t.id }) })).catch(() => {}); } catch (e) {}
+    showToast(kid ? (t.claimedAt ? '⏳ Gemeldet – Mama oder Papa bestätigt' : 'Meldung zurückgenommen') : '✅ Erledigt');
+    padRenderTodos(); padFitSoon();
+  }
   function padTodosHtml(full, only) {
     const today = todayStr(), nameOf = k => ACCOUNTS[k] || k;
     const byDue = (x, y) => (x.dueAt || '9999').localeCompare(y.dueAt || '9999') || (x.createdAt || 0) - (y.createdAt || 0);
     const row = t => {
       const late = t.dueAt && t.dueAt < today;
       const sub = t.claimedAt ? '⏳ gemeldet, wartet auf Bestätigung' : (late ? '⚠ überfällig seit ' + t.dueAt.split('-').reverse().slice(0, 2).join('.') + '.' : (t.dueAt === today ? 'heute fällig' : (t.dueAt ? 'bis ' + t.dueAt.split('-').reverse().slice(0, 2).join('.') + '.' : '')));
-      return `<div class="pad-t ${late ? 'late' : ''}">${escapeHtml(t.text)}${sub ? `<small>${sub}</small>` : ''}</div>`;
+      const kid = KIDS.map(userKey).includes(t.assigneeKey), canCk = cloudEnabled && (kid || !t.repeat);
+      const ck = canCk ? `<button class="pad-ck ${t.claimedAt ? 'wait' : ''}" data-ck="${t.id}" onclick="padTodoTap('${t.id}',event)" aria-label="Abhaken">${t.claimedAt ? '⏳' : '☐'}</button>` : '';
+      return `<div class="pad-t ${late ? 'late' : ''} ${ck ? 'hasck' : ''}">${ck}<div class="pad-tt">${escapeHtml(t.text)}${sub ? `<small>${sub}</small>` : ''}</div></div>`;
     };
     const L = full ? 999 : 6;
     const cards = Object.keys(ACCOUNTS).filter(k => !only || only === k).map(k => {
@@ -8475,7 +8504,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.51';
+  const APP_VERSION = '2.53';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
