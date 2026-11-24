@@ -130,6 +130,40 @@
   #blCanvas { width:100%; max-width:420px; display:block; margin:0 auto; border-radius:14px; border:3px solid #262319; touch-action:none; background:#dbeafe; }
   body.doodle #chatScreen { --cc:var(--k-plan); --cb:var(--k-plan-b); --hl:var(--k-plan-h); }
   body.doodle #tileChat { --tc:var(--k-plan); --tb:var(--k-plan-b); }
+  .zt-compose textarea { width:100%; box-sizing:border-box; background:#FFE97A; border:2px solid #262319; border-radius:6px; padding:10px 12px; font:inherit; font-size:17px; resize:none; box-shadow:2px 3px 0 rgba(0,0,0,.2); }
+  .zt-lbl { font-size:12px; font-weight:800; opacity:.6; margin:10px 0 4px; text-transform:uppercase; letter-spacing:.04em; }
+  .zt-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .zt-chips button { border:2px solid #262319; background:#fff; border-radius:999px; padding:6px 12px; font:inherit; font-weight:700; font-size:14px; cursor:pointer; }
+  .zt-chips button.on { background:#FFD84D; }
+  .zt-cols { display:flex; gap:10px; }
+  .zt-cols button { width:34px; height:34px; border-radius:50%; border:2px solid #262319; cursor:pointer; padding:0; }
+  .zt-cols button.on { outline:3px solid #262319; outline-offset:2px; }
+  .zt-prev { position:relative; margin-top:10px; } .zt-prev img { max-width:100%; max-height:180px; border-radius:8px; border:2px solid #262319; display:block; }
+  .zt-prev button { position:absolute; top:4px; left:4px; width:30px; height:30px; border-radius:50%; border:2px solid #262319; background:#fff; font-weight:800; cursor:pointer; }
+  .zt-actions { display:flex; gap:8px; margin-top:12px; }
+  .zt-h { font-weight:800; font-size:15px; margin:18px 2px 8px; }
+  .zt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; padding:4px 2px 10px; }
+  .zt-note { position:relative; padding:12px 12px 10px; border-radius:2px; box-shadow:2px 4px 8px rgba(0,0,0,.25); font-size:16px; line-height:1.25; word-break:break-word; white-space:pre-wrap; transform:rotate(var(--r,0deg)); }
+  .zt-note .zt-m { font-size:11px; opacity:.65; margin-top:8px; white-space:normal; }
+  .zt-note img { width:100%; border-radius:4px; margin-top:8px; display:block; cursor:pointer; background:#0001; min-height:40px; }
+  .zt-note .zt-b { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .zt-note .zt-b button { border:2px solid #262319; background:#fff; border-radius:10px; padding:4px 9px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+  .zt-note.done { opacity:.8; }
+  #zBox { position:fixed; inset:0; background:#000d; z-index:100; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:16px; }
+  #zBox.open { display:flex; } #zBox img { max-width:100%; max-height:76vh; border-radius:8px; }
+  #zBox button { border:2px solid #fff; background:#0006; color:#fff; border-radius:14px; padding:10px 18px; font-size:16px; cursor:pointer; }
+  #padScreen .pad-zbox { grid-column:1 / -1; }
+  #padScreen .pad-zbox .pad-h { font-size:clamp(16px,2.4vmin,28px); margin-bottom:6px; }
+  #padScreen .pz-row { display:flex; flex-wrap:wrap; gap:clamp(8px,1.4vmin,16px); }
+  #padScreen .pz-n { flex:1 1 clamp(120px,22vmin,260px); max-width:clamp(160px,34vmin,340px); padding:8px 10px 6px; border-radius:2px; box-shadow:2px 3px 7px rgba(0,0,0,.25); transform:rotate(var(--r,0deg)); font-size:clamp(13px,2.1vmin,24px); line-height:1.2; word-break:break-word; cursor:pointer; }
+  #padScreen .pz-n small { display:block; font-size:.7em; opacity:.65; margin-top:4px; }
+  #padZNew { position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:3vmin; }
+  #padZNew.hidden { display:none; }
+  #padZNew .pz-note { position:relative; width:min(86vw,1100px); padding:5vmin 5vmin 3.5vmin; box-shadow:8px 12px 30px rgba(0,0,0,.5); border-radius:3px; transform:rotate(-2deg); }
+  #padZNew .pz-tape { position:absolute; top:-16px; left:50%; width:90px; height:32px; background:rgba(255,255,255,.55); transform:translateX(-50%) rotate(3deg); box-shadow:0 1px 4px rgba(0,0,0,.2); }
+  #padZNew .pz-text, #padPopBody .pz-text { font-size:clamp(26px,8vmin,90px); line-height:1.1; font-weight:700; white-space:pre-wrap; word-break:break-word; }
+  #padZNew .pz-who { font-size:clamp(14px,3.2vmin,34px); opacity:.65; margin-top:2.5vmin; }
+  #padZNew img { display:block; max-width:100%; max-height:44vh; margin:2.5vmin auto 0; border-radius:8px; }
   #chatList { display:flex; flex-direction:column; gap:6px; padding:4px 0 96px; min-height:40vh; }
   .chat-day { align-self:center; font-size:12px; color:#8a8170; margin:8px 0 2px; }
   .chat-row { display:flex; gap:8px; align-items:flex-end; max-width:86%; }
@@ -1433,9 +1467,9 @@
         <div class="account-avatar" style="background:#F2B632;">💡</div>
         <div class="account-name">Licht</div>
       </div>
-      <div class="account-btn hidden" id="tileChat" role="button" tabindex="0" onclick="openChat()" onkeydown="if(event.key==='Enter'||event.key===' '){openChat()}">
-        <div class="account-avatar" style="background:#3FA7D6;">💬</div>
-        <div class="account-name">Chat</div>
+      <div class="account-btn hidden" id="tileChat" role="button" tabindex="0" onclick="openZettel()" onkeydown="if(event.key==='Enter'||event.key===' '){openZettel()}">
+        <div class="account-avatar" style="background:#F2C230;">📌</div>
+        <div class="account-name">Zettel</div>
         <div class="account-hint" id="chatBadge"></div>
       </div>
       <div class="account-btn hidden" id="tilePunkte" role="button" tabindex="0" onclick="openPunkte()" onkeydown="if(event.key==='Enter'||event.key===' '){openPunkte()}">
@@ -1676,6 +1710,7 @@
     <div id="padPlans"></div>
     <div id="padFoot"></div>
     <div id="padPop" class="hidden" onclick="if(event.target===this)padPopClose()"><div id="padPopBox"><button class="pp-x" onclick="padPopClose()">✕ Schliessen</button><div id="padPopBody"></div></div></div>
+    <div id="padZNew" class="hidden" onclick="padZNewClose()"><div class="pz-note" id="padZNote"><div class="pz-tape"></div><div class="pz-text" id="padZText"></div><img id="padZImg" class="hidden" alt=""><div class="pz-who" id="padZWho"></div></div></div>
     <div id="padNight"></div>
     <div id="padWeek" class="hidden">
       <div class="pw-top"><button onclick="padWeekGo(-1)">‹</button><div id="padWeekTitle"></div><button onclick="padWeekGo(1)">›</button><button onclick="padWeekClose()" style="margin-left:auto;">✕ Schliessen</button></div>
@@ -1700,26 +1735,27 @@
     <div class="summary-header">
       <button class="back-btn" onclick="goHome()">←</button>
       <div>
-        <h1>Familienchat</h1>
-        <div class="sub">Nur für uns vier 💬</div>
+        <h1>📌 Zettel</h1>
+        <div class="sub">Post-its für die Familie und das Pad</div>
       </div>
     </div>
     <div class="navbar" data-nav="chat"></div>
-    <div id="chatList"></div>
-    <div class="chat-bar">
-      <div id="chatPanel"></div>
-      <div id="chatRec"><span class="rec-dot"></span><span class="rec-t" id="chatRecT">0:00</span><button onclick="chatRecStop(false)">Abbrechen</button><button class="go" onclick="chatRecStop(true)">Senden ➤</button></div>
-      <div class="chat-tools">
-        <button class="chat-tool" onclick="document.getElementById('chatFile').click()" aria-label="Foto senden" title="Foto">📷</button>
-        <button class="chat-tool" id="chatMic" onclick="chatRecStart()" aria-label="Sprachnachricht" title="Sprachnachricht">🎤</button>
-        <button class="chat-tool" onclick="chatPanelToggle()" aria-label="Emojis und Sticker" title="Emojis">😊</button>
+    <div class="card zt-compose">
+      <textarea id="ztText" rows="3" maxlength="300" placeholder="Was soll draufstehen? …"></textarea>
+      <div class="zt-lbl">Für wen?</div>
+      <div id="ztTo" class="zt-chips"></div>
+      <div class="zt-lbl">Farbe</div>
+      <div id="ztCol" class="zt-cols"></div>
+      <div id="ztPrev" class="zt-prev hidden"><img id="ztPrevImg" alt=""><button onclick="ztPhotoClear()" aria-label="Foto entfernen">✕</button></div>
+      <div class="zt-actions">
+        <button class="btn" onclick="document.getElementById('ztFile').click()">📷 Foto</button>
+        <button class="btn" id="ztSend" onclick="ztSend()" style="flex:1;">📌 Aufkleben</button>
       </div>
-      <textarea id="chatInput" rows="1" maxlength="500" placeholder="Nachricht …" enterkeyhint="send"></textarea>
-      <button id="chatSend" onclick="chatSend()" aria-label="Senden">➤</button>
-      <input type="file" id="chatFile" accept="image/*" class="hidden" onchange="chatPhoto(this)">
-      <div class="chat-ver" id="chatVer"></div>
+      <input type="file" id="ztFile" accept="image/*" class="hidden" onchange="ztPhoto(this)">
     </div>
-    <div id="chatBox" onclick="if(event.target===this)chatBoxClose()"><img id="chatBoxImg" alt="Foto"><div class="cb-btns"><button id="chatBoxDel" onclick="chatBoxDelete()">🗑 Löschen</button><button onclick="chatBoxClose()">✕ Schliessen</button></div></div>
+    <div id="ztList"></div>
+    <div class="chat-ver" id="chatVer" style="padding:14px 0;"></div>
+    <div id="zBox" onclick="if(event.target===this)ztBoxClose()"><img id="zBoxImg" alt="Foto"><div class="cb-btns"><button onclick="ztBoxClose()">✕ Schliessen</button></div></div>
   </div>
 
   <div id="kalenderScreen" class="hidden">
@@ -2515,7 +2551,7 @@
   // Meldung angetippt -> direkt in den passenden Bereich (Chat, Aufgaben, Sterne)
   let pendingGo = null;
   const GO_TARGETS = {
-    chat: () => hasFeature('chat') && openChat(),
+    chat: () => hasFeature('chat') && openZettel(),
     todos: () => hasFeature('todo') && openTodos(),
     punkte: () => hasFeature('punkte') && openPunkte()
   };
@@ -3022,7 +3058,7 @@
     { key: 'spiele', label: 'Kachel Spiele' },
     { key: 'punkte', label: 'Kachel Sterne & Belohnungen' },
     { key: 'essen', label: 'Kacheln Wochenplan & Rezepte' },
-    { key: 'chat', label: 'Kachel Familienchat' }
+    { key: 'chat', label: 'Kachel Zettel (Post-its)' }
   ].filter(f => PUNKTE_AKTIV || f.key !== 'punkte');
   let settings = null;
 
@@ -3088,7 +3124,7 @@
     document.getElementById('tileRezepte').classList.toggle('hidden', !hasFeature('essen'));
     document.getElementById('tileChat').classList.toggle('hidden', !(cloudEnabled && hasFeature('chat')));
     document.getElementById('tileHue').classList.toggle('hidden', !(cloudEnabled && isAdmin()));
-    if (cloudEnabled && hasFeature('chat')) chatCheck();
+    if (cloudEnabled && hasFeature('chat')) zettelCheck();
     if (hasFeature('essen')) loadEssenSub();
     updateHomeInfo(); pushRefresh();
     const hint = document.getElementById('homeHint');
@@ -3754,9 +3790,10 @@
     try { const d = await cloudApi.photoGet(id); if (d) chatPhotoCache[id] = d; return d; } catch (e) { return null; }
   }
   function chatStop() {
+    zettelStop();
     if (rec) chatRecStop(false);
     if (recAudio) { try { recAudio.a.pause(); } catch (e) {} recAudio = null; } if (chatUnsub) { try { chatUnsub(); } catch (e) {} chatUnsub = null; } }
-  async function openChat() {
+  async function openChatLegacy() {
     if (!currentUser || !cloudEnabled) return;
     hideAllScreens(); refreshNavs();
     document.getElementById('chatScreen').classList.remove('hidden');
@@ -3921,6 +3958,120 @@
     inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(110, inp.scrollHeight) + 'px'; });
     inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !/iPhone|iPad|iPod|Android/.test(navigator.userAgent)) { e.preventDefault(); chatSend(); } });
   });
+
+
+  // ---------- Zettel (Post-its) – ersetzt den Chat ----------
+  const ZCOL = ['#FFE97A', '#FFC4DA', '#BDEBFF', '#C8F0B0'];
+  let zNotes = new Map(), zUnsubs = [], zTo = new Set(), zCol = 0, zPhoto = '', zSending = false;
+  const zPhotoCache = {};
+  const zRot = id => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) | 0; return ((Math.abs(h) % 41) - 20) / 10; };
+  const zName = k => k === 'pad' ? '📺 Pad' : (ACCOUNTS[k] || k);
+  const zSeenKey = () => 'ef-zettel-seen-' + userKey(currentUser);
+  async function zettelCheck() {
+    try {
+      const me = userKey(currentUser), list = await withTimeout(cloudApi.zettelFor(me));
+      const n = list.filter(z => !z.done && z.from !== me).length;
+      const b = document.getElementById('chatBadge');
+      if (b) b.textContent = n ? '📌 ' + n + ' offen' : '';
+    } catch (e) {}
+  }
+  function zettelStop() { zUnsubs.forEach(u => { try { u(); } catch (e) {} }); zUnsubs = []; }
+  async function openZettel() {
+    if (!currentUser || !cloudEnabled) return;
+    hideAllScreens(); refreshNavs();
+    document.getElementById('chatScreen').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
+    zNotes = new Map(); ztComposeBuild(); ztRender();
+    zettelStop();
+    const me = userKey(currentUser);
+    try { zUnsubs.push(cloudApi.zettelListen(me, list => { zNotes = new Map(list.map(z => [z.id, z])); ztRender(); zettelBadgeClear(); }, () => { document.getElementById('ztList').innerHTML = '<div class="todo-empty">Zettel konnten nicht geladen werden – Verbindung prüfen.</div>'; })); } catch (e) {}
+  }
+  function zettelBadgeClear() { const b = document.getElementById('chatBadge'); if (b) { const me = userKey(currentUser); const n = [...zNotes.values()].filter(z => !z.done && z.from !== me).length; b.textContent = n ? '📌 ' + n + ' offen' : ''; } }
+  function ztComposeBuild() {
+    const me = userKey(currentUser);
+    if (!zTo.size) Object.keys(ACCOUNTS).filter(k => k !== me).forEach(k => zTo.add(k));
+    zTo.delete(me);
+    ztChips();
+    document.getElementById('ztCol').innerHTML = ZCOL.map((c, i) => `<button class="${i === zCol ? 'on' : ''}" style="background:${c}" onclick="zCol=${i};ztComposeBuild()" aria-label="Farbe ${i + 1}"></button>`).join('');
+    document.getElementById('ztText').style.background = ZCOL[zCol];
+  }
+  function ztChips() {
+    const me = userKey(currentUser), others = Object.keys(ACCOUNTS).filter(k => k !== me);
+    const all = others.every(k => zTo.has(k));
+    document.getElementById('ztTo').innerHTML = `<button class="${all ? 'on' : ''}" onclick="ztToggle('*')">👪 Alle</button>` + others.map(k => `<button class="${zTo.has(k) ? 'on' : ''}" onclick="ztToggle('${k}')">${escapeHtml(ACCOUNTS[k])}</button>`).join('') + `<button class="${zTo.has('pad') ? 'on' : ''}" onclick="ztToggle('pad')">📺 Pad</button>`;
+  }
+  function ztToggle(k) {
+    const me = userKey(currentUser), others = Object.keys(ACCOUNTS).filter(x => x !== me);
+    if (k === '*') { const all = others.every(x => zTo.has(x)); others.forEach(x => all ? zTo.delete(x) : zTo.add(x)); }
+    else if (zTo.has(k)) zTo.delete(k); else zTo.add(k);
+    ztChips();
+  }
+  async function ztPhoto(inp) {
+    const f = inp.files && inp.files[0]; inp.value = ''; if (!f) return;
+    try { zPhoto = await chatCompress(f); document.getElementById('ztPrevImg').src = zPhoto; document.getElementById('ztPrev').classList.remove('hidden'); }
+    catch (e) { showToast('Foto konnte nicht geladen werden'); }
+  }
+  function ztPhotoClear() { zPhoto = ''; document.getElementById('ztPrev').classList.add('hidden'); }
+  async function ztSend() {
+    if (zSending) return;
+    const text = document.getElementById('ztText').value.trim();
+    if (!text && !zPhoto) { showToast('Schreib etwas oder füge ein Foto hinzu'); return; }
+    if (!zTo.size) { showToast('Wähle, für wen der Zettel ist'); return; }
+    zSending = true; document.getElementById('ztSend').disabled = true;
+    const me = userKey(currentUser), id = chatNewId();
+    const m = { id, from: me, name: currentUser, to: [...zTo], text: text.slice(0, 300), at: Date.now(), color: ZCOL[zCol], done: false };
+    try {
+      if (zPhoto) { await withTimeout(cloudApi.zphotoPut(id, { from: me, data: zPhoto, at: m.at }), 30000); zPhotoCache[id] = zPhoto; m.photo = true; }
+      try { await withTimeout(cloudApi.zettelAdd(m)); } catch (e) { if (m.photo) { try { await cloudApi.zphotoDelete(id); } catch (x) {} } throw e; }
+      zNotes.set(id, m); ztRender();
+      pushSend([{ to: m.to.filter(k => k !== 'pad'), title: '📌 Zettel von ' + currentUser, body: (m.text || '📷 Foto').slice(0, 120), url: './#chat' }]);
+      document.getElementById('ztText').value = ''; ztPhotoClear(); showToast('Zettel aufgeklebt 📌');
+    } catch (e) { showToast('Senden fehlgeschlagen – bitte Verbindung prüfen'); }
+    zSending = false; document.getElementById('ztSend').disabled = false;
+  }
+  function ztNoteHtml(z, kind) {
+    const me = userKey(currentUser), parent = isParentUser(), mine = z.from === me, forMe = (z.to || []).includes(me);
+    const to = (z.to || []).map(zName).join(', ');
+    const btns = [];
+    if (!z.done && (forMe || mine || parent)) btns.push(`<button onclick="ztDone('${z.id}')">✓ Erledigt</button>`);
+    if (mine || parent) btns.push(`<button onclick="ztDel('${z.id}')">🗑</button>`);
+    const time = new Date(z.at).toLocaleString('de-CH', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+    return `<div class="zt-note ${z.done ? 'done' : ''}" style="background:${escapeHtml(z.color || ZCOL[0])};--r:${zRot(z.id)}deg">${escapeHtml(z.text || '')}${z.photo ? `<img data-zp="${z.id}" alt="Foto">` : ''}<div class="zt-m">${kind === 'sent' ? 'An ' + escapeHtml(to) : escapeHtml(z.name || zName(z.from))}${z.done ? ' · ✓ erledigt' + (z.doneBy ? ' von ' + escapeHtml(zName(z.doneBy)) : '') : ''} · ${escapeHtml(time)}</div>${btns.length ? `<div class="zt-b">${btns.join('')}</div>` : ''}</div>`;
+  }
+  function ztRender() {
+    const el = document.getElementById('ztList'); if (!el) return;
+    const me = userKey(currentUser), all = [...zNotes.values()];
+    const forMe = all.filter(z => !z.done && (z.to || []).includes(me) && z.from !== me).sort((a, b) => b.at - a.at);
+    const sent = all.filter(z => !z.done && z.from === me).sort((a, b) => b.at - a.at);
+    const done = all.filter(z => z.done && z.photo).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+    const sec = (t, l, k) => l.length ? `<div class="zt-h">${t}</div><div class="zt-grid">${l.map(z => ztNoteHtml(z, k)).join('')}</div>` : '';
+    el.innerHTML = (sec('📥 Für mich', forMe, 'in') + sec('📤 Von mir', sent, 'sent') + sec('📷 Erledigt – Fotos gespeichert', done, 'in')) || '<div class="todo-empty">Keine Zettel. Klebe den ersten auf! 📌</div>';
+    el.querySelectorAll('img[data-zp]').forEach(img => {
+      const id = img.dataset.zp;
+      img.onclick = () => { if (zPhotoCache[id]) { document.getElementById('zBoxImg').src = zPhotoCache[id]; document.getElementById('zBox').classList.add('open'); } };
+      ztPhotoSrc(id).then(src => { if (src) img.src = src; else img.alt = 'Foto nicht mehr vorhanden'; });
+    });
+  }
+  async function ztPhotoSrc(id) {
+    if (zPhotoCache[id]) return zPhotoCache[id];
+    try { const d = await cloudApi.zphotoGet(id); if (d) zPhotoCache[id] = d; return d; } catch (e) { return null; }
+  }
+  function ztBoxClose() { document.getElementById('zBox').classList.remove('open'); }
+  // Erledigt: Zettel mit Foto bleibt (Foto gespeichert), Zettel ohne Foto wird entfernt
+  async function ztDone(id) {
+    const z = zNotes.get(id); if (!z) return;
+    try {
+      if (z.photo) { await withTimeout(cloudApi.zettelDone(id, userKey(currentUser))); zNotes.set(id, { ...z, done: true, doneBy: userKey(currentUser), doneAt: Date.now() }); }
+      else { await withTimeout(cloudApi.zettelDelete(id, false)); zNotes.delete(id); }
+      ztRender(); zettelBadgeClear();
+    } catch (e) { showToast('Hat nicht geklappt'); }
+  }
+  async function ztDel(id) {
+    const z = zNotes.get(id); if (!z) return;
+    if (!window.confirm(z.photo ? 'Zettel und Foto endgültig löschen?' : 'Diesen Zettel löschen?')) return;
+    try { await withTimeout(cloudApi.zettelDelete(id, !!z.photo)); zNotes.delete(id); ztRender(); zettelBadgeClear(); } catch (e) { showToast('Löschen fehlgeschlagen'); }
+  }
 
   // ---------- Push-Mitteilungen ----------
   // Adresse des Cloudflare-Workers (cloudflare/worker.js). Leer = Mitteilungen aus.
@@ -7449,6 +7600,8 @@
     padUnsub = cloudApi.todosListen(list => { padTodos = list; padRenderTodos(); }, () => {});
     padSlowLoad();
     padSlow = setInterval(padSlowLoad, 30 * 60000);
+    padZSeen = null; padZ = [];
+    try { padZUnsub = cloudApi.zettelListenPad(padZUpdate, () => {}); } catch (e) {}
     padShowLoad();
     padShowRefresh = setInterval(padShowLoad, 60 * 60000);
     padHueInit(); padHueLoad(); hueTimer = setInterval(padHueLoad, 20000);
@@ -7494,6 +7647,7 @@
   }
   function padStop(keep) {
     if (padUnsub) { try { padUnsub(); } catch (e) {} padUnsub = null; }
+    if (padZUnsub) { try { padZUnsub(); } catch (e) {} padZUnsub = null; }
     clearInterval(padTick); clearInterval(padSlow); clearInterval(hueTimer); clearInterval(padShowTimer); clearInterval(padShowRefresh); padShowTimer = padShowRefresh = null; padTick = padSlow = hueTimer = null;
     if (padWake) { try { padWake.release(); } catch (e) {} padWake = null; }
     if (!keep) { document.body.classList.remove('pad-mode'); document.getElementById('padScreen').classList.add('hidden'); }
@@ -7515,6 +7669,27 @@
     padDay = day;
     padNightCheck(); padRenderBday();
   }
+  let padZ = [], padZSeen = null, padZUnsub = null, padZQueue = [], padZTimer = null;
+  function padZUpdate(list) {
+    padZ = list;
+    if (padZSeen === null) padZSeen = new Set(list.map(z => z.id));
+    else list.forEach(z => { if (!padZSeen.has(z.id)) { padZSeen.add(z.id); if (!z.done && Date.now() - z.at < 10 * 60000) padZQueue.push(z.id); } });
+    padRenderTodos(); padFitSoon();
+    if (padZQueue.length && document.getElementById('padZNew').classList.contains('hidden')) padZNext();
+  }
+  async function padZNext() {
+    const id = padZQueue.shift(); if (!id) return;
+    const z = padZ.find(x => x.id === id); if (!z) { padZNext(); return; }
+    padWakeUntil = Date.now() + 60000; padNightCheck();
+    const note = document.getElementById('padZNote'); note.style.background = z.color || '#FFE97A';
+    document.getElementById('padZText').textContent = z.text || '';
+    document.getElementById('padZWho').textContent = '— ' + (z.name || zName(z.from)) + ' · ' + new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+    const im = document.getElementById('padZImg'); im.classList.add('hidden'); im.removeAttribute('src');
+    document.getElementById('padZNew').classList.remove('hidden');
+    clearTimeout(padZTimer); padZTimer = setTimeout(padZNewClose, 40000);
+    if (z.photo) { const src = await ztPhotoSrc(z.id); if (src && !document.getElementById('padZNew').classList.contains('hidden')) { im.src = src; im.classList.remove('hidden'); } }
+  }
+  function padZNewClose() { clearTimeout(padZTimer); document.getElementById('padZNew').classList.add('hidden'); if (padZQueue.length) setTimeout(padZNext, 400); }
   let padBd = [], padNightCfg = {}, padWakeUntil = 0;
   async function padCfgLoad() {
     try { const c = (await cloudApi.padcfgGet()) || {}; padBd = Array.isArray(c.bdays) ? c.bdays : []; padNightCfg = c.night || {}; } catch (e) {}
@@ -7541,6 +7716,11 @@
   function padPop(what) {
     let h = '';
     if (what.startsWith('t:')) h = padTodosHtml(true, what.slice(2)) || '<div class="pad-ok">Nichts offen</div>';
+    else if (what.startsWith('z:')) {
+      const z = padZ.find(x => x.id === what.slice(2)); if (!z) return;
+      h = `<div style="background:${escapeHtml(z.color || '#FFE97A')};padding:3vmin;border-radius:3px;box-shadow:3px 5px 14px rgba(0,0,0,.3);"><div class="pz-text">${escapeHtml(z.text || '')}</div>${z.photo ? '<img id="padPopZImg" style="display:block;max-width:100%;max-height:50vh;margin:2vmin auto 0;border-radius:8px;">' : ''}<div style="opacity:.65;margin-top:2vmin;font-size:clamp(14px,2.6vmin,28px);">— ${escapeHtml(z.name || zName(z.from))} · ${new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div>`;
+      if (z.photo) ztPhotoSrc(z.id).then(src => { const i = document.getElementById('padPopZImg'); if (i && src) i.src = src; });
+    }
     else if (what === 'bday') h = '<div class="pad-h">🎂 Geburtstage</div>' + (padBdHtml(99) || '<div class="pad-ok">Keine erfasst</div>');
     else if (what === 'meal') {
       const todayD = new Date(), p = [0, 7].map(off => { const m = mondayOf(new Date(todayD.getTime() + off * 86400000)); return { m, v: padMeals[isoDate(m)] }; });
@@ -7615,7 +7795,9 @@
     }).join('');
     const pool = padTodos.filter(t => t.assigneeKey === POOL && !t.done).sort(byDue);
     const poolHtml = pool.length && (!only || only === 'pool') ? `<div class="pad-person pad-pool" data-k="pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>wer zuerst kommt!</span></div>${pool.slice(0, L).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
-    return cards + poolHtml;
+    const zl = (!only && !full) ? padZ.filter(z => !z.done).sort((x, y) => y.at - x.at).slice(0, 6) : [];
+    const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Zettel</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))}</small></div>`).join('')}</div></div>` : '';
+    return cards + poolHtml + zHtml;
   }
 
   // ---------- Login (Cloud-Modus) ----------
@@ -7879,6 +8061,22 @@
         }, e => { if (eb) eb(e); }),
         chatAdd: m => { const { id, ...data } = m; return F.setDoc(F.doc(db, 'chat', id), data); },
         chatDelete: async (id, photoId) => { await F.deleteDoc(F.doc(db, 'chat', id)); if (photoId) { try { await F.deleteDoc(F.doc(db, 'chatPhotos', photoId)); } catch (e) {} } },
+        zettelListen: (me, cb, eb) => {
+          const a = new Map(), b = new Map();
+          const emit = () => cb([...new Map([...a, ...b]).values()]);
+          const fill = mp => sn => { mp.clear(); sn.forEach(d => mp.set(d.id, { id: d.id, ...d.data() })); emit(); };
+          const u1 = F.onSnapshot(F.query(F.collection(db, 'zettel'), F.where('to', 'array-contains', me)), fill(a), e => { if (eb) eb(e); });
+          const u2 = F.onSnapshot(F.query(F.collection(db, 'zettel'), F.where('from', '==', me)), fill(b), e => { if (eb) eb(e); });
+          return () => { u1(); u2(); };
+        },
+        zettelListenPad: (cb, eb) => F.onSnapshot(F.query(F.collection(db, 'zettel'), F.where('to', 'array-contains', 'pad')), sn => { const out = []; sn.forEach(d => out.push({ id: d.id, ...d.data() })); cb(out); }, e => { if (eb) eb(e); }),
+        zettelFor: async me => { const sn = await F.getDocs(F.query(F.collection(db, 'zettel'), F.where('to', 'array-contains', me))); const out = []; sn.forEach(d => out.push({ id: d.id, ...d.data() })); return out; },
+        zettelAdd: m => { const { id, ...data } = m; return F.setDoc(F.doc(db, 'zettel', id), data); },
+        zettelDone: (id, by) => F.updateDoc(F.doc(db, 'zettel', id), { done: true, doneBy: by, doneAt: Date.now() }),
+        zettelDelete: async (id, hasPhoto) => { if (hasPhoto) { try { await F.deleteDoc(F.doc(db, 'zettelPhotos', id)); } catch (e) {} } await F.deleteDoc(F.doc(db, 'zettel', id)); },
+        zphotoPut: (id, d) => F.setDoc(F.doc(db, 'zettelPhotos', id), d),
+        zphotoGet: async id => { const d = await F.getDoc(F.doc(db, 'zettelPhotos', id)); return d.exists() ? d.data().data : null; },
+        zphotoDelete: id => F.deleteDoc(F.doc(db, 'zettelPhotos', id)),
         photoPut: (id, d) => F.setDoc(F.doc(db, 'chatPhotos', id), d),
         photoGet: async (id) => { const d = await F.getDoc(F.doc(db, 'chatPhotos', id)); return d.exists() ? d.data().data : null; },
         photoDelete: id => F.deleteDoc(F.doc(db, 'chatPhotos', id)),
@@ -7925,7 +8123,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.31';
+  const APP_VERSION = '2.32';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

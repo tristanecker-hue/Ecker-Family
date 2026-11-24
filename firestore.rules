@@ -136,6 +136,43 @@ service cloud.firestore {
       allow delete: if canChat() && (resource.data.from == uname() || uname() in ['tristan', 'claudia']);
     }
 
+    // Zettel (Post-its, ersetzen den Chat): lesen Absender und Empfänger, das Pad nur Zettel an 'pad'.
+    // Ändern: nur erledigt markieren. Löschen: Absender, Eltern, oder Empfänger bei Zetteln ohne Foto.
+    match /zettel/{id} {
+      allow read: if (canChat() && (resource.data.from == uname() || uname() in resource.data.to))
+        || (isPad() && 'pad' in resource.data.to);
+      allow create: if canChat()
+        && request.resource.data.keys().hasOnly(['from', 'name', 'to', 'text', 'at', 'photo', 'color', 'done'])
+        && request.resource.data.from == uname()
+        && request.resource.data.to is list
+        && request.resource.data.to.size() >= 1 && request.resource.data.to.size() <= 5
+        && request.resource.data.to.hasOnly(['tristan', 'claudia', 'lina', 'florian', 'pad'])
+        && request.resource.data.text is string && request.resource.data.text.size() <= 300
+        && (request.resource.data.text.size() > 0 || request.resource.data.get('photo', false) == true)
+        && request.resource.data.at is number
+        && request.resource.data.done == false;
+      allow update: if canChat()
+        && (resource.data.from == uname() || uname() in resource.data.to || uname() in ['tristan', 'claudia'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneBy', 'doneAt']);
+      allow delete: if canChat() && (resource.data.from == uname() || uname() in ['tristan', 'claudia']
+        || (uname() in resource.data.to && resource.data.get('photo', false) == false));
+    }
+
+    // Zettel-Fotos (Dokument-ID = Zettel-ID): lesen wer den Zettel lesen darf
+    match /zettelPhotos/{id} {
+      allow read: if (canChat() && (resource.data.from == uname()
+          || uname() in get(/databases/$(database)/documents/zettel/$(id)).data.to))
+        || (isPad() && 'pad' in get(/databases/$(database)/documents/zettel/$(id)).data.to);
+      allow create: if canChat()
+        && request.resource.data.keys().hasOnly(['from', 'data', 'at'])
+        && request.resource.data.from == uname()
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 950000
+        && request.resource.data.at is number;
+      allow update: if false;
+      allow delete: if canChat() && (resource.data.from == uname() || uname() in ['tristan', 'claudia']);
+    }
+
     // Familienfotos für die Diashow am Wand-iPad: alle Familienmitglieder und das Pad lesen,
     // jede Person lädt eigene hoch und löscht eigene, Tristan löscht alle
     match /fotos/{id} {
