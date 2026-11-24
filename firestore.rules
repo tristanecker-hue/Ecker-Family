@@ -223,9 +223,9 @@ service cloud.firestore {
       allow write: if isFamily() && uname() in ['tristan', 'claudia'];
     }
 
-    // Profile (Name + Profilbild): alle vier lesen, jeder schreibt nur sein eigenes
+    // Profile (Name + Profilbild): alle vier und das Pad (für Geburtstagsfotos) lesen, jeder schreibt nur sein eigenes
     match /profiles/{userId} {
-      allow read: if isFamily();
+      allow read: if isFamily() || isPad();
       allow write: if isFamily() && request.auth.uid == userId;
     }
   }

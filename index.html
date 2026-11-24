@@ -1875,7 +1875,14 @@
       <div class="field" style="margin-top:8px;"><label for="bdName">Name</label><input type="text" id="bdName" list="bdNames" placeholder="z. B. Lina oder Oma"><datalist id="bdNames"><option value="Tristan"><option value="Claudia"><option value="Lina"><option value="Florian"></datalist></div>
       <div class="field"><label for="bdDate">Geburtsdatum</label><input type="date" id="bdDate"></div>
       <label class="set-row"><span>Alter anzeigen («wird 12»)</span><span class="switch"><input type="checkbox" id="bdAge" checked><span class="slider"></span></span></label>
-      <button class="btn" onclick="bdAdd()" style="margin-top:6px;">＋ Geburtstag hinzufügen</button>
+      <div class="set-note">Von Familienmitgliedern wird das Profilbild gezeigt. Für alle anderen (z. B. Oma) kannst du ein Foto hinzufügen.</div>
+      <div id="bdPrev" class="zt-prev hidden"><img id="bdPrevImg" alt="" style="max-height:110px;border-radius:50%;"><button onclick="bdPhotoClear()" aria-label="Foto entfernen">✕</button></div>
+      <div class="zt-actions">
+        <button class="btn" onclick="document.getElementById('bdFile').click()">📷 Foto</button>
+        <button class="btn" id="bdSubmit" onclick="bdAdd()" style="flex:1;">＋ Geburtstag hinzufügen</button>
+        <button class="btn hidden" id="bdCancel" onclick="bdCancel()">Abbrechen</button>
+      </div>
+      <input type="file" id="bdFile" accept="image/*" class="hidden" onchange="bdPhoto(this)">
       </details>
     </div>
     <div class="card hidden" id="nmCard">
@@ -7271,22 +7278,66 @@
     document.getElementById('nmDim').value = String(n.dim || 0.85);
     bdRenderList();
   }
+  let bdEdit = -1, bdImg = '';
+  const bdUser = n => USERS.find(u => u.toLowerCase() === String(n || '').trim().toLowerCase()) || null;
+  const bdImgOf = b => b.img || (bdUser(b.n) && avatars[bdUser(b.n)]) || '';
+  // Rundes Foto: Profilbild, eigenes Foto oder Anfangsbuchstabe
+  function bdAvatar(b, size) {
+    const img = bdImgOf(b), u = bdUser(b.n);
+    const base = `display:inline-flex;flex:none;width:${size}px;height:${size}px;border-radius:50%;border:2px solid #262319;align-items:center;justify-content:center;font-weight:800;font-size:${Math.round(size * .5)}px;color:#fff;background-size:cover;background-position:center;`;
+    if (img) return `<span class="bd-av" style="${base}background-image:url('${String(img).replace(/['"\\]/g, '')}')"></span>`;
+    return `<span class="bd-av" style="${base}background:${u ? userColor(u) : '#E08A12'}">${escapeHtml((b.n || '?').trim().charAt(0).toUpperCase())}</span>`;
+  }
   function bdRenderList() {
-    const l = bdCfg.bdays.slice().sort((a, b) => a.m - b.m || a.d - b.d);
-    document.getElementById('bdList').innerHTML = l.length ? l.map(b => `<div class="set-row"><span>${escapeHtml(b.n)} · ${b.d}.${b.m}.${b.y && b.age ? b.y : ''}</span><button class="btn" style="padding:4px 10px;" onclick="bdDel(${bdCfg.bdays.indexOf(b)})">✕</button></div>`).join('') : '<div class="set-note">Noch keine Geburtstage erfasst.</div>';
+    const l = bdCfg.bdays.map((b, i) => ({ b, i })).sort((x, y) => x.b.m - y.b.m || x.b.d - y.b.d);
+    document.getElementById('bdList').innerHTML = l.length ? l.map(({ b, i }) => `<div class="set-row"><span style="display:flex;align-items:center;gap:10px;">${bdAvatar(b, 36)}<span>${escapeHtml(b.n)} · ${b.d}.${b.m}.${b.y && b.age ? b.y : ''}</span></span><span style="display:flex;gap:6px;"><button class="btn" style="padding:4px 10px;" onclick="bdEditStart(${i})" aria-label="Bearbeiten">✏️</button><button class="btn" style="padding:4px 10px;" onclick="bdDel(${i})" aria-label="Löschen">✕</button></span></div>`).join('') : '<div class="set-note">Noch keine Geburtstage erfasst.</div>';
   }
   async function bdSave() {
-    try { await cloudApi.padcfgSet({ bdays: bdCfg.bdays }); showToast('Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen'); }
+    try { await cloudApi.padcfgSet({ bdays: bdCfg.bdays }); showToast('Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen (Foto zu gross?)'); }
   }
+  function bdFormReset() {
+    bdEdit = -1; bdImg = '';
+    document.getElementById('bdName').value = ''; document.getElementById('bdDate').value = ''; document.getElementById('bdAge').checked = true;
+    document.getElementById('bdPrev').classList.add('hidden');
+    document.getElementById('bdSubmit').textContent = '＋ Geburtstag hinzufügen';
+    document.getElementById('bdCancel').classList.add('hidden');
+  }
+  function bdEditStart(i) {
+    const b = bdCfg.bdays[i]; if (!b) return;
+    bdEdit = i; bdImg = b.img || '';
+    document.getElementById('bdName').value = b.n;
+    document.getElementById('bdDate').value = (b.y || 2000) + '-' + String(b.m).padStart(2, '0') + '-' + String(b.d).padStart(2, '0');
+    document.getElementById('bdAge').checked = !!b.age;
+    if (bdImg) { document.getElementById('bdPrevImg').src = bdImg; document.getElementById('bdPrev').classList.remove('hidden'); } else document.getElementById('bdPrev').classList.add('hidden');
+    document.getElementById('bdSubmit').textContent = '💾 Änderung speichern';
+    document.getElementById('bdCancel').classList.remove('hidden');
+    document.getElementById('bdName').scrollIntoView({ block: 'center' });
+  }
+  function bdCancel() { bdFormReset(); }
+  // Kleines, quadratisches Foto (160 px) – bleibt klein in der Datenbank
+  async function bdPhoto(inp) {
+    const f = inp.files && inp.files[0]; inp.value = ''; if (!f) return;
+    const url = URL.createObjectURL(f);
+    try {
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Bild')); i.src = url; });
+      const sz = Math.min(img.naturalWidth, img.naturalHeight), c = document.createElement('canvas'); c.width = c.height = 160;
+      c.getContext('2d').drawImage(img, (img.naturalWidth - sz) / 2, (img.naturalHeight - sz) / 2, sz, sz, 0, 0, 160, 160);
+      bdImg = c.toDataURL('image/jpeg', 0.8);
+      document.getElementById('bdPrevImg').src = bdImg; document.getElementById('bdPrev').classList.remove('hidden');
+    } catch (e) { showToast('Foto konnte nicht geladen werden'); }
+    URL.revokeObjectURL(url);
+  }
+  function bdPhotoClear() { bdImg = ''; document.getElementById('bdPrev').classList.add('hidden'); }
   function bdAdd() {
     const n = document.getElementById('bdName').value.trim(), v = document.getElementById('bdDate').value;
     if (!n || !v) { showToast('Name und Datum eingeben'); return; }
     const [y, m, d] = v.split('-').map(Number);
-    bdCfg.bdays.push({ n, m, d, y, age: document.getElementById('bdAge').checked });
-    document.getElementById('bdName').value = ''; document.getElementById('bdDate').value = '';
-    bdRenderList(); bdSave();
+    const e = { n, m, d, y, age: document.getElementById('bdAge').checked };
+    if (bdImg) e.img = bdImg;
+    if (bdEdit >= 0) bdCfg.bdays[bdEdit] = e; else bdCfg.bdays.push(e);
+    bdFormReset(); bdRenderList(); bdSave();
   }
-  function bdDel(i) { bdCfg.bdays.splice(i, 1); bdRenderList(); bdSave(); }
+  function bdDel(i) { if (!window.confirm('Diesen Geburtstag löschen?')) return; bdCfg.bdays.splice(i, 1); if (bdEdit === i) bdFormReset(); bdRenderList(); bdSave(); }
   async function nmSave() {
     bdCfg.night = { on: document.getElementById('nmOn').checked, from: document.getElementById('nmFrom').value || '22:00', to: document.getElementById('nmTo').value || '06:30', dim: Number(document.getElementById('nmDim').value) || 0.85 };
     try { await cloudApi.padcfgSet({ night: bdCfg.night }); showToast('Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen'); }
@@ -7760,7 +7811,7 @@
       return { b, days: Math.round((nx - t) / 86400000), age: b.y && b.age ? y - b.y : null, nx };
     }).sort((x, y) => x.days - y.days).slice(0, max).map(x => {
       const when = x.days === 0 ? '🎉 heute!' : x.days === 1 ? 'morgen' : 'noch ' + x.days + ' Tage';
-      return `<div class="pad-row"><span>${escapeHtml(x.b.n)}${x.age && max > 3 ? ' wird ' + x.age : ''}${max > 3 ? ' <small style="opacity:.6">· ' + x.b.d + '.' + x.b.m + '.</small>' : ''}</span><b style="margin-left:auto;text-align:right;${x.days === 0 ? 'color:#c0271d;' : ''}">${when}</b></div>`;
+      return `<div class="pad-row" style="align-items:center;">${bdAvatar(x.b, max > 3 ? 64 : 40)}<span>${escapeHtml(x.b.n)}${x.age && max > 3 ? ' wird ' + x.age : ''}${max > 3 ? ' <small style="opacity:.6">· ' + x.b.d + '.' + x.b.m + '.</small>' : ''}</span><b style="margin-left:auto;text-align:right;${x.days === 0 ? 'color:#c0271d;' : ''}">${when}</b></div>`;
     }).join('');
   }
   // Pad: Detail-Fenster beim Antippen einer Kachel
@@ -7798,7 +7849,9 @@
     const dark = !!n.on && inNight && Date.now() > padWakeUntil;
     el.style.opacity = dark ? String(n.dim || 0.85) : '0';
   }
+  let padSlowN = 0;
   async function padSlowLoad() {
+    if (padSlowN++ % 30 === 0) { try { await loadAvatars(); } catch (e) {} }
     padCfgLoad();
     try {
       const now = new Date(), weeks = {};
@@ -8174,7 +8227,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.36';
+  const APP_VERSION = '2.37';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
