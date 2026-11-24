@@ -7170,7 +7170,7 @@
   function padShowNext(first) {
     const imgs = document.querySelectorAll('#padShow img'); if (!imgs.length || !padShowList.length) return;
     const nxt = imgs[padShowSide ^ 1], cur = imgs[padShowSide];
-    nxt.onload = () => { nxt.classList.toggle('fit', nxt.naturalWidth > nxt.naturalHeight); nxt.classList.add('on'); if (cur !== nxt) cur.classList.remove('on'); };
+    nxt.onload = () => { nxt.classList.toggle('fit', nxt.naturalWidth > nxt.naturalHeight); nxt.classList.add('on'); if (cur !== nxt) cur.classList.remove('on'); const pi = document.getElementById('padPopImg'); if (pi && !document.getElementById('padPop').classList.contains('hidden')) pi.src = nxt.src; };
     nxt.src = padShowList[padShowIdx % padShowList.length];
     padShowIdx++; padShowSide ^= 1;
   }
@@ -7551,7 +7551,7 @@
       }).join('')).join('');
     } else if (what === 'show') {
       const im = document.querySelector('#padShow img.on'); if (!im || !im.src) return;
-      h = `<img src="${im.src}" style="display:block;max-width:100%;max-height:82vh;margin:0 auto;border-radius:14px;">`;
+      h = `<img id="padPopImg" src="${im.src}" style="display:block;max-width:100%;max-height:82vh;margin:0 auto;border-radius:14px;">`;
     }
     if (!h) return;
     document.getElementById('padPopBody').innerHTML = h;
@@ -7925,7 +7925,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.29';
+  const APP_VERSION = '2.30';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
