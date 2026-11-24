@@ -204,6 +204,9 @@
   #padScreen .pad-row { font-size: clamp(16px, 2.6vmin, 32px); padding: 4px 0; border-top: 1.5px dashed rgba(38,35,25,.25); display:flex; gap:10px; }
   #padScreen .pad-row:first-of-type { border-top: 0; }
   #padScreen .pad-row b { flex: none; min-width: 3.2em; }
+  #padScreen #padCal .pad-row { align-items:center; padding:5px 0; }
+  #padScreen #padCal .pad-row b { background:#FFD84D; border:2px solid #262319; border-radius:999px; padding:1px 10px; min-width:0; font-size:.82em; text-align:center; }
+  #padScreen #padCal .pad-row.old { opacity:.4; }
   #padScreen .pad-people { display:grid; grid-template-columns: repeat(2, 1fr); gap: clamp(8px, 1.4vmin, 16px); }
   #padScreen .pad-person { border:3px solid var(--kc,#999); background: var(--kbg,#fff); border-radius:18px; padding: clamp(6px, 1.1vmin, 14px) clamp(10px, 1.6vmin, 18px); }
   #padScreen .pad-pn { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size: clamp(17px, 2.6vmin, 32px); font-weight:800; margin-bottom: 2px; }
@@ -253,16 +256,28 @@
   #padPlans .card { margin:0; }
   #padPlans .blk-scroll { overflow:visible; }
   @media (max-width: 900px) { #padPlans { grid-template-columns: 1fr; } }
-  #padWeek { position:fixed; inset:0; z-index:50; background:var(--paper,#FFFDF8); padding:14px; overflow:auto; }
-  .pw-top { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
-  .pw-top button { border:2.5px solid #262319; background:#fff; border-radius:999px; padding:8px 18px; font-family:inherit; font-weight:700; font-size:20px; cursor:pointer; }
-  #padWeekTitle { font-weight:800; font-size:clamp(20px,3.2vmin,36px); }
-  #padWeekGrid { display:grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap:8px; align-items:start; }
-  .pw-day { border:2.5px solid #262319; border-radius:14px; padding:8px; min-height:120px; background:#fff; }
-  .pw-day.today { background:#FFF2B3; border-width:4px; }
-  .pw-day h4 { margin:0 0 6px; font-size:clamp(14px,2.2vmin,22px); }
-  .pw-ev { font-size:clamp(12px,1.9vmin,19px); padding:4px 0; border-top:1.5px dashed rgba(38,35,25,.25); word-break:break-word; }
-  .pw-ev b { display:block; font-size:.85em; opacity:.75; }
+  #padWeek { position:fixed; inset:0; z-index:50; background:var(--paper,#FFFDF8); padding:clamp(10px,1.8vmin,24px); overflow:hidden; display:flex; flex-direction:column; box-sizing:border-box; }
+  #padWeek.hidden { display:none; }
+  .pw-top { display:flex; gap:10px; align-items:center; margin-bottom:clamp(8px,1.6vmin,18px); flex:none; }
+  .pw-top button { border:2.5px solid #262319; background:#fff; border-radius:999px; padding:8px 18px; font-family:inherit; font-weight:700; font-size:clamp(16px,2.6vmin,28px); cursor:pointer; }
+  #padWeekTitle { font-weight:800; font-size:clamp(20px,3.6vmin,44px); }
+  #padWeekGrid { flex:1 1 auto; min-height:0; display:grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap:clamp(6px,1.2vmin,14px); align-items:stretch; }
+  .pw-day { border:2.5px solid #262319; border-radius:18px; padding:clamp(6px,1.1vmin,14px); background:#fff; overflow:hidden; display:flex; flex-direction:column; gap:clamp(5px,.9vmin,10px); box-shadow:3px 3px 0 rgba(38,35,25,.9); }
+  .pw-day.past { opacity:.5; box-shadow:none; }
+  .pw-day.we { background:#F3F7FF; }
+  .pw-day.today { background:#FFF2B3; border-width:4px; box-shadow:4px 4px 0 #262319; opacity:1; }
+  .pw-day h4 { margin:0; display:flex; align-items:baseline; justify-content:space-between; gap:6px; padding-bottom:clamp(4px,.8vmin,8px); border-bottom:2.5px solid #262319; }
+  .pw-dn { font-size:clamp(18px,3vmin,38px); font-weight:800; }
+  .pw-dd { font-size:clamp(20px,4vmin,50px); font-weight:800; line-height:1; }
+  .pw-heute { font-size:clamp(10px,1.5vmin,16px); font-weight:800; background:#262319; color:#FFF2B3; border-radius:999px; padding:2px 8px; align-self:center; }
+  .pw-ev { border-left:clamp(5px,.8vmin,9px) solid var(--ec,#3FA7D6); background:rgba(255,255,255,.85); border-radius:8px; padding:clamp(4px,.8vmin,9px) clamp(6px,1vmin,12px); box-shadow:1px 2px 0 rgba(38,35,25,.2); overflow-wrap:break-word; }
+  .pw-ev.old { opacity:.45; }
+  .pw-ev.allday { background:var(--ec,#3FA7D6); border-left:0; color:#fff; }
+  .pw-ev.allday .pw-t { color:#fff; opacity:.85; }
+  .pw-t { display:block; font-size:clamp(12px,1.9vmin,22px); font-weight:800; color:var(--ec,#3FA7D6); filter:brightness(.8); }
+  .pw-t i { font-style:normal; opacity:.7; font-weight:600; }
+  .pw-n { display:block; font-size:clamp(13px,1.95vmin,24px); font-weight:700; line-height:1.15; overflow-wrap:break-word; hyphens:auto; -webkit-hyphens:auto; }
+  .pw-free { margin:auto; opacity:.3; font-size:clamp(14px,2.2vmin,26px); font-weight:700; }
   @media (max-width: 900px) { #padWeekGrid { grid-template-columns: 1fr; } }
   .foto-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:8px; margin-top:10px; }
   .foto { position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; border:2px solid #262319; background:#eee; }
@@ -7458,21 +7473,27 @@
   function padWeekClose() { document.getElementById('padWeek').classList.add('hidden'); }
   function padWeekGo(d) { padWeekStart = new Date(padWeekStart.getFullYear(), padWeekStart.getMonth(), padWeekStart.getDate() + 7 * d); padWeekRender(); }
   function padWeekRender() {
-    const p2 = x => String(x).padStart(2, '0'), names = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+    const p2 = x => String(x).padStart(2, '0'), names = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
     const w0 = padWeekStart, w6 = new Date(w0.getFullYear(), w0.getMonth(), w0.getDate() + 6), todayIso = isoDate(new Date());
     document.getElementById('padWeekTitle').textContent = w0.toLocaleDateString('de-CH', { day: 'numeric', month: 'long' }) + ' – ' + w6.toLocaleDateString('de-CH', { day: 'numeric', month: 'long', year: 'numeric' });
     const evs = [];
-    padCal.forEach(d => (d.events || []).forEach(e => {
+    padCal.forEach((d, ci) => (d.events || []).forEach(e => {
       const st = e.a ? new Date(e.s + 'T00:00:00') : new Date(e.s), en = e.a ? new Date(e.e + 'T00:00:00') : new Date(e.e);
-      evs.push({ e, st, en });
+      evs.push({ e, st, en, ci });
     }));
     evs.sort((x, y) => (x.e.a ? 0 : 1) - (y.e.a ? 0 : 1) || x.st - y.st);
+    const PAL = ['#E4572E', '#2F8FC4', '#4FAE2B', '#8A55CE', '#E08A12', '#D9437F'], now = new Date();
     let html = '';
     for (let i = 0; i < 7; i++) {
       const ds = new Date(w0.getFullYear(), w0.getMonth(), w0.getDate() + i), de = new Date(ds.getFullYear(), ds.getMonth(), ds.getDate() + 1);
-      const list = evs.filter(x => x.st < de && x.en > ds);
-      html += '<div class="pw-day' + (isoDate(ds) === todayIso ? ' today' : '') + '"><h4>' + names[i] + ' ' + ds.getDate() + '.' + (ds.getMonth() + 1) + '.</h4>' +
-        (list.map(x => '<div class="pw-ev"><b>' + (x.e.a ? 'ganztägig' : p2(x.st.getHours()) + ':' + p2(x.st.getMinutes()) + ' – ' + p2(x.en.getHours()) + ':' + p2(x.en.getMinutes())) + '</b>' + escapeHtml(x.e.t || '') + '</div>').join('') || '<div class="sub" style="opacity:.5;">–</div>') + '</div>';
+      const iso = isoDate(ds), list = evs.filter(x => x.st < de && x.en > ds);
+      const cls = (iso === todayIso ? ' today' : iso < todayIso ? ' past' : '') + (i >= 5 ? ' we' : '');
+      html += '<div class="pw-day' + cls + '" lang="de"><h4><span class="pw-dn">' + names[i] + '</span>' + '<span class="pw-dd">' + ds.getDate() + '.</span></h4>' +
+        (list.map(x => {
+          const col = PAL[x.ci % PAL.length], old = iso === todayIso && !x.e.a && x.en < now;
+          return x.e.a ? '<div class="pw-ev allday" style="--ec:' + col + '"><span class="pw-t">ganztägig</span><span class="pw-n">' + escapeHtml(x.e.t || '') + '</span></div>'
+            : '<div class="pw-ev' + (old ? ' old' : '') + '" style="--ec:' + col + '"><span class="pw-t">' + p2(x.st.getHours()) + ':' + p2(x.st.getMinutes()) + '<i> – ' + p2(x.en.getHours()) + ':' + p2(x.en.getMinutes()) + '</i></span><span class="pw-n">' + escapeHtml(x.e.t || '') + '</span></div>';
+        }).join('') || '<div class="pw-free">frei</div>') + '</div>';
     }
     document.getElementById('padWeekGrid').innerHTML = html;
   }
@@ -7629,7 +7650,7 @@
     padTick = setInterval(padClock, 10000);
     padUnsub = cloudApi.todosListen(list => { padTodos = list; padRenderTodos(); }, () => {});
     padSlowLoad();
-    padSlow = setInterval(padSlowLoad, 30 * 60000);
+    padSlow = setInterval(padSlowLoad, 60000);
     padZSeen = null; padZ = [];
     try { padZUnsub = cloudApi.zettelListenPad(padZUpdate, () => {}); } catch (e) {}
     padShowLoad();
@@ -8153,7 +8174,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.35';
+  const APP_VERSION = '2.36';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
