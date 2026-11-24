@@ -1801,14 +1801,19 @@
     </div>
     <div class="card hidden" id="bdCard">
       <details>
-      <summary style="cursor:pointer;" class="card-title">🎂 Geburtstage &amp; 🌙 Nachtmodus</summary>
-      <div class="set-note" style="margin-top:0;">Geburtstage erscheinen im Pad-Modus mit Countdown. Nachts wird das Pad abgedunkelt (Antippen = 1 Minute hell).</div>
+      <summary style="cursor:pointer;" class="card-title">🎂 Geburtstage</summary>
+      <div class="set-note" style="margin-top:0;">Geburtstage erscheinen im Pad-Modus mit Countdown.</div>
       <div id="bdList"></div>
       <div class="field" style="margin-top:8px;"><label for="bdName">Name</label><input type="text" id="bdName" list="bdNames" placeholder="z. B. Lina oder Oma"><datalist id="bdNames"><option value="Tristan"><option value="Claudia"><option value="Lina"><option value="Florian"></datalist></div>
       <div class="field"><label for="bdDate">Geburtsdatum</label><input type="date" id="bdDate"></div>
       <label class="set-row"><span>Alter anzeigen («wird 12»)</span><span class="switch"><input type="checkbox" id="bdAge" checked><span class="slider"></span></span></label>
       <button class="btn" onclick="bdAdd()" style="margin-top:6px;">＋ Geburtstag hinzufügen</button>
-      <div class="card-title" style="margin-top:16px;font-size:1em;">🌙 Nachtmodus</div>
+      </details>
+    </div>
+    <div class="card hidden" id="nmCard">
+      <details>
+      <summary style="cursor:pointer;" class="card-title">🌙 Nachtmodus</summary>
+      <div class="set-note" style="margin-top:0;">Nachts wird das Pad abgedunkelt. Antippen macht es eine Minute hell.</div>
       <label class="set-row"><span>Pad nachts abdunkeln</span><span class="switch"><input type="checkbox" id="nmOn" onchange="nmSave()"><span class="slider"></span></span></label>
       <div class="field" style="margin-top:8px;"><label for="nmFrom">Von</label><input type="time" id="nmFrom" value="22:00" onchange="nmSave()"></div>
       <div class="field"><label for="nmTo">Bis</label><input type="time" id="nmTo" value="06:30" onchange="nmSave()"></div>
@@ -7048,6 +7053,7 @@
     const c = document.getElementById('bdCard'); if (!c) return;
     const ok = cloudEnabled && isParentU();
     c.classList.toggle('hidden', !ok);
+    document.getElementById('nmCard').classList.toggle('hidden', !ok);
     if (!ok) return;
     try {
       const cfg = (await cloudApi.padcfgGet()) || {};
@@ -7885,7 +7891,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.27';
+  const APP_VERSION = '2.28';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
