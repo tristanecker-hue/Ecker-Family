@@ -309,8 +309,14 @@
   #padTabs button.on { background:#FFD84D; }
   #padScreen.tab-l .pad-col, #padScreen.tab-l .pad-people { display:none; }
   #padScreen:not(.tab-l) #padHueCard { display:none !important; }
-  #padScreen.tab-l #padHue .hue-plan img { max-height:calc(100vh - 215px); }
-  #padScreen.tab-l #padHueCard { padding-bottom:6px; }
+  #padScreen.tab-l #padHue .hue-plan img { max-height:calc(100vh - 124px); }
+  #padScreen.tab-l #padHueCard { padding:6px; }
+  #padScreen.tab-l #padHueCard .pad-h { display:none; }
+  #padScreen.tab-l { padding:8px 14px; }
+  #padScreen.tab-l #padClock { font-size:clamp(34px, 6.5vmin, 90px); }
+  #padScreen.tab-l .pad-top { margin-bottom:8px; }
+  #padScreen.tab-l #padDate { font-size:clamp(16px,2.6vmin,30px); }
+  #padScreen.tab-l #padFoot { display:none; }
   #padHue.hp { grid-template-columns: 1fr; }
   #padHue.hp .hue-list { display:none; }
   #padScreen .pad-main #padHueCard { grid-column: 1 / -1; }
@@ -326,7 +332,7 @@
   #padHue:has(.hue-planwrap:empty) .hue-list, #hueBox:has(.hue-planwrap:empty) .hue-list { grid-column:1 / -1; }
   #padHue.hp .hue-list { grid-column:1; }
   #padHueCard { position:relative; }
-  #padScreen.tab-l #padHue .hue-stopwrap { position:absolute; left:22px; top:64px; z-index:5; padding:0; }
+  #padScreen.tab-l #padHue .hue-stopwrap { position:absolute; left:18px; top:14px; z-index:5; padding:0; }
   #padScreen.tab-l #padHue .hue-planwrap { grid-row:1; }
   #hueBox .hue-plan img { max-height:62vh; }
   @media (max-width: 760px) { #padHue, #hueBox { grid-template-columns: 1fr !important; } #padHue .hue-list, #hueBox .hue-list { grid-column:1 !important; grid-row:3 !important; } #padScreen.tab-l #padHue .hue-stopwrap { position:static; } #padScreen.tab-l #padHue .hue-planwrap { grid-row:2; } #hueBox .hue-room { flex:1 1 100%; } #hueBox .hue-plan img { max-height:none; } }
@@ -8319,7 +8325,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.39';
+  const APP_VERSION = '2.40';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
