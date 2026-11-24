@@ -377,6 +377,7 @@
   #padPhoto .pv-l { left:12px; } #padPhoto .pv-r { right:12px; }
   #padPhotoN { position:absolute; bottom:12px; left:0; right:0; text-align:center; color:#fffb; font-size:clamp(13px,2vmin,22px); }
   #padFx { position:fixed; inset:0; width:100vw; height:100vh; z-index:40; pointer-events:none; display:none; }
+  #padSky { position:fixed; inset:0; width:100vw; height:100vh; z-index:10000; pointer-events:none; opacity:0; transition:opacity 2.5s ease; }
   #padNight { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; z-index:9999; transition:opacity 2.5s ease; }
   #padPop { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:16px; }
   #padPop.hidden { display:none; }
@@ -1811,6 +1812,7 @@
     <div id="padZNew" class="hidden" onclick="padZNewClose()"><div class="pz-note" id="padZNote"><div class="pz-tape"></div><div class="pz-text" id="padZText"></div><img id="padZImg" class="hidden" alt=""><div class="pz-who" id="padZWho"></div></div></div>
     <div id="padPhoto" class="hidden"><button class="pv-x" onclick="padPhotoClose()" aria-label="Schliessen">✕</button><button class="pv-a pv-l" onclick="padPhotoGo(-1)" aria-label="Vorheriges">‹</button><img id="padPhotoImg" alt=""><button class="pv-a pv-r" onclick="padPhotoGo(1)" aria-label="Nächstes">›</button><div id="padPhotoN"></div></div>
     <canvas id="padFx"></canvas>
+    <canvas id="padSky"></canvas>
     <div id="padNight"></div>
     <div id="padWeek" class="hidden">
       <div class="pw-top"><button onclick="padWeekGo(-1)">‹</button><div id="padWeekTitle"></div><button onclick="padWeekGo(1)">›</button><button onclick="padWeekClose()" style="margin-left:auto;">✕ Schliessen</button></div>
@@ -1971,6 +1973,7 @@
       <summary style="cursor:pointer;" class="card-title">🌙 Nachtmodus</summary>
       <div class="set-note" style="margin-top:0;">Nachts wird das Pad abgedunkelt. Antippen macht es eine Minute hell.</div>
       <label class="set-row"><span>Pad nachts abdunkeln</span><span class="switch"><input type="checkbox" id="nmOn" onchange="nmSave()"><span class="slider"></span></span></label>
+      <label class="set-row"><span>Bildschirmschoner mit Mond und Sternen</span><span class="switch"><input type="checkbox" id="nmSaver" checked onchange="nmSave()"><span class="slider"></span></span></label>
       <div class="field" style="margin-top:8px;"><label for="nmFrom">Von</label><input type="time" id="nmFrom" value="22:00" onchange="nmSave()"></div>
       <div class="field"><label for="nmTo">Bis</label><input type="time" id="nmTo" value="06:30" onchange="nmSave()"></div>
       <div class="field"><label for="nmDim">Abdunkeln</label><select id="nmDim" onchange="nmSave()"><option value="0.7">Etwas</option><option value="0.85">Stark</option><option value="0.95">Fast schwarz</option></select></div>
@@ -7456,6 +7459,7 @@
     document.getElementById('nmFrom').value = n.from || '22:00';
     document.getElementById('nmTo').value = n.to || '06:30';
     document.getElementById('nmDim').value = String(n.dim || 0.85);
+    document.getElementById('nmSaver').checked = n.saver !== false;
     bdRenderList();
   }
   let bdEdit = -1, bdImg = '';
@@ -7581,7 +7585,7 @@
   }
   function bdDel(i) { if (!window.confirm('Diesen Geburtstag löschen?')) return; bdCfg.bdays.splice(i, 1); if (bdEdit === i) bdFormReset(); bdRenderList(); bdSave(); }
   async function nmSave() {
-    bdCfg.night = { on: document.getElementById('nmOn').checked, from: document.getElementById('nmFrom').value || '22:00', to: document.getElementById('nmTo').value || '06:30', dim: Number(document.getElementById('nmDim').value) || 0.85 };
+    bdCfg.night = { on: document.getElementById('nmOn').checked, from: document.getElementById('nmFrom').value || '22:00', to: document.getElementById('nmTo').value || '06:30', dim: Number(document.getElementById('nmDim').value) || 0.85, saver: document.getElementById('nmSaver').checked };
     try { await cloudApi.padcfgSet({ night: bdCfg.night }); showToast('Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen'); }
   }
   // ---- Fotos / Diashow ----
@@ -8232,6 +8236,47 @@
     document.getElementById('padPop').classList.remove('hidden');
   }
   function padPopClose() { document.getElementById('padPop').classList.add('hidden'); }
+  // ---- Nacht-Bildschirmschoner: Mond und Sterne ----
+  let padSkyRaf = 0, padSkyStars = [], padSkyMoon = null, padSkyShoot = null, padSkyLast = 0, padSkyNext = 0;
+  function padSkyUpdate(on) {
+    const cv = document.getElementById('padSky'); if (!cv) return;
+    if (on) { cv.style.opacity = '1'; if (!padSkyRaf) { padSkyLast = 0; padSkyRaf = requestAnimationFrame(padSkyStep); } }
+    else { cv.style.opacity = '0'; setTimeout(() => { if (cv.style.opacity === '0' && padSkyRaf) { cancelAnimationFrame(padSkyRaf); padSkyRaf = 0; } }, 2700); }
+  }
+  function padSkyMake(R) {
+    const c = document.createElement('canvas'); c.width = c.height = Math.ceil(R * 2 + 4); const g = c.getContext('2d'), m = R + 2;
+    g.beginPath(); g.arc(m, m, R, 0, 6.2832); g.clip();
+    const gr = g.createRadialGradient(m - R * .3, m - R * .3, R * .1, m, m, R); gr.addColorStop(0, '#fffbe0'); gr.addColorStop(1, '#e9dc9c'); g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = 'rgba(190,175,110,.35)'; [[-.25, -.1, .16], [.1, .3, .12], [-.05, .45, .09], [.3, -.25, .08]].forEach(q => { g.beginPath(); g.arc(m + q[0] * R, m + q[1] * R, q[2] * R, 0, 6.2832); g.fill(); });
+    g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(m + R * .5, m - R * .12, R * .9, 0, 6.2832); g.fill();
+    return c;
+  }
+  function padSkyStep(t) {
+    padSkyRaf = requestAnimationFrame(padSkyStep);
+    if (t - padSkyLast < 40) return; padSkyLast = t;
+    const cv = document.getElementById('padSky'), W = window.innerWidth, H = window.innerHeight;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; padSkyStars = []; padSkyMoon = null; }
+    const g = cv.getContext('2d'), R = Math.min(W, H) * .11;
+    if (!padSkyStars.length) for (let i = 0; i < 150; i++) padSkyStars.push({ x: Math.random() * W, y: Math.random() * H, r: .5 + Math.random() * 1.4, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.6, c: ['#fff', '#cfe0ff', '#fff3c8'][i % 3] });
+    if (!padSkyMoon) padSkyMoon = padSkyMake(R);
+    g.clearRect(0, 0, W, H);
+    const ts = t / 1000;
+    padSkyStars.forEach(s => { g.globalAlpha = .25 + .6 * (.5 + .5 * Math.sin(ts * s.sp + s.ph)); g.fillStyle = s.c; g.beginPath(); g.arc(s.x, s.y, s.r, 0, 6.2832); g.fill(); });
+    // Mond (wandert langsam, damit nichts einbrennt)
+    const mx = W * .72 + Math.sin(ts / 400) * W * .05, my = H * .34 + Math.cos(ts / 500) * H * .04;
+    const gl = g.createRadialGradient(mx, my, R * .8, mx, my, R * 3); gl.addColorStop(0, 'rgba(255,240,190,.22)'); gl.addColorStop(1, 'rgba(255,240,190,0)');
+    g.globalAlpha = 1; g.fillStyle = gl; g.fillRect(mx - R * 3, my - R * 3, R * 6, R * 6);
+    g.globalAlpha = .95; g.drawImage(padSkyMoon, mx - R - 2, my - R - 2);
+    // Sternschnuppe
+    if (!padSkyShoot && ts > padSkyNext) { padSkyShoot = { x: Math.random() * W * .6, y: Math.random() * H * .3, a: 0 }; padSkyNext = ts + 20 + Math.random() * 30; }
+    if (padSkyShoot) { const s = padSkyShoot; s.a += .035; s.x += 14; s.y += 7; const al = Math.max(0, 1 - s.a);
+      const gr = g.createLinearGradient(s.x, s.y, s.x - 90, s.y - 45); gr.addColorStop(0, 'rgba(255,255,255,' + al + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.globalAlpha = 1; g.strokeStyle = gr; g.lineWidth = 2; g.beginPath(); g.moveTo(s.x, s.y); g.lineTo(s.x - 90, s.y - 45); g.stroke(); if (s.a >= 1) padSkyShoot = null; }
+    // Uhrzeit, ganz dezent
+    const d = new Date(); g.globalAlpha = .38; g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = Math.round(H * .07) + 'px "Patrick Hand", Arial, sans-serif';
+    g.fillText(String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'), W / 2, H * .9);
+    g.globalAlpha = 1;
+  }
   function padNightCheck() {
     const el = document.getElementById('padNight'); if (!el) return;
     const n = padNightCfg || {}, now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
@@ -8239,7 +8284,9 @@
     const f = tm(n.from || '22:00'), to = tm(n.to || '06:30');
     const inNight = f <= to ? (cur >= f && cur < to) : (cur >= f || cur < to);
     const dark = !!n.on && inNight && Date.now() > padWakeUntil;
-    el.style.opacity = dark ? String(n.dim || 0.85) : '0';
+    const saver = dark && n.saver !== false;
+    el.style.opacity = dark ? (saver ? '1' : String(n.dim || 0.85)) : '0';
+    padSkyUpdate(saver);
   }
   let padSlowN = 0;
   async function padSlowLoad() {
@@ -8618,7 +8665,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.60';
+  const APP_VERSION = '2.61';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
