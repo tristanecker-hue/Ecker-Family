@@ -1650,7 +1650,7 @@
 
   <div id="padScreen" class="hidden">
     <div class="pad-top">
-      <div id="padClock" title="Antippen: App aktualisieren · 3 Sekunden halten: Pad-Modus beenden">--:--</div>
+      <div id="padClock" title="2× antippen: App aktualisieren · 4× antippen: Pad-Modus beenden">--:--</div>
       <div id="padTabs"><button id="padTabO" class="on" onclick="padTab('o')">🏠 Übersicht</button><button id="padTabP" onclick="padTab('p')">📚 Stundenplan</button><button id="padTabL" class="hidden" onclick="padTab('l')">💡 Licht</button></div>
       <div id="padDate"></div>
     </div>
@@ -7380,10 +7380,12 @@
     const clock = document.getElementById('padClock');
     if (!clock.dataset.hold) {
       clock.dataset.hold = '1';
-      let t0 = 0;
-      clock.addEventListener('pointerdown', () => { t0 = Date.now(); padHold = setTimeout(padExit, 3000); });
-      clock.addEventListener('click', () => { if (Date.now() - t0 < 800) reloadApp(); });
-      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => clock.addEventListener(ev, () => clearTimeout(padHold)));
+      let taps = 0, tapT = null;
+      clock.addEventListener('click', () => {
+        taps++; clearTimeout(tapT);
+        if (taps >= 4) { taps = 0; padExit(); return; }
+        tapT = setTimeout(() => { const n = taps; taps = 0; if (n === 2) reloadApp(); }, 600);
+      });
     }
   }
   // Auto-Skalierung: Inhalt immer so verkleinern, dass alles ohne Scrollen auf den Bildschirm passt
@@ -7792,7 +7794,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.25';
+  const APP_VERSION = '2.26';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
