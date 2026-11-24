@@ -140,6 +140,11 @@
   .zt-cols button.on { outline:3px solid #262319; outline-offset:2px; }
   .zt-prev { position:relative; margin-top:10px; } .zt-prev img { max-width:100%; max-height:180px; border-radius:8px; border:2px solid #262319; display:block; }
   .zt-prev button { position:absolute; top:4px; left:4px; width:30px; height:30px; border-radius:50%; border:2px solid #262319; background:#fff; font-weight:800; cursor:pointer; }
+  .zt-sum { margin-top:12px; padding:8px 12px; border:2px dashed #262319; border-radius:10px; font-weight:800; background:#fffbe8; }
+  .zt-sum.bad { border-color:#c0271d; color:#c0271d; }
+  .zt-to { display:inline-block; font-size:12px; font-weight:800; background:#fff9; border:1.5px solid #262319; border-radius:999px; padding:2px 9px; margin-bottom:8px; white-space:normal; }
+  .zt-chips button.on::before { content:'✓ '; }
+  .zt-chips button:not(.on) { opacity:.55; }
   .zt-actions { display:flex; gap:8px; margin-top:12px; }
   .zt-h { font-weight:800; font-size:15px; margin:18px 2px 8px; }
   .zt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; padding:4px 2px 10px; }
@@ -1748,6 +1753,7 @@
       <div id="ztCol" class="zt-cols"></div>
       <div class="zt-lbl">Grösse &amp; Schrift</div>
       <div id="ztSty" class="zt-chips"></div>
+      <div id="ztSum" class="zt-sum"></div>
       <div id="ztPrev" class="zt-prev hidden"><img id="ztPrevImg" alt=""><button onclick="ztPhotoClear()" aria-label="Foto entfernen">✕</button></div>
       <div class="zt-actions">
         <button class="btn" onclick="document.getElementById('ztFile').click()">📷 Foto</button>
@@ -3974,6 +3980,14 @@
   const zHidKey = who => 'ef-zettel-hidden-' + who;
   const zHidGet = who => { try { return new Set(JSON.parse(localStorage.getItem(zHidKey(who)) || '[]')); } catch (e) { return new Set(); } };
   const zHidAdd = (who, id) => { const h = zHidGet(who); h.add(id); try { localStorage.setItem(zHidKey(who), JSON.stringify([...h].slice(-200))); } catch (e) {} };
+  // Empfänger als Text: «alle», Namen, «dich», «📺 Pad»
+  function zToText(z, me) {
+    const to = z.to || [], others = Object.keys(ACCOUNTS).filter(k => k !== z.from), people = to.filter(k => k !== 'pad');
+    const all = others.length && others.every(k => people.includes(k));
+    const names = all ? ['alle'] : people.map(k => k === me ? 'dich' : ACCOUNTS[k] || k);
+    if (to.includes('pad')) names.push('📺 Pad');
+    return names.join(', ');
+  }
   const zRot = id => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) | 0; return ((Math.abs(h) % 41) - 20) / 10; };
   const zName = k => k === 'pad' ? '📺 Pad' : (ACCOUNTS[k] || k);
   const zSeenKey = () => 'ef-zettel-seen-' + userKey(currentUser);
@@ -4011,6 +4025,9 @@
   function ztChips() {
     const me = userKey(currentUser), others = Object.keys(ACCOUNTS).filter(k => k !== me);
     const all = others.every(k => zTo.has(k));
+    const sum = document.getElementById('ztSum'), txt = zToText({ from: me, to: [...zTo] }, null);
+    sum.textContent = zTo.size ? '➡️ Geht an: ' + txt : '⚠️ Niemand gewählt – wähle oben, für wen der Zettel ist';
+    sum.classList.toggle('bad', !zTo.size);
     document.getElementById('ztTo').innerHTML = `<button class="${all ? 'on' : ''}" onclick="ztToggle('*')">👪 Alle</button>` + others.map(k => `<button class="${zTo.has(k) ? 'on' : ''}" onclick="ztToggle('${k}')">${escapeHtml(ACCOUNTS[k])}</button>`).join('') + `<button class="${zTo.has('pad') ? 'on' : ''}" onclick="ztToggle('pad')">📺 Pad</button>`;
   }
   function ztToggle(k) {
@@ -4044,13 +4061,12 @@
   }
   function ztNoteHtml(z, kind) {
     const me = userKey(currentUser), parent = isParentUser(), mine = z.from === me, forMe = (z.to || []).includes(me);
-    const to = (z.to || []).map(zName).join(', ');
     const btns = [];
     if (!z.done && (forMe || mine || parent)) btns.push(`<button onclick="ztDone('${z.id}')">✓ Erledigt</button>`);
     btns.push(`<button onclick="ztHide('${z.id}')" title="Auf diesem Gerät entfernen">🗑 Entfernen</button>`);
     if (mine || parent) btns.push(`<button onclick="ztDel('${z.id}')" title="Für alle löschen">✕ Für alle</button>`);
     const time = new Date(z.at).toLocaleString('de-CH', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-    return `<div class="zt-note ${z.done ? 'done' : ''}" style="background:${escapeHtml(z.color || ZCOL[0])};--r:${zRot(z.id)}deg;font-size:${16 * zSz(z)}px;${zFam(z) ? 'font-family:' + zFam(z) : ''}${z.size === 'l' ? ';grid-column:span 2' : ''}">${escapeHtml(z.text || '')}${z.photo ? `<img data-zp="${z.id}" alt="Foto">` : ''}<div class="zt-m">${kind === 'sent' ? 'An ' + escapeHtml(to) : escapeHtml(z.name || zName(z.from))}${z.done ? ' · ✓ erledigt' + (z.doneBy ? ' von ' + escapeHtml(zName(z.doneBy)) : '') : ''} · ${escapeHtml(time)}</div>${btns.length ? `<div class="zt-b">${btns.join('')}</div>` : ''}</div>`;
+    return `<div class="zt-note ${z.done ? 'done' : ''}" style="background:${escapeHtml(z.color || ZCOL[0])};--r:${zRot(z.id)}deg;${z.size === 'l' ? 'grid-column:span 2' : ''}"><div class="zt-to">${mine ? 'An' : 'Von ' + escapeHtml(z.name || zName(z.from)) + ' an'}: ${escapeHtml(zToText(z, me))}</div><div style="font-size:${16 * zSz(z)}px;${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? `<img data-zp="${z.id}" alt="Foto">` : ''}<div class="zt-m">${z.done ? '✓ erledigt' + (z.doneBy ? ' von ' + escapeHtml(zName(z.doneBy)) + ' · ' : ' · ') : ''}${escapeHtml(time)}</div>${btns.length ? `<div class="zt-b">${btns.join('')}</div>` : ''}</div>`;
   }
   function ztRender() {
     const el = document.getElementById('ztList'); if (!el) return;
@@ -7697,7 +7713,7 @@
     padWakeUntil = Date.now() + 60000; padNightCheck();
     const note = document.getElementById('padZNote'); note.style.background = z.color || '#FFE97A';
     const pt = document.getElementById('padZText'); pt.textContent = z.text || ''; pt.style.setProperty('--zs', zSz(z)); pt.style.fontFamily = zFam(z).split(';')[0]; pt.style.fontWeight = /900/.test(zFam(z)) ? '900' : '';
-    document.getElementById('padZWho').textContent = '— ' + (z.name || zName(z.from)) + ' · ' + new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('padZWho').textContent = '— ' + (z.name || zName(z.from)) + ' an ' + zToText(z, null) + ' · ' + new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
     const im = document.getElementById('padZImg'); im.classList.add('hidden'); im.removeAttribute('src');
     document.getElementById('padZNew').classList.remove('hidden');
     clearTimeout(padZTimer); padZTimer = setTimeout(padZNewClose, 40000);
@@ -7732,7 +7748,7 @@
     if (what.startsWith('t:')) h = padTodosHtml(true, what.slice(2)) || '<div class="pad-ok">Nichts offen</div>';
     else if (what.startsWith('z:')) {
       const z = padZ.find(x => x.id === what.slice(2)); if (!z) return;
-      h = `<div style="background:${escapeHtml(z.color || '#FFE97A')};padding:3vmin;border-radius:3px;box-shadow:3px 5px 14px rgba(0,0,0,.3);"><div class="pz-text" style="--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? '<img id="padPopZImg" style="display:block;max-width:100%;max-height:50vh;margin:2vmin auto 0;border-radius:8px;">' : ''}<div style="opacity:.65;margin-top:2vmin;font-size:clamp(14px,2.6vmin,28px);">— ${escapeHtml(z.name || zName(z.from))} · ${new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div><button class="pp-x" style="margin:12px 0 0 auto;background:#fff;" onclick="zHidAdd('pad','${z.id}');padPopClose();padRenderTodos();padFitSoon()">🗑 Vom Pad entfernen</button>`;
+      h = `<div style="background:${escapeHtml(z.color || '#FFE97A')};padding:3vmin;border-radius:3px;box-shadow:3px 5px 14px rgba(0,0,0,.3);"><div class="pz-text" style="--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? '<img id="padPopZImg" style="display:block;max-width:100%;max-height:50vh;margin:2vmin auto 0;border-radius:8px;">' : ''}<div style="opacity:.65;margin-top:2vmin;font-size:clamp(14px,2.6vmin,28px);">— ${escapeHtml(z.name || zName(z.from))} an ${escapeHtml(zToText(z, null))} · ${new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div><button class="pp-x" style="margin:12px 0 0 auto;background:#fff;" onclick="zHidAdd('pad','${z.id}');padPopClose();padRenderTodos();padFitSoon()">🗑 Vom Pad entfernen</button>`;
       if (z.photo) ztPhotoSrc(z.id).then(src => { const i = document.getElementById('padPopZImg'); if (i && src) i.src = src; });
     }
     else if (what === 'bday') h = '<div class="pad-h">🎂 Geburtstage</div>' + (padBdHtml(99) || '<div class="pad-ok">Keine erfasst</div>');
@@ -7810,7 +7826,7 @@
     const pool = padTodos.filter(t => t.assigneeKey === POOL && !t.done).sort(byDue);
     const poolHtml = pool.length && (!only || only === 'pool') ? `<div class="pad-person pad-pool" data-k="pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>wer zuerst kommt!</span></div>${pool.slice(0, L).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
     const zl = (!only && !full) ? padZ.filter(z => !z.done && !zHidGet('pad').has(z.id)).sort((x, y) => y.at - x.at).slice(0, 6) : [];
-    const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Zettel</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))}</small></div>`).join('')}</div></div>` : '';
+    const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Zettel</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))} → ${escapeHtml(zToText(z, null))}</small></div>`).join('')}</div></div>` : '';
     return cards + poolHtml + zHtml;
   }
 
@@ -8137,7 +8153,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.34';
+  const APP_VERSION = '2.35';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
