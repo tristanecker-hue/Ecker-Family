@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Ecker's Family</title>
 <link rel="apple-touch-icon" href="icons/icon-180.png?v=3">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3">
@@ -201,7 +201,7 @@
   .pool-row > div { flex:1; }
   .pool-row .take { border:2px solid #262319; background:#7CCB4A; border-radius:12px; padding:8px 10px; font-weight:800; cursor:pointer; color:#262319; }
   /* Pad-Modus (Wand-iPad) */
-  #padScreen { padding: clamp(10px, 2vmin, 28px); box-sizing: border-box; min-height: 100vh; }
+  #padScreen { --pp: clamp(10px, 2vmin, 28px); padding: max(var(--pp), env(safe-area-inset-top)) max(var(--pp), env(safe-area-inset-right)) max(var(--pp), env(safe-area-inset-bottom)) max(var(--pp), env(safe-area-inset-left)); box-sizing: border-box; min-height: 100vh; }
   #padScreen .pad-top { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom: clamp(8px, 1.6vmin, 20px); }
   #padClock { font-size: clamp(54px, 11vmin, 150px); line-height: .95; font-weight: 800; cursor: default; user-select: none; -webkit-user-select: none; }
   #padDate { font-size: clamp(20px, 3.4vmin, 44px); text-align: right; font-weight: 700; }
@@ -312,7 +312,7 @@
   #padScreen.tab-l #padHue .hue-plan img { max-height:calc(100vh - 124px); }
   #padScreen.tab-l #padHueCard { padding:6px; }
   #padScreen.tab-l #padHueCard .pad-h { display:none; }
-  #padScreen.tab-l { padding:8px 14px; }
+  #padScreen.tab-l { --pp: 8px; }
   #padScreen.tab-l #padClock { font-size:clamp(34px, 6.5vmin, 90px); }
   #padScreen.tab-l .pad-top { margin-bottom:8px; }
   #padScreen.tab-l #padDate { font-size:clamp(16px,2.6vmin,30px); }
@@ -7782,11 +7782,25 @@
     try { localStorage.setItem('ef-pad-visible', '1'); history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
     renderAccountCards(); chooseUser('Pad');
   }
+  // Pad: Statusleiste und untere Leiste in der Farbe der Seite einfärben (Rand wirkt «weg»)
+  function padThemeColor(on) {
+    const m = document.querySelector('meta[name="theme-color"]'); if (!m) return;
+    if (on) {
+      if (!m.dataset.orig) m.dataset.orig = m.content;
+      const c = getComputedStyle(document.body).backgroundColor;
+      m.content = c && c !== 'rgba(0, 0, 0, 0)' ? c : '#F5F1E8';
+      document.documentElement.style.backgroundColor = m.content;
+    } else {
+      if (m.dataset.orig) m.content = m.dataset.orig;
+      document.documentElement.style.backgroundColor = '';
+    }
+  }
   async function enterPad() {
     hideAllScreens();
     ['accountScreen', 'homeScreen', 'mainScreen', 'summaryScreen'].forEach(id => document.getElementById(id).classList.add('hidden'));
     setLoginBackground(false);
     document.body.classList.add('pad-mode');
+    padThemeColor(true);
     document.getElementById('padScreen').classList.remove('hidden');
     document.getElementById('padFoot').textContent = "Ecker's Family · Pad · Version " + APP_VERSION;
     padStop(true);
@@ -7850,7 +7864,7 @@
     if (padZUnsub) { try { padZUnsub(); } catch (e) {} padZUnsub = null; }
     clearInterval(padTick); clearInterval(padSlow); clearInterval(hueTimer); clearInterval(padShowTimer); clearInterval(padShowRefresh); padShowTimer = padShowRefresh = null; padTick = padSlow = hueTimer = null;
     if (padWake) { try { padWake.release(); } catch (e) {} padWake = null; }
-    if (!keep) { document.body.classList.remove('pad-mode'); document.getElementById('padScreen').classList.add('hidden'); }
+    if (!keep) { padThemeColor(false); document.body.classList.remove('pad-mode'); document.getElementById('padScreen').classList.add('hidden'); }
   }
   async function padExit() {
     if (!window.confirm('Pad-Modus beenden und abmelden?')) return;
@@ -8325,7 +8339,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.41';
+  const APP_VERSION = '2.42';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
