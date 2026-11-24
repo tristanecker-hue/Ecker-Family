@@ -267,6 +267,9 @@
   #padScreen.tab-l #padHue .hue-planwrap { grid-row:1; }
   #hueBox .hue-plan img { max-height:62vh; }
   @media (max-width: 760px) { #padHue, #hueBox { grid-template-columns: 1fr !important; } #padHue .hue-list, #hueBox .hue-list { grid-column:1 !important; grid-row:3 !important; } #padScreen.tab-l #padHue .hue-stopwrap { position:static; } #padScreen.tab-l #padHue .hue-planwrap { grid-row:2; } #hueBox .hue-room { flex:1 1 100%; } #hueBox .hue-plan img { max-height:none; } }
+  body.pad-mode .app-version { display:none; }
+  body.pad-mode { overflow:hidden; }
+  #padScreen { transform-origin: 0 0; }
   #padFoot { text-align:center; font-size:12px; opacity:.5; margin-top: 14px; }
   body.pad-mode .wrap { max-width: none; padding: 0; }
   @media (max-width: 760px) { #padScreen .pad-main { grid-template-columns: 1fr; } #padScreen .pad-people { grid-template-columns: 1fr; } }
@@ -7186,7 +7189,7 @@
       hueFill(box, st);
     } catch (e) { if (!card) box.innerHTML = '<div class="sub">Licht nicht erreichbar (' + escapeHtml(e.message) + ')</div>'; }
   }
-  function padTab(t) {
+  function padTab(t) { setTimeout(padFitSoon, 50);
     const sc = document.getElementById('padScreen');
     sc.classList.toggle('tab-l', t === 'l'); sc.classList.toggle('tab-p', t === 'p');
     document.getElementById('padTabO').classList.toggle('on', t !== 'l' && t !== 'p');
@@ -7364,6 +7367,7 @@
     document.getElementById('padScreen').classList.remove('hidden');
     document.getElementById('padFoot').textContent = "Ecker's Family · Pad · Version " + APP_VERSION;
     padStop(true);
+    padFitStart();
     padClock(true);
     padTick = setInterval(padClock, 10000);
     padUnsub = cloudApi.todosListen(list => { padTodos = list; padRenderTodos(); }, () => {});
@@ -7380,6 +7384,34 @@
       clock.addEventListener('pointerdown', () => { t0 = Date.now(); padHold = setTimeout(padExit, 3000); });
       clock.addEventListener('click', () => { if (Date.now() - t0 < 800) reloadApp(); });
       ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => clock.addEventListener(ev, () => clearTimeout(padHold)));
+    }
+  }
+  // Auto-Skalierung: Inhalt immer so verkleinern, dass alles ohne Scrollen auf den Bildschirm passt
+  let padFitT = null;
+  function padFit() {
+    const el = document.getElementById('padScreen');
+    if (!el || el.classList.contains('hidden')) return;
+    const W = window.innerWidth, H = window.innerHeight;
+    el.style.transform = 'none'; el.style.width = ''; el.style.minHeight = '';
+    const nh = el.scrollHeight, nw = el.scrollWidth;
+    let z = Math.min(1, H / nh, W / nw);
+    z = Math.max(0.45, Math.floor(z * 100) / 100);
+    if (z < 0.995) {
+      el.style.width = (W / z) + 'px';
+      el.style.minHeight = (H / z) + 'px';
+      el.style.transform = 'scale(' + z + ')';
+      // nach Neuumbruch (breiter) nochmals prüfen
+      if (el.scrollHeight * z > H + 2 && z > 0.46) { z = Math.max(0.45, Math.floor(z * H / (el.scrollHeight * z) * 100) / 100); el.style.width = (W / z) + 'px'; el.style.minHeight = (H / z) + 'px'; el.style.transform = 'scale(' + z + ')'; }
+    }
+  }
+  function padFitSoon() { clearTimeout(padFitT); padFitT = setTimeout(padFit, 150); }
+  function padFitStart() {
+    padFit();
+    if (!window.__padFitBound) {
+      window.__padFitBound = true;
+      window.addEventListener('resize', padFitSoon);
+      window.addEventListener('orientationchange', padFitSoon);
+      setInterval(() => { if (document.body.classList.contains('pad-mode')) padFit(); }, 4000);
     }
   }
   function padStop(keep) {
@@ -7760,7 +7792,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.23';
+  const APP_VERSION = '2.24';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
