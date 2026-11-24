@@ -369,6 +369,7 @@
   body.pad-mode .app-version { display:none; }
   body.pad-mode { overflow:hidden; }
   #padScreen { transform-origin: 0 0; }
+  #padFx { position:fixed; inset:0; width:100vw; height:100vh; z-index:40; pointer-events:none; display:none; }
   #padNight { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; z-index:9999; transition:opacity 2.5s ease; }
   #padPop { position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:16px; }
   #padPop.hidden { display:none; }
@@ -1801,6 +1802,7 @@
     <div id="padFoot"></div>
     <div id="padPop" class="hidden" onclick="if(event.target===this)padPopClose()"><div id="padPopBox"><button class="pp-x" onclick="padPopClose()">✕ Schliessen</button><div id="padPopBody"></div></div></div>
     <div id="padZNew" class="hidden" onclick="padZNewClose()"><div class="pz-note" id="padZNote"><div class="pz-tape"></div><div class="pz-text" id="padZText"></div><img id="padZImg" class="hidden" alt=""><div class="pz-who" id="padZWho"></div></div></div>
+    <canvas id="padFx"></canvas>
     <div id="padNight"></div>
     <div id="padWeek" class="hidden">
       <div class="pw-top"><button onclick="padWeekGo(-1)">‹</button><div id="padWeekTitle"></div><button onclick="padWeekGo(1)">›</button><button onclick="padWeekClose()" style="margin-left:auto;">✕ Schliessen</button></div>
@@ -1979,6 +1981,13 @@
       <button class="btn" onclick="wasteAdd()" style="margin:6px 0;">＋ Termin hinzufügen</button>
       <div id="wsList"></div>
       <button class="btn" onclick="wastePast()" style="margin-top:6px;">Vergangene löschen</button>
+      </details>
+    </div>
+    <div class="card hidden" id="wxCard">
+      <details>
+      <summary style="cursor:pointer;" class="card-title">☀️ Wetter</summary>
+      <div class="set-note" style="margin-top:0;">Die Pad-Übersicht reagiert aufs Wetter in Zuchwil: Regen, Schnee, Gewitter und Nebel erscheinen als Effekt im Hintergrund.</div>
+      <label class="set-row"><span>Wettereffekte auf der Übersicht</span><span class="switch"><input type="checkbox" id="wxFx" checked onchange="wxfxSave()"><span class="slider"></span></span></label>
       </details>
     </div>
     <div class="card hidden" id="hueCard">
@@ -3284,7 +3293,7 @@
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
-    renderThemes(); gcalRender(); pushRender(); odRender(); padRender(); fotoSettings(); bdSettings(); wasteSettings();
+    renderThemes(); gcalRender(); pushRender(); odRender(); padRender(); fotoSettings(); bdSettings(); wasteSettings(); wxfxSettings();
     if (isAdmin()) renderSettings();
     applyAvatars();
   }
@@ -7760,9 +7769,54 @@
     document.getElementById('padTabO').classList.toggle('on', t !== 'l' && t !== 'p' && t !== 'w');
     document.getElementById('padTabW').classList.toggle('on', t === 'w');
     if (t === 'w') padWxShow();
+    padFxUpdate();
     document.getElementById('padTabP').classList.toggle('on', t === 'p');
     document.getElementById('padTabL').classList.toggle('on', t === 'l');
     if (t === 'p') padRenderPlans();
+  }
+  // ---- Wettereffekte auf der Pad-Übersicht ----
+  let padFxCfg = true, padFxRaf = 0, padFxP = [], padFxKind = '', padFxFlash = 0, padFxLast = 0;
+  async function wxfxSettings() {
+    const c = document.getElementById('wxCard'); if (!c) return;
+    const ok = cloudEnabled && isParentU(); c.classList.toggle('hidden', !ok); if (!ok) return;
+    try { const cfg = (await cloudApi.padcfgGet()) || {}; document.getElementById('wxFx').checked = cfg.wxfx !== false; } catch (e) {}
+  }
+  async function wxfxSave() { try { await cloudApi.padcfgSet({ wxfx: document.getElementById('wxFx').checked }); showToast('Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen'); } }
+  const padFxKindOf = c => (c >= 95 ? 'thunder' : (c >= 71 && c <= 77) || c === 85 || c === 86 ? 'snow' : (c >= 51 && c <= 67) || (c >= 80 && c <= 82) ? 'rain' : c === 45 || c === 48 ? 'fog' : '');
+  function padFxUpdate(force) {
+    const cv = document.getElementById('padFx'); if (!cv) return;
+    const sc = document.getElementById('padScreen');
+    const kind = padFxCfg && padWx && padWx.current ? padFxKindOf(padWx.current.weather_code) : (force || '');
+    const on = !!kind && document.body.classList.contains('pad-mode') && !sc.classList.contains('hidden') && !/\btab-[lpw]\b/.test(sc.className) && document.getElementById('padWeek').classList.contains('hidden');
+    if (!on) { cv.style.display = 'none'; cancelAnimationFrame(padFxRaf); padFxRaf = 0; padFxKind = ''; return; }
+    cv.style.display = 'block';
+    if (kind !== padFxKind) { padFxKind = kind; padFxP = []; }
+    if (!padFxRaf) { padFxLast = 0; padFxRaf = requestAnimationFrame(padFxStep); }
+  }
+  function padFxStep(t) {
+    padFxRaf = requestAnimationFrame(padFxStep);
+    if (!document.body.classList.contains('pad-mode')) { padFxUpdate(); return; }
+    if (t - padFxLast < 33) return; padFxLast = t;
+    const cv = document.getElementById('padFx'), W = window.innerWidth, H = window.innerHeight;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; padFxP = []; }
+    const g = cv.getContext('2d'), k = padFxKind, rain = k === 'rain' || k === 'thunder';
+    const code = padWx && padWx.current ? padWx.current.weather_code : 61, heavy = [65, 67, 75, 77, 82, 86, 95, 96, 99].includes(code);
+    const N = k === 'fog' ? 7 : Math.round((rain ? 110 : 80) * (heavy ? 1.6 : 1) * (code === 51 || code === 56 ? .5 : 1));
+    while (padFxP.length < N) padFxP.push(k === 'fog' ? { x: Math.random() * W, y: Math.random() * H, r: H * (.25 + Math.random() * .3), v: .2 + Math.random() * .3 } : { x: Math.random() * W, y: Math.random() * H, v: rain ? 18 + Math.random() * 14 : 1.5 + Math.random() * 2.5, l: 12 + Math.random() * 16, r: 2 + Math.random() * 3.5, ph: Math.random() * 6.28 });
+    g.clearRect(0, 0, W, H);
+    if (k === 'fog') {
+      padFxP.forEach(p => { p.x += p.v; if (p.x - p.r > W) p.x = -p.r; const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r); gr.addColorStop(0, 'rgba(160,170,180,.28)'); gr.addColorStop(1, 'rgba(160,170,180,0)'); g.fillStyle = gr; g.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2); });
+      return;
+    }
+    if (rain) {
+      g.strokeStyle = 'rgba(40,110,190,.55)'; g.lineWidth = 2; g.lineCap = 'round'; g.beginPath();
+      padFxP.forEach(p => { g.moveTo(p.x, p.y); g.lineTo(p.x - p.l * .22, p.y + p.l); p.y += p.v; p.x -= p.v * .22; if (p.y > H) { p.y = -20; p.x = Math.random() * (W + 120); } });
+      g.stroke();
+      if (k === 'thunder') { if (!padFxFlash && Math.random() < .004) padFxFlash = 5; if (padFxFlash) { g.fillStyle = 'rgba(255,255,255,' + (padFxFlash % 2 ? .55 : .2) + ')'; g.fillRect(0, 0, W, H); padFxFlash--; } }
+    } else {
+      g.fillStyle = '#fff'; g.strokeStyle = 'rgba(110,140,185,.75)'; g.lineWidth = 1.5;
+      padFxP.forEach(p => { p.y += p.v; p.ph += .03; p.x += Math.sin(p.ph) * 1.1; if (p.y > H + 10) { p.y = -10; p.x = Math.random() * W; } g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.283); g.fill(); g.stroke(); });
+    }
   }
   // ---- Wetter Zuchwil (Open-Meteo, kein Schlüssel nötig) ----
   const WX_PLACE = { name: 'Zuchwil', lat: 47.2025, lon: 7.5667 };
@@ -7781,7 +7835,7 @@
       padWx = await r.json(); padWxAt = Date.now();
     } catch (e) {}
     padWxBusy = false;
-    padWxRender();
+    padWxRender(); padFxUpdate();
   }
   function padWxShow() { padWxRender(); padWxLoad(false); }
   function padWxRender() {
@@ -7802,8 +7856,8 @@
     try { document.getElementById('padPlans').innerHTML = PLAN_KIDS.map(planCardHtml).join(''); } catch (e) {}
   }
   let padWeekStart = null;
-  function padWeekOpen() { const m = mondayOf(new Date()); padWeekStart = new Date(m.getFullYear(), m.getMonth(), m.getDate()); document.getElementById('padWeek').classList.remove('hidden'); padWeekRender(); }
-  function padWeekClose() { document.getElementById('padWeek').classList.add('hidden'); }
+  function padWeekOpen() { const m = mondayOf(new Date()); padWeekStart = new Date(m.getFullYear(), m.getMonth(), m.getDate()); document.getElementById('padWeek').classList.remove('hidden'); padWeekRender(); padFxUpdate(); }
+  function padWeekClose() { document.getElementById('padWeek').classList.add('hidden'); padFxUpdate(); }
   function padWeekGo(d) { padWeekStart = new Date(padWeekStart.getFullYear(), padWeekStart.getMonth(), padWeekStart.getDate() + 7 * d); padWeekRender(); }
   function padWeekRender() {
     const p2 = x => String(x).padStart(2, '0'), names = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -8104,7 +8158,7 @@
   function padZNewClose() { clearTimeout(padZTimer); document.getElementById('padZNew').classList.add('hidden'); if (padZQueue.length) setTimeout(padZNext, 400); }
   let padBd = [], padNightCfg = {}, padWakeUntil = 0;
   async function padCfgLoad() {
-    try { const c = (await cloudApi.padcfgGet()) || {}; padBd = Array.isArray(c.bdays) ? c.bdays : []; padNightCfg = c.night || {}; wasteList = Array.isArray(c.waste) ? c.waste : []; } catch (e) {}
+    try { const c = (await cloudApi.padcfgGet()) || {}; padBd = Array.isArray(c.bdays) ? c.bdays : []; padNightCfg = c.night || {}; wasteList = Array.isArray(c.waste) ? c.waste : []; padFxCfg = c.wxfx !== false; padFxUpdate(); } catch (e) {}
     padRenderBday(); padNightCheck(); try { padRenderInfo(); if (!document.getElementById('padWeek').classList.contains('hidden')) padWeekRender(); } catch (e) {}
   }
   function padRenderBday() {
@@ -8163,7 +8217,7 @@
   async function padSlowLoad() {
     if (padSlowN++ % 30 === 0) { try { await loadAvatars(); } catch (e) {} }
     padCfgLoad();
-    if (document.getElementById('padScreen').classList.contains('tab-w')) padWxLoad(false);
+    padWxLoad(false); padFxUpdate();
     try {
       const now = new Date(), weeks = {};
       for (const off of [0, 7]) { const m = mondayOf(new Date(now.getTime() + off * 86400000)); weeks[isoDate(m)] = await kvGet('meals', isoDate(m)); }
@@ -8536,7 +8590,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.56';
+  const APP_VERSION = '2.57';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
