@@ -258,7 +258,25 @@
   #hueSheet, #fotoSheet { position:fixed; inset:0; z-index:60; background:rgba(38,35,25,.5); display:flex; align-items:flex-end; justify-content:center; }
   #hueSheet .hs, #fotoSheet .hs { background:var(--paper,#fffdf6); width:100%; max-width:1100px; max-height:92vh; overflow:auto; border-radius:22px 22px 0 0; padding:16px 16px 28px; border:3px solid #262319; border-bottom:0; }
   #hueSheet .hs h3, #fotoSheet .hs h3 { margin:0 0 6px; display:flex; justify-content:space-between; align-items:center; }
-  #padScreen.tab-p .pad-main { display:none; }
+  #padScreen.tab-p .pad-main, #padScreen.tab-w .pad-main { display:none; }
+  #padScreen:not(.tab-w) #padWeather { display:none; }
+  #padWeather { display:flex; flex-direction:column; gap:clamp(10px,2vmin,24px); flex:1; }
+  .wx-card { background:#fffdf8; border:2.5px solid #262319; border-radius:22px; padding:clamp(12px,2.2vmin,28px); box-shadow:4px 4px 0 #262319; }
+  .wx-now { display:flex; align-items:center; gap:clamp(14px,3vmin,40px); flex-wrap:wrap; }
+  .wx-ico { font-size:clamp(70px,16vmin,190px); line-height:1; }
+  .wx-temp { font-size:clamp(60px,14vmin,170px); font-weight:800; line-height:1; }
+  .wx-desc { font-size:clamp(20px,4vmin,50px); font-weight:800; }
+  .wx-meta { font-size:clamp(14px,2.4vmin,30px); opacity:.75; line-height:1.5; }
+  .wx-place { margin-left:auto; text-align:right; font-size:clamp(16px,2.8vmin,34px); font-weight:800; }
+  .wx-place small { display:block; font-size:.6em; font-weight:600; opacity:.55; }
+  .wx-h { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:clamp(4px,.8vmin,10px); text-align:center; }
+  .wx-h > div { padding:clamp(4px,.8vmin,10px) 0; border-radius:14px; background:#fff; border:1.5px solid rgba(38,35,25,.25); }
+  .wx-h b { display:block; font-size:clamp(12px,2vmin,24px); } .wx-h i { display:block; font-style:normal; font-size:clamp(22px,4.4vmin,54px); } .wx-h span { display:block; font-size:clamp(14px,2.4vmin,30px); font-weight:800; } .wx-h small { display:block; font-size:clamp(11px,1.7vmin,20px); color:#2F8FC4; font-weight:700; min-height:1.2em; }
+  .wx-d { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:clamp(6px,1.2vmin,14px); text-align:center; }
+  .wx-d > div { padding:clamp(6px,1.2vmin,14px) 4px; border-radius:16px; background:#fff; border:2px solid #262319; }
+  .wx-d > div.t { background:#FFF2B3; border-width:3px; }
+  .wx-d b { display:block; font-size:clamp(14px,2.4vmin,30px); } .wx-d i { display:block; font-style:normal; font-size:clamp(30px,6.5vmin,80px); margin:2px 0; } .wx-d span { display:block; font-size:clamp(14px,2.5vmin,32px); font-weight:800; } .wx-d span em { font-style:normal; font-weight:600; opacity:.55; } .wx-d small { display:block; font-size:clamp(11px,1.8vmin,22px); color:#2F8FC4; font-weight:700; }
+  .wx-h-t { font-size:clamp(13px,2vmin,24px); font-weight:800; opacity:.6; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
   #padScreen:not(.tab-p) #padPlans { display:none; }
   #padPlans { display:grid; grid-template-columns: 1fr 1fr; gap:14px; align-items:start; }
   #padPlans .compare-avatar { display:none; }
@@ -1731,7 +1749,7 @@
   <div id="padScreen" class="hidden">
     <div class="pad-top">
       <div id="padClock" title="1× antippen: App aktualisieren · 4× antippen: Pad-Modus beenden">--:--</div>
-      <div id="padTabs"><button id="padTabO" class="on" onclick="padTab('o')">🏠 Übersicht</button><button id="padTabP" onclick="padTab('p')">📚 Stundenplan</button><button id="padTabL" class="hidden" onclick="padTab('l')">💡 Licht</button></div>
+      <div id="padTabs"><button id="padTabO" class="on" onclick="padTab('o')">🏠 Übersicht</button><button id="padTabP" onclick="padTab('p')">📚 Stundenplan</button><button id="padTabL" class="hidden" onclick="padTab('l')">💡 Licht</button><button id="padTabW" onclick="padTab('w')">☀️ Wetter</button></div>
       <div id="padDate"></div>
     </div>
     <div class="pad-main">
@@ -1745,6 +1763,7 @@
       <div class="pad-card hidden" id="padHueCard"><div class="pad-h">💡 Licht</div><div id="padHue"></div></div>
     </div>
     <div id="padPlans"></div>
+    <div id="padWeather"></div>
     <div id="padFoot"></div>
     <div id="padPop" class="hidden" onclick="if(event.target===this)padPopClose()"><div id="padPopBox"><button class="pp-x" onclick="padPopClose()">✕ Schliessen</button><div id="padPopBody"></div></div></div>
     <div id="padZNew" class="hidden" onclick="padZNewClose()"><div class="pz-note" id="padZNote"><div class="pz-tape"></div><div class="pz-text" id="padZText"></div><img id="padZImg" class="hidden" alt=""><div class="pz-who" id="padZWho"></div></div></div>
@@ -7608,11 +7627,47 @@
   }
   function padTab(t) { setTimeout(padFitSoon, 50);
     const sc = document.getElementById('padScreen');
-    sc.classList.toggle('tab-l', t === 'l'); sc.classList.toggle('tab-p', t === 'p');
-    document.getElementById('padTabO').classList.toggle('on', t !== 'l' && t !== 'p');
+    sc.classList.toggle('tab-l', t === 'l'); sc.classList.toggle('tab-p', t === 'p'); sc.classList.toggle('tab-w', t === 'w');
+    document.getElementById('padTabO').classList.toggle('on', t !== 'l' && t !== 'p' && t !== 'w');
+    document.getElementById('padTabW').classList.toggle('on', t === 'w');
+    if (t === 'w') padWxShow();
     document.getElementById('padTabP').classList.toggle('on', t === 'p');
     document.getElementById('padTabL').classList.toggle('on', t === 'l');
     if (t === 'p') padRenderPlans();
+  }
+  // ---- Wetter Zuchwil (Open-Meteo, kein Schlüssel nötig) ----
+  const WX_PLACE = { name: 'Zuchwil', lat: 47.2025, lon: 7.5667 };
+  const WX_CODES = { 0: ['☀️', 'Klar'], 1: ['🌤️', 'Überwiegend klar'], 2: ['⛅', 'Teilweise bewölkt'], 3: ['☁️', 'Bedeckt'], 45: ['🌫️', 'Nebel'], 48: ['🌫️', 'Reifnebel'], 51: ['🌦️', 'Leichter Nieselregen'], 53: ['🌦️', 'Nieselregen'], 55: ['🌧️', 'Starker Nieselregen'], 56: ['🌧️', 'Gefrierender Niesel'], 57: ['🌧️', 'Gefrierender Niesel'], 61: ['🌧️', 'Leichter Regen'], 63: ['🌧️', 'Regen'], 65: ['🌧️', 'Starker Regen'], 66: ['🌧️', 'Gefrierender Regen'], 67: ['🌧️', 'Gefrierender Regen'], 71: ['🌨️', 'Leichter Schneefall'], 73: ['🌨️', 'Schneefall'], 75: ['❄️', 'Starker Schneefall'], 77: ['🌨️', 'Schneegriesel'], 80: ['🌦️', 'Leichte Schauer'], 81: ['🌧️', 'Schauer'], 82: ['⛈️', 'Heftige Schauer'], 85: ['🌨️', 'Schneeschauer'], 86: ['🌨️', 'Starke Schneeschauer'], 95: ['⛈️', 'Gewitter'], 96: ['⛈️', 'Gewitter mit Hagel'], 99: ['⛈️', 'Gewitter mit Hagel'] };
+  const wxInfo = (c, night) => { const w = WX_CODES[c] || ['❓', '–']; return night && (c === 0 || c === 1) ? ['🌙', w[1]] : w; };
+  let padWx = null, padWxAt = 0, padWxBusy = false;
+  async function padWxLoad(force) {
+    if (padWxBusy || (!force && padWx && Date.now() - padWxAt < 10 * 60000)) return;
+    padWxBusy = true;
+    try {
+      const u = 'https://api.open-meteo.com/v1/forecast?latitude=' + WX_PLACE.lat + '&longitude=' + WX_PLACE.lon +
+        '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day' +
+        '&hourly=temperature_2m,precipitation_probability,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' +
+        '&timezone=Europe%2FZurich&forecast_days=7&wind_speed_unit=kmh';
+      const r = await fetch(u); if (!r.ok) throw new Error('wx ' + r.status);
+      padWx = await r.json(); padWxAt = Date.now();
+    } catch (e) {}
+    padWxBusy = false;
+    padWxRender();
+  }
+  function padWxShow() { padWxRender(); padWxLoad(false); }
+  function padWxRender() {
+    const el = document.getElementById('padWeather'); if (!el) return;
+    if (!padWx || !padWx.current) { el.innerHTML = '<div class="wx-card"><div class="wx-desc">Wetter wird geladen …</div></div>'; return; }
+    const c = padWx.current, h = padWx.hourly, d = padWx.daily, night = !c.is_day, info = wxInfo(c.weather_code, night);
+    const hm = iso => String(iso).slice(11, 16), p2 = x => String(x).padStart(2, '0');
+    const stale = Date.now() - padWxAt > 30 * 60000;
+    let i0 = h.time.indexOf(String(c.time).slice(0, 13) + ':00'); if (i0 < 0) i0 = 0;
+    const hours = []; for (let k = 0; k < 12; k++) { const i = i0 + 1 + k * 2; if (i < h.time.length) hours.push(i); }
+    const names = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    el.innerHTML = `<div class="wx-card"><div class="wx-now"><div class="wx-ico">${info[0]}</div><div class="wx-temp">${Math.round(c.temperature_2m)}°</div><div><div class="wx-desc">${escapeHtml(info[1])}</div><div class="wx-meta">Gefühlt ${Math.round(c.apparent_temperature)}° · Wind ${Math.round(c.wind_speed_10m)} km/h · Feuchte ${Math.round(c.relative_humidity_2m)} %<br>🌅 ${hm(d.sunrise[0])} · 🌇 ${hm(d.sunset[0])}</div></div><div class="wx-place">📍 ${WX_PLACE.name}<small>Stand ${hm(c.time)}${stale ? ' (veraltet)' : ''}</small></div></div></div>` +
+      `<div class="wx-card"><div class="wx-h-t">Die nächsten Stunden</div><div class="wx-h">${hours.map(i => { const w = wxInfo(h.weather_code[i], !h.is_day[i]), pr = h.precipitation_probability[i]; return `<div><b>${hm(h.time[i]).slice(0, 2)} Uhr</b><i>${w[0]}</i><span>${Math.round(h.temperature_2m[i])}°</span><small>${pr >= 10 ? '💧' + pr + '%' : ''}</small></div>`; }).join('')}</div></div>` +
+      `<div class="wx-card"><div class="wx-h-t">7 Tage</div><div class="wx-d">${d.time.map((t, i) => { const dt = new Date(t + 'T12:00:00'), w = wxInfo(d.weather_code[i], false), pr = d.precipitation_probability_max[i]; return `<div class="${i === 0 ? 't' : ''}"><b>${i === 0 ? 'Heute' : i === 1 ? 'Morgen' : names[dt.getDay()] + ' ' + dt.getDate() + '.'}</b><i>${w[0]}</i><span>${Math.round(d.temperature_2m_max[i])}° <em>${Math.round(d.temperature_2m_min[i])}°</em></span><small>${pr >= 10 ? '💧 ' + pr + '%' : '&nbsp;'}</small></div>`; }).join('')}</div></div>`;
+    padFitSoon();
   }
   function padRenderPlans() {
     try { document.getElementById('padPlans').innerHTML = PLAN_KIDS.map(planCardHtml).join(''); } catch (e) {}
@@ -7973,6 +8028,7 @@
   async function padSlowLoad() {
     if (padSlowN++ % 30 === 0) { try { await loadAvatars(); } catch (e) {} }
     padCfgLoad();
+    if (document.getElementById('padScreen').classList.contains('tab-w')) padWxLoad(false);
     try {
       const now = new Date(), weeks = {};
       for (const off of [0, 7]) { const m = mondayOf(new Date(now.getTime() + off * 86400000)); weeks[isoDate(m)] = await kvGet('meals', isoDate(m)); }
@@ -8347,7 +8403,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.43';
+  const APP_VERSION = '2.44';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
