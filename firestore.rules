@@ -66,7 +66,6 @@ service cloud.firestore {
     // Inhalt ändern (Text, Person, Datum) darf nur, wer die Pendenz erstellt hat.
     // "Erledigt" ein- und ausschalten darf, wer zuordnen darf, und die zugeordnete Person
     // (diese vermerkt ausserdem, dass sie die Pendenz gesehen hat).
-    // Wand-iPad: Kinder-Pendenzen nur «gemeldet» (claimedAt), Pendenzen von Tristan/Claudia ohne Wiederholung erledigen.
     match /todos/{id} {
       allow read: if canTodo() || isPad();
       allow create: if canAssign();
@@ -80,15 +79,6 @@ service cloud.firestore {
           && mail() == resource.data.assigneeKey + '@ecker.ch'
           && resource.data.done == false
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedAt', 'seenAt']))
-        || (isPad()
-          && resource.data.done == false
-          && resource.data.assigneeKey in ['lina', 'florian']
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedAt']))
-        || (isPad()
-          && resource.data.done == false
-          && resource.data.assigneeKey in ['tristan', 'claudia']
-          && (!('repeat' in resource.data) || resource.data.repeat == null || resource.data.repeat == '')
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneAt', 'claimedAt']))
         || (canTodo()
           && resource.data.assigneeKey == 'alle'
           && resource.data.done == false

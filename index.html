@@ -232,10 +232,6 @@
   #padScreen .pad-pn span { font-size: clamp(12px, 1.7vmin, 20px); font-weight:700; }
   #padScreen .pad-t { font-size: clamp(13px, 2vmin, 24px); padding: 3px 0; border-top: 1.5px dashed rgba(38,35,25,.2); }
   #padScreen .pad-t.late { color:#c0271d; font-weight:800; }
-  #padScreen .pad-t.hasck, #padPopBody .pad-t.hasck { display:flex; gap:clamp(6px,1.2vmin,14px); align-items:flex-start; }
-  .pad-ck { flex:none; min-width:clamp(30px,4.6vmin,52px); height:clamp(30px,4.6vmin,52px); border:2.5px solid #262319; border-radius:10px; background:#fff; font-size:clamp(16px,2.6vmin,30px); line-height:1; cursor:pointer; padding:0 4px; font-family:inherit; }
-  .pad-ck.wait { background:#FFE9A8; } .pad-ck.arm { background:#9BE08C; font-weight:800; }
-  .pad-tt { min-width:0; flex:1; }
   #padScreen .pad-t small { display:block; font-size: .72em; opacity:.75; }
   #padScreen .pad-ok { font-size: clamp(13px, 2vmin, 24px); padding: 4px 0; }
   #padScreen .pad-pool { grid-column: 1 / -1; background:#FFF6D6; border:3px solid #262319; }
@@ -1970,6 +1966,21 @@
       <div class="field"><label for="nmDim">Abdunkeln</label><select id="nmDim" onchange="nmSave()"><option value="0.7">Etwas</option><option value="0.85">Stark</option><option value="0.95">Fast schwarz</option></select></div>
       </details>
     </div>
+    <div class="card hidden" id="wsCard">
+      <details>
+      <summary style="cursor:pointer;" class="card-title">🗑️ Abfuhrtermine</summary>
+      <div class="set-note" style="margin-top:0;">Erscheinen als ganztägige Termine im Kalender, in der Wochenansicht und auf dem Pad (Heute / Morgen).</div>
+      <div class="zt-lbl">Art</div>
+      <div class="zt-chips" id="wsTypes"></div>
+      <div class="field" id="wsNameF" style="margin-top:8px;display:none;"><label for="wsName">Bezeichnung</label><input type="text" id="wsName" placeholder="z. B. Sperrgut"></div>
+      <div class="field" style="margin-top:8px;"><label for="wsDate">Datum (erster Termin)</label><input type="date" id="wsDate"></div>
+      <div class="field"><label for="wsRep">Wiederholen</label><select id="wsRep" onchange="document.getElementById('wsUntilF').style.display=this.value==='0'?'none':''"><option value="0">einmalig</option><option value="7">jede Woche</option><option value="14">alle 2 Wochen</option><option value="28">alle 4 Wochen</option></select></div>
+      <div class="field" id="wsUntilF" style="display:none;"><label for="wsUntil">Bis</label><input type="date" id="wsUntil"></div>
+      <button class="btn" onclick="wasteAdd()" style="margin:6px 0;">＋ Termin hinzufügen</button>
+      <div id="wsList"></div>
+      <button class="btn" onclick="wastePast()" style="margin-top:6px;">Vergangene löschen</button>
+      </details>
+    </div>
     <div class="card hidden" id="hueCard">
       <details>
       <summary style="cursor:pointer;" class="card-title">💡 Philips Hue</summary>
@@ -3273,7 +3284,7 @@
     document.getElementById('settingsScreen').classList.remove('hidden');
     window.scrollTo(0, 0);
     document.getElementById('settingsAdmin').classList.toggle('hidden', !isAdmin());
-    renderThemes(); gcalRender(); pushRender(); odRender(); padRender(); fotoSettings(); bdSettings();
+    renderThemes(); gcalRender(); pushRender(); odRender(); padRender(); fotoSettings(); bdSettings(); wasteSettings();
     if (isAdmin()) renderSettings();
     applyAvatars();
   }
@@ -4442,6 +4453,8 @@
         const st = e.a ? new Date(e.s + 'T00:00:00') : new Date(e.s), en = e.a ? new Date(e.e + 'T00:00:00') : new Date(e.e);
         if (en > now && st < end) rows.push({ e, st, d });
       }));
+      try { const wc = await cloudApi.padcfgGet(); wasteList = Array.isArray(wc && wc.waste) ? wc.waste : []; } catch (e) {}
+      wasteEvents().forEach(e => { const st = new Date(e.s + 'T00:00:00'), en = new Date(e.e + 'T00:00:00'); if (en > now && st < end) rows.push({ e, st }); });
       rows.sort((p, q) => p.st - q.st);
       rows.slice(0, 5).forEach(x => {
         const day = x.st < tomorrow ? 'Heute' : 'Morgen';
@@ -7370,6 +7383,47 @@
   }
   // ---- Geburtstage & Nachtmodus (Eltern) ----
   let bdCfg = { bdays: [], night: {} };
+  // ---- Abfuhrtermine (Eltern erfassen, erscheinen als ganztägige Kalendertermine) ----
+  const WASTE = { kehricht: ['🗑️', 'Kehricht'], papier: ['📰', 'Papier'], karton: ['📦', 'Karton'], gruen: ['🌿', 'Grüngut'], sperr: ['🛋️', 'Sperrgut'], sonst: ['♻️', 'Abfuhr'] };
+  let wasteList = [], wasteType = 'kehricht';
+  const wasteTitle = w => (WASTE[w.t] || WASTE.sonst)[0] + ' ' + (w.n || (WASTE[w.t] || WASTE.sonst)[1]);
+  const wasteNext = iso => { const q = iso.split('-').map(Number); return isoDate(new Date(q[0], q[1] - 1, q[2] + 1)); };
+  const wasteEvents = () => wasteList.filter(w => w && /^\d{4}-\d{2}-\d{2}$/.test(w.d)).map(w => ({ a: true, s: w.d, e: wasteNext(w.d), t: wasteTitle(w) }));
+  async function wasteSettings() {
+    const c = document.getElementById('wsCard'); if (!c) return;
+    const ok = cloudEnabled && isParentU(); c.classList.toggle('hidden', !ok); if (!ok) return;
+    try { const cfg = (await cloudApi.padcfgGet()) || {}; wasteList = Array.isArray(cfg.waste) ? cfg.waste : []; } catch (e) {}
+    wasteRender();
+  }
+  function wasteRender() {
+    document.getElementById('wsTypes').innerHTML = Object.keys(WASTE).map(k => `<button class="${k === wasteType ? 'on' : ''}" onclick="wasteType='${k}';wasteRender()">${WASTE[k][0]} ${WASTE[k][1]}</button>`).join('');
+    document.getElementById('wsNameF').style.display = wasteType === 'sonst' ? '' : 'none';
+    const today = isoDate(new Date()), l = wasteList.filter(w => w.d >= today).sort((a, b) => a.d.localeCompare(b.d) || a.t.localeCompare(b.t));
+    document.getElementById('wsList').innerHTML = l.length ? l.slice(0, 40).map(w => `<div class="set-row"><span>${escapeHtml(wasteTitle(w))} · ${new Date(w.d + 'T00:00:00').toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span><button class="btn" style="padding:4px 10px;" onclick="wasteDel('${w.d}','${w.t}')" aria-label="Löschen">✕</button></div>`).join('') + (l.length > 40 ? `<div class="set-note">… und ${l.length - 40} weitere</div>` : '') : '<div class="set-note">Noch keine kommenden Termine.</div>';
+  }
+  async function wasteSave(msg) {
+    wasteList.sort((a, b) => a.d.localeCompare(b.d));
+    try { await cloudApi.padcfgSet({ waste: wasteList }); showToast(msg || 'Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen'); }
+    wasteRender();
+  }
+  async function wasteAdd() {
+    const d = document.getElementById('wsDate').value, rep = Number(document.getElementById('wsRep').value) || 0, until = document.getElementById('wsUntil').value;
+    const nm = wasteType === 'sonst' ? document.getElementById('wsName').value.trim().slice(0, 30) : '';
+    if (!d) { showToast('Datum wählen'); return; }
+    if (wasteType === 'sonst' && !nm) { showToast('Bezeichnung eingeben'); return; }
+    if (rep && (!until || until < d)) { showToast('«Bis»-Datum wählen'); return; }
+    const q = d.split('-').map(Number), out = [];
+    for (let i = 0; i < 120; i++) {
+      const iso = isoDate(new Date(q[0], q[1] - 1, q[2] + i * rep));
+      if (i && (!rep || iso > until)) break;
+      if (!wasteList.some(w => w.d === iso && w.t === wasteType && (w.n || '') === nm)) out.push(nm ? { d: iso, t: wasteType, n: nm } : { d: iso, t: wasteType });
+      if (!rep) break;
+    }
+    wasteList = wasteList.concat(out);
+    await wasteSave(out.length === 1 ? 'Termin gespeichert' : out.length + ' Termine gespeichert');
+  }
+  async function wasteDel(d, t) { wasteList = wasteList.filter(w => !(w.d === d && w.t === t)); await wasteSave('Gelöscht'); }
+  async function wastePast() { const today = isoDate(new Date()); wasteList = wasteList.filter(w => w.d >= today); await wasteSave('Vergangene gelöscht'); }
   async function bdSettings() {
     const c = document.getElementById('bdCard'); if (!c) return;
     const ok = cloudEnabled && isParentU();
@@ -7760,6 +7814,7 @@
       const st = e.a ? new Date(e.s + 'T00:00:00') : new Date(e.s), en = e.a ? new Date(e.e + 'T00:00:00') : new Date(e.e);
       evs.push({ e, st, en, ci });
     }));
+    wasteEvents().forEach(e => evs.push({ e, st: new Date(e.s + 'T00:00:00'), en: new Date(e.e + 'T00:00:00'), ci: 3 }));
     evs.sort((x, y) => (x.e.a ? 0 : 1) - (y.e.a ? 0 : 1) || x.st - y.st);
     const PAL = ['#E4572E', '#2F8FC4', '#4FAE2B', '#8A55CE', '#E08A12', '#D9437F'], now = new Date();
     let html = '';
@@ -8049,8 +8104,8 @@
   function padZNewClose() { clearTimeout(padZTimer); document.getElementById('padZNew').classList.add('hidden'); if (padZQueue.length) setTimeout(padZNext, 400); }
   let padBd = [], padNightCfg = {}, padWakeUntil = 0;
   async function padCfgLoad() {
-    try { const c = (await cloudApi.padcfgGet()) || {}; padBd = Array.isArray(c.bdays) ? c.bdays : []; padNightCfg = c.night || {}; } catch (e) {}
-    padRenderBday(); padNightCheck();
+    try { const c = (await cloudApi.padcfgGet()) || {}; padBd = Array.isArray(c.bdays) ? c.bdays : []; padNightCfg = c.night || {}; wasteList = Array.isArray(c.waste) ? c.waste : []; } catch (e) {}
+    padRenderBday(); padNightCheck(); try { padRenderInfo(); if (!document.getElementById('padWeek').classList.contains('hidden')) padWeekRender(); } catch (e) {}
   }
   function padRenderBday() {
     const card = document.getElementById('padBdayCard'); if (!card) return;
@@ -8126,6 +8181,7 @@
       const st = e.a ? new Date(e.s + 'T00:00:00') : new Date(e.s), en = e.a ? new Date(e.e + 'T00:00:00') : new Date(e.e);
       if (en > now && st < end) rows.push({ e, st });
     }));
+    wasteEvents().forEach(e => { const st = new Date(e.s + 'T00:00:00'), en = new Date(e.e + 'T00:00:00'); if (en > now && st < end) rows.push({ e, st }); });
     rows.sort((x, y) => x.st - y.st);
     const ev = (label, list) => list.length ? `<div class="pad-sub">${label}</div>` + list.map(x => `<div class="pad-row"><b>${x.e.a ? 'ganztägig' : p2(x.st.getHours()) + ':' + p2(x.st.getMinutes())}</b><span>${escapeHtml(x.e.t || '')}</span></div>`).join('') : '';
     const today = rows.filter(x => x.st < tomorrow).slice(0, 7), morrow = rows.filter(x => x.st >= tomorrow).slice(0, 5);
@@ -8140,37 +8196,13 @@
     document.getElementById('padMeal').innerHTML = (meal(mo, mo ? 'Morgen' : 'Heute') + meal(mo + 1, mo ? 'Übermorgen' : 'Morgen')) || '<div class="pad-ok">Noch nichts geplant</div>';
   }
   function padRenderTodos() { const el = document.getElementById('padTodos'); if (el) el.innerHTML = padTodosHtml(false); }
-  // Pendenzen auf dem Pad abhaken (gleiche Regeln wie in der App): Kinder melden nur «erledigt» (Eltern bestätigen),
-  // Aufgaben von Tristan und Claudia werden direkt erledigt (zweiter Tipp zur Sicherheit). Wiederkehrende und Zusatzaufgaben: nur am Handy.
-  let padCkArm = null;
-  async function padTodoTap(id, ev) {
-    if (ev) ev.stopPropagation();
-    const t = padTodos.find(x => x.id === id); if (!t || t.done || !cloudEnabled) return;
-    const kid = KIDS.map(userKey).includes(t.assigneeKey);
-    if (!kid && (t.repeat || !['tristan', 'claudia'].includes(t.assigneeKey))) return;
-    if (!kid && !(padCkArm && padCkArm.id === id && Date.now() < padCkArm.until)) {
-      padCkArm = { id, until: Date.now() + 4000 };
-      document.querySelectorAll('.pad-ck[data-ck="' + id + '"]').forEach(b => { b.textContent = '✔?'; b.classList.add('arm'); });
-      setTimeout(() => { if (padCkArm && padCkArm.id === id) { padCkArm = null; padRenderTodos(); } }, 4100);
-      return;
-    }
-    padCkArm = null;
-    const patch = kid ? { claimedAt: t.claimedAt ? null : Date.now() } : { done: true, doneAt: Date.now(), claimedAt: null }, before = { ...t };
-    try { await withTimeout(cloudApi.updateTodo(id, patch, false)); } catch (e) { showToast('Abhaken fehlgeschlagen – Verbindung prüfen'); return; }
-    Object.assign(t, patch);
-    try { pushSend(pushTodoMsgs(before, t)); if (t.done && cloudApi.idToken) Promise.resolve(cloudApi.idToken()).then(tok => fetch(PUSH_URL + '/remind-cancel', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain' }, body: JSON.stringify({ id: t.id }) })).catch(() => {}); } catch (e) {}
-    showToast(kid ? (t.claimedAt ? '⏳ Gemeldet – Mama oder Papa bestätigt' : 'Meldung zurückgenommen') : '✅ Erledigt');
-    padRenderTodos(); padFitSoon();
-  }
   function padTodosHtml(full, only) {
     const today = todayStr(), nameOf = k => ACCOUNTS[k] || k;
     const byDue = (x, y) => (x.dueAt || '9999').localeCompare(y.dueAt || '9999') || (x.createdAt || 0) - (y.createdAt || 0);
     const row = t => {
       const late = t.dueAt && t.dueAt < today;
       const sub = t.claimedAt ? '⏳ gemeldet, wartet auf Bestätigung' : (late ? '⚠ überfällig seit ' + t.dueAt.split('-').reverse().slice(0, 2).join('.') + '.' : (t.dueAt === today ? 'heute fällig' : (t.dueAt ? 'bis ' + t.dueAt.split('-').reverse().slice(0, 2).join('.') + '.' : '')));
-      const kid = KIDS.map(userKey).includes(t.assigneeKey), canCk = cloudEnabled && (kid || !t.repeat);
-      const ck = canCk ? `<button class="pad-ck ${t.claimedAt ? 'wait' : ''}" data-ck="${t.id}" onclick="padTodoTap('${t.id}',event)" aria-label="Abhaken">${t.claimedAt ? '⏳' : '☐'}</button>` : '';
-      return `<div class="pad-t ${late ? 'late' : ''} ${ck ? 'hasck' : ''}">${ck}<div class="pad-tt">${escapeHtml(t.text)}${sub ? `<small>${sub}</small>` : ''}</div></div>`;
+      return `<div class="pad-t ${late ? 'late' : ''}">${escapeHtml(t.text)}${sub ? `<small>${sub}</small>` : ''}</div>`;
     };
     const L = full ? 999 : 6;
     const cards = Object.keys(ACCOUNTS).filter(k => !only || only === k).map(k => {
@@ -8504,7 +8536,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.53';
+  const APP_VERSION = '2.55';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

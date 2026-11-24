@@ -298,12 +298,9 @@ export default {
         }
         return json({ error: 'not found' }, 404);
       }
-      const user = await verifyUser(req, true);
+      const user = await verifyUser(req);
       if (!user) return json({ error: 'nicht angemeldet' }, 401);
-      // Wand-iPad: nur Meldungen an die Eltern und Erinnerungen löschen (Pendenzen abhaken)
-      if (user === 'pad' && path !== '/notify' && path !== '/remind-cancel') return json({ error: 'nicht erlaubt' }, 403);
       const data = await req.json().catch(() => ({}));
-      if (user === 'pad' && path === '/notify') data.msgs = (Array.isArray(data.msgs) ? data.msgs : []).map(m => ({ ...m, to: (m.to || []).filter(k => k === 'tristan' || k === 'claudia') }));
 
       if (path === '/subscribe') {
         if (!goodSub(data.sub)) return json({ error: 'ungültig' }, 400);
