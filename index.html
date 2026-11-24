@@ -751,6 +751,25 @@
   .kid-foot .fd { font-size:56px; display:block; line-height:1.1; }
   .kid-foot .fd-img { display:block; width:260px; max-width:80%; margin:0 auto 4px; }
 
+  /* Startseite auf dem iPhone: kleinere Kacheln (3 pro Reihe) */
+  @media (max-width: 599px) {
+    #homeTiles { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    #homeTiles .account-btn { padding: 12px 4px 10px; gap: 6px; border-radius: 18px; min-width: 0; }
+    body.doodle #homeTiles .account-btn { border-width: 2.5px; border-radius: 18px 20px 17px 19px / 19px 17px 20px 18px; }
+    #homeTiles .account-avatar { width: 52px; height: 52px; font-size: 26px; }
+    body.doodle #homeTiles .account-avatar { border-width: 2.5px; }
+    #homeTiles .account-name, body.doodle #homeTiles .account-name { font-size: 13px; line-height: 1.15; overflow-wrap: anywhere; }
+    #homeTiles .account-hint, body.doodle #homeTiles .account-hint { font-size: 11.5px; margin-top: 0; }
+    #homeTiles #essenSub { margin-top: 0 !important; }
+  }
+  /* Post-its auf der Startseite (wie auf dem Pad) */
+  #homeZettel { margin: 0 0 16px; }
+  #homeZettel .hz-h { font-weight: 800; font-size: 14px; margin: 0 2px 8px; }
+  body.doodle #homeZettel .hz-h { font-family: 'Permanent Marker','Patrick Hand',cursive; font-weight: 400; font-size: 17px; }
+  #homeZettel .hz-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; padding: 2px 4px 6px; }
+  #homeZettel .hz-n { padding: 9px 11px 7px; border-radius: 2px; box-shadow: 2px 3px 7px rgba(0,0,0,.25); transform: rotate(var(--r,0deg)); font-size: calc(15px * var(--zs,1)); line-height: 1.2; word-break: break-word; white-space: pre-wrap; cursor: pointer; color: #1d1b16; min-width: 0; }
+  #homeZettel .hz-n small { display: block; font-size: 11px; opacity: .65; margin-top: 5px; white-space: normal; }
+
   /* Anmeldebildschirm: 2 x 2 (Eltern oben, Kinder unten), grosse Bilder */
   #accountGrid { grid-template-columns: 1fr 1fr !important; max-width: 560px; margin-left: auto; margin-right: auto; gap: 16px; }
   #accountGrid .account-avatar { width: 124px; height: 124px; font-size: 48px; }
@@ -1497,6 +1516,8 @@
       <div class="home-info" id="homeInfo"></div>
       <div class="home-quote" id="homeQuote"></div>
     </div>
+
+    <div id="homeZettel" class="hidden"></div>
 
     <div class="account-grid" id="homeTiles">
       <div class="account-btn hidden" id="tileZeit" role="button" tabindex="0" onclick="openHauswart()" onkeydown="if(event.key==='Enter'||event.key===' '){openHauswart()}">
@@ -3191,7 +3212,7 @@
     document.getElementById('tileRezepte').classList.toggle('hidden', !hasFeature('essen'));
     document.getElementById('tileChat').classList.toggle('hidden', !(cloudEnabled && hasFeature('chat')));
     document.getElementById('tileHue').classList.toggle('hidden', !(cloudEnabled && isAdmin()));
-    if (cloudEnabled && hasFeature('chat')) zettelCheck();
+    if (cloudEnabled && hasFeature('chat')) zettelCheck(); else homeZettelRender([]);
     if (hasFeature('essen')) loadEssenSub();
     updateHomeInfo(); pushRefresh();
     const hint = document.getElementById('homeHint');
@@ -4050,12 +4071,22 @@
   const zRot = id => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) | 0; return ((Math.abs(h) % 41) - 20) / 10; };
   const zName = k => k === 'pad' ? '📺 Pad' : (ACCOUNTS[k] || k);
   const zSeenKey = () => 'ef-zettel-seen-' + userKey(currentUser);
+  // Post-its auf der Startseite: offene Zettel, die an mich gehen (wie auf dem Pad)
+  function homeZettelRender(list) {
+    const el = document.getElementById('homeZettel'); if (!el) return;
+    const me = userKey(currentUser), hid = zHidGet(me);
+    const zl = (list || []).filter(z => !z.done && z.from !== me && !hid.has(z.id)).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 6);
+    if (!zl.length) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+    el.innerHTML = `<div class="hz-h">📌 Zettel für dich</div><div class="hz-row">${zl.map(z => `<div class="hz-n" onclick="openZettel()" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>von ${escapeHtml(z.name || zName(z.from))}</small></div>`).join('')}</div>`;
+    el.classList.remove('hidden');
+  }
   async function zettelCheck() {
     try {
       const me = userKey(currentUser), list = await withTimeout(cloudApi.zettelFor(me));
       const hid = zHidGet(me), n = list.filter(z => !z.done && z.from !== me && !hid.has(z.id)).length;
       const b = document.getElementById('chatBadge');
       if (b) b.textContent = n ? '📌 ' + n + ' offen' : '';
+      homeZettelRender(list);
     } catch (e) {}
   }
   function zettelStop() { zUnsubs.forEach(u => { try { u(); } catch (e) {} }); zUnsubs = []; }
@@ -4069,7 +4100,7 @@
     const me = userKey(currentUser);
     try { zUnsubs.push(cloudApi.zettelListen(me, list => { zNotes = new Map(list.map(z => [z.id, z])); ztRender(); zettelBadgeClear(); }, () => { document.getElementById('ztList').innerHTML = '<div class="todo-empty">Zettel konnten nicht geladen werden – Verbindung prüfen.</div>'; })); } catch (e) {}
   }
-  function zettelBadgeClear() { const b = document.getElementById('chatBadge'); if (b) { const me = userKey(currentUser); const hid = zHidGet(me), n = [...zNotes.values()].filter(z => !z.done && z.from !== me && !hid.has(z.id)).length; b.textContent = n ? '📌 ' + n + ' offen' : ''; } }
+  function zettelBadgeClear() { const b = document.getElementById('chatBadge'); if (b) { const me = userKey(currentUser); const hid = zHidGet(me), n = [...zNotes.values()].filter(z => !z.done && z.from !== me && !hid.has(z.id)).length; b.textContent = n ? '📌 ' + n + ' offen' : ''; } homeZettelRender([...zNotes.values()]); }
   function ztComposeBuild() {
     const me = userKey(currentUser);
     if (!zTo.size) Object.keys(ACCOUNTS).filter(k => k !== me).forEach(k => zTo.add(k));
@@ -8403,7 +8434,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.44';
+  const APP_VERSION = '2.45';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
