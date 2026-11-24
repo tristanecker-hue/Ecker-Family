@@ -155,13 +155,13 @@
   #padScreen .pad-zbox { grid-column:1 / -1; }
   #padScreen .pad-zbox .pad-h { font-size:clamp(16px,2.4vmin,28px); margin-bottom:6px; }
   #padScreen .pz-row { display:flex; flex-wrap:wrap; gap:clamp(8px,1.4vmin,16px); }
-  #padScreen .pz-n { flex:1 1 clamp(120px,22vmin,260px); max-width:clamp(160px,34vmin,340px); padding:8px 10px 6px; border-radius:2px; box-shadow:2px 3px 7px rgba(0,0,0,.25); transform:rotate(var(--r,0deg)); font-size:clamp(13px,2.1vmin,24px); line-height:1.2; word-break:break-word; cursor:pointer; }
+  #padScreen .pz-n { flex:1 1 clamp(120px,22vmin,260px); max-width:clamp(160px,34vmin,340px); padding:8px 10px 6px; border-radius:2px; box-shadow:2px 3px 7px rgba(0,0,0,.25); transform:rotate(var(--r,0deg)); font-size:calc(clamp(13px,2.1vmin,24px) * var(--zs,1)); line-height:1.2; word-break:break-word; cursor:pointer; }
   #padScreen .pz-n small { display:block; font-size:.7em; opacity:.65; margin-top:4px; }
   #padZNew { position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:3vmin; }
   #padZNew.hidden { display:none; }
   #padZNew .pz-note { position:relative; width:min(86vw,1100px); padding:5vmin 5vmin 3.5vmin; box-shadow:8px 12px 30px rgba(0,0,0,.5); border-radius:3px; transform:rotate(-2deg); }
   #padZNew .pz-tape { position:absolute; top:-16px; left:50%; width:90px; height:32px; background:rgba(255,255,255,.55); transform:translateX(-50%) rotate(3deg); box-shadow:0 1px 4px rgba(0,0,0,.2); }
-  #padZNew .pz-text, #padPopBody .pz-text { font-size:clamp(26px,8vmin,90px); line-height:1.1; font-weight:700; white-space:pre-wrap; word-break:break-word; }
+  #padZNew .pz-text, #padPopBody .pz-text { font-size:calc(clamp(26px,8vmin,90px) * var(--zs,1)); line-height:1.1; font-weight:700; white-space:pre-wrap; word-break:break-word; }
   #padZNew .pz-who { font-size:clamp(14px,3.2vmin,34px); opacity:.65; margin-top:2.5vmin; }
   #padZNew img { display:block; max-width:100%; max-height:44vh; margin:2.5vmin auto 0; border-radius:8px; }
   #chatList { display:flex; flex-direction:column; gap:6px; padding:4px 0 96px; min-height:40vh; }
@@ -1746,6 +1746,8 @@
       <div id="ztTo" class="zt-chips"></div>
       <div class="zt-lbl">Farbe</div>
       <div id="ztCol" class="zt-cols"></div>
+      <div class="zt-lbl">Grösse &amp; Schrift</div>
+      <div id="ztSty" class="zt-chips"></div>
       <div id="ztPrev" class="zt-prev hidden"><img id="ztPrevImg" alt=""><button onclick="ztPhotoClear()" aria-label="Foto entfernen">✕</button></div>
       <div class="zt-actions">
         <button class="btn" onclick="document.getElementById('ztFile').click()">📷 Foto</button>
@@ -3964,13 +3966,21 @@
   const ZCOL = ['#FFE97A', '#FFC4DA', '#BDEBFF', '#C8F0B0'];
   let zNotes = new Map(), zUnsubs = [], zTo = new Set(), zCol = 0, zPhoto = '', zSending = false;
   const zPhotoCache = {};
+  const ZSIZES = { s: ['Klein', 0.8], m: ['Mittel', 1], l: ['Gross', 1.45] };
+  const ZFONTS = { n: ['Normal', ''], h: ['Handschrift', "'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive"], b: ['Fett', "'Arial Black','Helvetica Neue',Arial,sans-serif;font-weight:900"], t: ['Schreibmaschine', "'Courier New',monospace"] };
+  let zSize = 'm', zFont = 'n';
+  const zSz = z => (ZSIZES[z.size] || ZSIZES.m)[1];
+  const zFam = z => (ZFONTS[z.font] || ZFONTS.n)[1];
+  const zHidKey = who => 'ef-zettel-hidden-' + who;
+  const zHidGet = who => { try { return new Set(JSON.parse(localStorage.getItem(zHidKey(who)) || '[]')); } catch (e) { return new Set(); } };
+  const zHidAdd = (who, id) => { const h = zHidGet(who); h.add(id); try { localStorage.setItem(zHidKey(who), JSON.stringify([...h].slice(-200))); } catch (e) {} };
   const zRot = id => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) | 0; return ((Math.abs(h) % 41) - 20) / 10; };
   const zName = k => k === 'pad' ? '📺 Pad' : (ACCOUNTS[k] || k);
   const zSeenKey = () => 'ef-zettel-seen-' + userKey(currentUser);
   async function zettelCheck() {
     try {
       const me = userKey(currentUser), list = await withTimeout(cloudApi.zettelFor(me));
-      const n = list.filter(z => !z.done && z.from !== me).length;
+      const hid = zHidGet(me), n = list.filter(z => !z.done && z.from !== me && !hid.has(z.id)).length;
       const b = document.getElementById('chatBadge');
       if (b) b.textContent = n ? '📌 ' + n + ' offen' : '';
     } catch (e) {}
@@ -3986,7 +3996,7 @@
     const me = userKey(currentUser);
     try { zUnsubs.push(cloudApi.zettelListen(me, list => { zNotes = new Map(list.map(z => [z.id, z])); ztRender(); zettelBadgeClear(); }, () => { document.getElementById('ztList').innerHTML = '<div class="todo-empty">Zettel konnten nicht geladen werden – Verbindung prüfen.</div>'; })); } catch (e) {}
   }
-  function zettelBadgeClear() { const b = document.getElementById('chatBadge'); if (b) { const me = userKey(currentUser); const n = [...zNotes.values()].filter(z => !z.done && z.from !== me).length; b.textContent = n ? '📌 ' + n + ' offen' : ''; } }
+  function zettelBadgeClear() { const b = document.getElementById('chatBadge'); if (b) { const me = userKey(currentUser); const hid = zHidGet(me), n = [...zNotes.values()].filter(z => !z.done && z.from !== me && !hid.has(z.id)).length; b.textContent = n ? '📌 ' + n + ' offen' : ''; } }
   function ztComposeBuild() {
     const me = userKey(currentUser);
     if (!zTo.size) Object.keys(ACCOUNTS).filter(k => k !== me).forEach(k => zTo.add(k));
@@ -3994,6 +4004,9 @@
     ztChips();
     document.getElementById('ztCol').innerHTML = ZCOL.map((c, i) => `<button class="${i === zCol ? 'on' : ''}" style="background:${c}" onclick="zCol=${i};ztComposeBuild()" aria-label="Farbe ${i + 1}"></button>`).join('');
     document.getElementById('ztText').style.background = ZCOL[zCol];
+    document.getElementById('ztSty').innerHTML = Object.keys(ZSIZES).map(k => `<button class="${k === zSize ? 'on' : ''}" onclick="zSize='${k}';ztComposeBuild()">${ZSIZES[k][0]}</button>`).join('') + '<span style="width:100%;height:0"></span>' + Object.keys(ZFONTS).map(k => `<button class="${k === zFont ? 'on' : ''}" style="font-family:${ZFONTS[k][1].split(';')[0] || 'inherit'}" onclick="zFont='${k}';ztComposeBuild()">${ZFONTS[k][0]}</button>`).join('');
+    const ta = document.getElementById('ztText'), zz = { size: zSize, font: zFont };
+    ta.style.fontSize = (17 * zSz(zz)) + 'px'; ta.style.cssText += ';font-family:' + (zFam(zz) || 'inherit');
   }
   function ztChips() {
     const me = userKey(currentUser), others = Object.keys(ACCOUNTS).filter(k => k !== me);
@@ -4019,7 +4032,7 @@
     if (!zTo.size) { showToast('Wähle, für wen der Zettel ist'); return; }
     zSending = true; document.getElementById('ztSend').disabled = true;
     const me = userKey(currentUser), id = chatNewId();
-    const m = { id, from: me, name: currentUser, to: [...zTo], text: text.slice(0, 300), at: Date.now(), color: ZCOL[zCol], done: false };
+    const m = { id, from: me, name: currentUser, to: [...zTo], text: text.slice(0, 300), at: Date.now(), color: ZCOL[zCol], size: zSize, font: zFont, done: false };
     try {
       if (zPhoto) { await withTimeout(cloudApi.zphotoPut(id, { from: me, data: zPhoto, at: m.at }), 30000); zPhotoCache[id] = zPhoto; m.photo = true; }
       try { await withTimeout(cloudApi.zettelAdd(m)); } catch (e) { if (m.photo) { try { await cloudApi.zphotoDelete(id); } catch (x) {} } throw e; }
@@ -4034,13 +4047,14 @@
     const to = (z.to || []).map(zName).join(', ');
     const btns = [];
     if (!z.done && (forMe || mine || parent)) btns.push(`<button onclick="ztDone('${z.id}')">✓ Erledigt</button>`);
-    if (mine || parent) btns.push(`<button onclick="ztDel('${z.id}')">🗑</button>`);
+    btns.push(`<button onclick="ztHide('${z.id}')" title="Auf diesem Gerät entfernen">🗑 Entfernen</button>`);
+    if (mine || parent) btns.push(`<button onclick="ztDel('${z.id}')" title="Für alle löschen">✕ Für alle</button>`);
     const time = new Date(z.at).toLocaleString('de-CH', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-    return `<div class="zt-note ${z.done ? 'done' : ''}" style="background:${escapeHtml(z.color || ZCOL[0])};--r:${zRot(z.id)}deg">${escapeHtml(z.text || '')}${z.photo ? `<img data-zp="${z.id}" alt="Foto">` : ''}<div class="zt-m">${kind === 'sent' ? 'An ' + escapeHtml(to) : escapeHtml(z.name || zName(z.from))}${z.done ? ' · ✓ erledigt' + (z.doneBy ? ' von ' + escapeHtml(zName(z.doneBy)) : '') : ''} · ${escapeHtml(time)}</div>${btns.length ? `<div class="zt-b">${btns.join('')}</div>` : ''}</div>`;
+    return `<div class="zt-note ${z.done ? 'done' : ''}" style="background:${escapeHtml(z.color || ZCOL[0])};--r:${zRot(z.id)}deg;font-size:${16 * zSz(z)}px;${zFam(z) ? 'font-family:' + zFam(z) : ''}${z.size === 'l' ? ';grid-column:span 2' : ''}">${escapeHtml(z.text || '')}${z.photo ? `<img data-zp="${z.id}" alt="Foto">` : ''}<div class="zt-m">${kind === 'sent' ? 'An ' + escapeHtml(to) : escapeHtml(z.name || zName(z.from))}${z.done ? ' · ✓ erledigt' + (z.doneBy ? ' von ' + escapeHtml(zName(z.doneBy)) : '') : ''} · ${escapeHtml(time)}</div>${btns.length ? `<div class="zt-b">${btns.join('')}</div>` : ''}</div>`;
   }
   function ztRender() {
     const el = document.getElementById('ztList'); if (!el) return;
-    const me = userKey(currentUser), all = [...zNotes.values()];
+    const me = userKey(currentUser), hid = zHidGet(me), all = [...zNotes.values()].filter(z => !hid.has(z.id));
     const forMe = all.filter(z => !z.done && (z.to || []).includes(me) && z.from !== me).sort((a, b) => b.at - a.at);
     const sent = all.filter(z => !z.done && z.from === me).sort((a, b) => b.at - a.at);
     const done = all.filter(z => z.done && z.photo).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
@@ -4066,6 +4080,7 @@
       ztRender(); zettelBadgeClear();
     } catch (e) { showToast('Hat nicht geklappt'); }
   }
+  function ztHide(id) { zHidAdd(userKey(currentUser), id); ztRender(); zettelBadgeClear(); showToast('Auf diesem Gerät entfernt'); }
   async function ztDel(id) {
     const z = zNotes.get(id); if (!z) return;
     if (!window.confirm(z.photo ? 'Zettel und Foto endgültig löschen?' : 'Diesen Zettel löschen?')) return;
@@ -7672,7 +7687,7 @@
   function padZUpdate(list) {
     padZ = list;
     if (padZSeen === null) padZSeen = new Set(list.map(z => z.id));
-    else list.forEach(z => { if (!padZSeen.has(z.id)) { padZSeen.add(z.id); if (!z.done && Date.now() - z.at < 10 * 60000) padZQueue.push(z.id); } });
+    else list.forEach(z => { if (!padZSeen.has(z.id)) { padZSeen.add(z.id); if (!z.done && Date.now() - z.at < 10 * 60000 && !zHidGet('pad').has(z.id)) padZQueue.push(z.id); } });
     padRenderTodos(); padFitSoon();
     if (padZQueue.length && document.getElementById('padZNew').classList.contains('hidden')) padZNext();
   }
@@ -7681,7 +7696,7 @@
     const z = padZ.find(x => x.id === id); if (!z) { padZNext(); return; }
     padWakeUntil = Date.now() + 60000; padNightCheck();
     const note = document.getElementById('padZNote'); note.style.background = z.color || '#FFE97A';
-    document.getElementById('padZText').textContent = z.text || '';
+    const pt = document.getElementById('padZText'); pt.textContent = z.text || ''; pt.style.setProperty('--zs', zSz(z)); pt.style.fontFamily = zFam(z).split(';')[0]; pt.style.fontWeight = /900/.test(zFam(z)) ? '900' : '';
     document.getElementById('padZWho').textContent = '— ' + (z.name || zName(z.from)) + ' · ' + new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
     const im = document.getElementById('padZImg'); im.classList.add('hidden'); im.removeAttribute('src');
     document.getElementById('padZNew').classList.remove('hidden');
@@ -7717,7 +7732,7 @@
     if (what.startsWith('t:')) h = padTodosHtml(true, what.slice(2)) || '<div class="pad-ok">Nichts offen</div>';
     else if (what.startsWith('z:')) {
       const z = padZ.find(x => x.id === what.slice(2)); if (!z) return;
-      h = `<div style="background:${escapeHtml(z.color || '#FFE97A')};padding:3vmin;border-radius:3px;box-shadow:3px 5px 14px rgba(0,0,0,.3);"><div class="pz-text">${escapeHtml(z.text || '')}</div>${z.photo ? '<img id="padPopZImg" style="display:block;max-width:100%;max-height:50vh;margin:2vmin auto 0;border-radius:8px;">' : ''}<div style="opacity:.65;margin-top:2vmin;font-size:clamp(14px,2.6vmin,28px);">— ${escapeHtml(z.name || zName(z.from))} · ${new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div>`;
+      h = `<div style="background:${escapeHtml(z.color || '#FFE97A')};padding:3vmin;border-radius:3px;box-shadow:3px 5px 14px rgba(0,0,0,.3);"><div class="pz-text" style="--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? '<img id="padPopZImg" style="display:block;max-width:100%;max-height:50vh;margin:2vmin auto 0;border-radius:8px;">' : ''}<div style="opacity:.65;margin-top:2vmin;font-size:clamp(14px,2.6vmin,28px);">— ${escapeHtml(z.name || zName(z.from))} · ${new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div><button class="pp-x" style="margin:12px 0 0 auto;background:#fff;" onclick="zHidAdd('pad','${z.id}');padPopClose();padRenderTodos();padFitSoon()">🗑 Vom Pad entfernen</button>`;
       if (z.photo) ztPhotoSrc(z.id).then(src => { const i = document.getElementById('padPopZImg'); if (i && src) i.src = src; });
     }
     else if (what === 'bday') h = '<div class="pad-h">🎂 Geburtstage</div>' + (padBdHtml(99) || '<div class="pad-ok">Keine erfasst</div>');
@@ -7794,8 +7809,8 @@
     }).join('');
     const pool = padTodos.filter(t => t.assigneeKey === POOL && !t.done).sort(byDue);
     const poolHtml = pool.length && (!only || only === 'pool') ? `<div class="pad-person pad-pool" data-k="pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>wer zuerst kommt!</span></div>${pool.slice(0, L).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
-    const zl = (!only && !full) ? padZ.filter(z => !z.done).sort((x, y) => y.at - x.at).slice(0, 6) : [];
-    const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Zettel</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))}</small></div>`).join('')}</div></div>` : '';
+    const zl = (!only && !full) ? padZ.filter(z => !z.done && !zHidGet('pad').has(z.id)).sort((x, y) => y.at - x.at).slice(0, 6) : [];
+    const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Zettel</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))}</small></div>`).join('')}</div></div>` : '';
     return cards + poolHtml + zHtml;
   }
 
@@ -8122,7 +8137,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.33';
+  const APP_VERSION = '2.34';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
