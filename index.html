@@ -4103,7 +4103,11 @@
   const ZSIZES = { s: ['Klein', 0.8], m: ['Mittel', 1], l: ['Gross', 1.45] };
   const ZFONTS = { n: ['Normal', ''], h: ['Handschrift', "'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive"], b: ['Fett', "'Arial Black','Helvetica Neue',Arial,sans-serif;font-weight:900"], t: ['Schreibmaschine', "'Courier New',monospace"] };
   let zSize = 'm', zFont = 'n';
-  const zSz = z => (ZSIZES[z.size] || ZSIZES.m)[1];
+  const zSz = z => (z.fs >= 0.5 && z.fs <= 3) ? z.fs : (ZSIZES[z.size] || ZSIZES.m)[1];
+  const zAl = z => z.al === 'c' ? 'center' : z.al === 'r' ? 'right' : 'left';
+  let zFs = 1, zAlign = 'l';
+  function zSetAlign(k) { zAlign = k; ztComposeBuild(); }
+  function zFsStep(d) { zFs = Math.min(2.4, Math.max(0.6, Math.round((zFs + d) * 10) / 10)); ztComposeBuild(); }
   const zFam = z => (ZFONTS[z.font] || ZFONTS.n)[1];
   const zHidKey = who => 'ef-zettel-hidden-' + who;
   const zHidGet = who => { try { return new Set(JSON.parse(localStorage.getItem(zHidKey(who)) || '[]')); } catch (e) { return new Set(); } };
@@ -4125,7 +4129,7 @@
     const me = userKey(currentUser), hid = zHidGet(me);
     const zl = (list || []).filter(z => !z.done && z.from !== me && !hid.has(z.id)).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 6);
     if (!zl.length) { el.classList.add('hidden'); el.innerHTML = ''; return; }
-    el.innerHTML = `<div class="hz-h">📌 Post-its für dich</div><div class="hz-row">${zl.map(z => `<div class="hz-n" onclick="openZettel()" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>von ${escapeHtml(z.name || zName(z.from))}</small></div>`).join('')}</div>`;
+    el.innerHTML = `<div class="hz-h">📌 Post-its für dich</div><div class="hz-row">${zl.map(z => `<div class="hz-n" onclick="openZettel()" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};text-align:${zAl(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>von ${escapeHtml(z.name || zName(z.from))}</small></div>`).join('')}</div>`;
     el.classList.remove('hidden');
   }
   async function zettelCheck() {
@@ -4151,7 +4155,7 @@
     const id = zHomeQ.shift(), z = zHomeData[id]; if (!z) return zHomeNext();
     zHomeCur = id; zShownAdd(userKey(currentUser), id);
     const note = document.getElementById('zhNote'); note.style.background = z.color || ZCOL[0];
-    const t = document.getElementById('zhText'); t.textContent = z.text || (z.photo ? '📷 Foto' : ''); t.style.fontSize = (26 * zSz(z)) + 'px'; t.style.fontFamily = zFam(z).split(';')[0]; t.style.fontWeight = /900/.test(zFam(z)) ? '900' : '';
+    const t = document.getElementById('zhText'); t.textContent = z.text || (z.photo ? '📷 Foto' : ''); t.style.fontSize = (26 * zSz(z)) + 'px'; t.style.textAlign = zAl(z); t.style.fontFamily = zFam(z).split(';')[0]; t.style.fontWeight = /900/.test(zFam(z)) ? '900' : '';
     document.getElementById('zhWho').textContent = '— ' + (z.name || zName(z.from)) + ' an ' + zToText(z, userKey(currentUser));
     document.getElementById('zhHint').textContent = '👆 Tippen zum Öffnen' + (zHomeQ.length ? ' · +' + zHomeQ.length + ' weitere' : '');
     const im = document.getElementById('zhImg'); im.classList.add('hidden'); im.removeAttribute('src');
@@ -4180,9 +4184,9 @@
     ztChips();
     document.getElementById('ztCol').innerHTML = ZCOL.map((c, i) => `<button class="${i === zCol ? 'on' : ''}" style="background:${c}" onclick="zCol=${i};ztComposeBuild()" aria-label="Farbe ${i + 1}"></button>`).join('');
     document.getElementById('ztText').style.background = ZCOL[zCol];
-    document.getElementById('ztSty').innerHTML = Object.keys(ZSIZES).map(k => `<button class="${k === zSize ? 'on' : ''}" onclick="zSize='${k}';ztComposeBuild()">${ZSIZES[k][0]}</button>`).join('') + '<span style="width:100%;height:0"></span>' + Object.keys(ZFONTS).map(k => `<button class="${k === zFont ? 'on' : ''}" style="font-family:${ZFONTS[k][1].split(';')[0] || 'inherit'}" onclick="zFont='${k}';ztComposeBuild()">${ZFONTS[k][0]}</button>`).join('');
-    const ta = document.getElementById('ztText'), zz = { size: zSize, font: zFont };
-    ta.style.fontSize = (17 * zSz(zz)) + 'px'; ta.style.cssText += ';font-family:' + (zFam(zz) || 'inherit');
+    document.getElementById('ztSty').innerHTML = `<button onclick="zFsStep(-0.2)" aria-label="Text kleiner">A−</button><span style="align-self:center;font-weight:700;min-width:44px;text-align:center">${Math.round(zFs * 100)}%</span><button onclick="zFsStep(0.2)" aria-label="Text grösser">A+</button><span style="width:14px"></span>` + [['l', '⬅'], ['c', '↔'], ['r', '➡']].map(([k, ic]) => `<button class="${k === zAlign ? 'on' : ''}" onclick="zSetAlign('${k}')" aria-label="Ausrichtung">${ic}</button>`).join('') + '<span style="width:100%;height:0"></span>' + Object.keys(ZFONTS).map(k => `<button class="${k === zFont ? 'on' : ''}" style="font-family:${ZFONTS[k][1].split(';')[0] || 'inherit'}" onclick="zFont='${k}';ztComposeBuild()">${ZFONTS[k][0]}</button>`).join('');
+    const ta = document.getElementById('ztText'), zz = { fs: zFs, font: zFont };
+    ta.style.textAlign = zAl({ al: zAlign }); ta.style.fontSize = (17 * zSz(zz)) + 'px'; ta.style.cssText += ';font-family:' + (zFam(zz) || 'inherit');
   }
   function ztChips() {
     const me = userKey(currentUser), others = Object.keys(ACCOUNTS).filter(k => k !== me);
@@ -4211,7 +4215,7 @@
     if (!zTo.size) { showToast('Wähle, für wen das Post-it ist'); return; }
     zSending = true; document.getElementById('ztSend').disabled = true;
     const me = userKey(currentUser), id = chatNewId();
-    const m = { id, from: me, name: currentUser, to: [...zTo], text: text.slice(0, 300), at: Date.now(), color: ZCOL[zCol], size: zSize, font: zFont, done: false };
+    const m = { id, from: me, name: currentUser, to: [...zTo], text: text.slice(0, 300), at: Date.now(), color: ZCOL[zCol], size: zFs >= 1.3 ? 'l' : zFs < 0.9 ? 's' : 'm', fs: zFs, al: zAlign, font: zFont, done: false };
     try {
       if (zPhoto) { await withTimeout(cloudApi.zphotoPut(id, { from: me, data: zPhoto, at: m.at }), 30000); zPhotoCache[id] = zPhoto; m.photo = true; }
       try { await withTimeout(cloudApi.zettelAdd(m)); } catch (e) { if (m.photo) { try { await cloudApi.zphotoDelete(id); } catch (x) {} } throw e; }
@@ -4228,7 +4232,7 @@
     btns.push(`<button onclick="ztHide('${z.id}')" title="Auf diesem Gerät entfernen">🗑 Entfernen</button>`);
     if (mine || parent) btns.push(`<button onclick="ztDel('${z.id}')" title="Für alle löschen">✕ Für alle</button>`);
     const time = new Date(z.at).toLocaleString('de-CH', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-    return `<div class="zt-note ${z.done ? 'done' : ''}" style="background:${escapeHtml(z.color || ZCOL[0])};--r:${zRot(z.id)}deg;${z.size === 'l' ? 'grid-column:span 2' : ''}"><div class="zt-to">${mine ? 'An' : 'Von ' + escapeHtml(z.name || zName(z.from)) + ' an'}: ${escapeHtml(zToText(z, me))}</div><div style="font-size:${16 * zSz(z)}px;${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? `<img data-zp="${z.id}" alt="Foto">` : ''}<div class="zt-m">${z.done ? '✓ erledigt' + (z.doneBy ? ' von ' + escapeHtml(zName(z.doneBy)) + ' · ' : ' · ') : ''}${escapeHtml(time)}</div>${btns.length ? `<div class="zt-b">${btns.join('')}</div>` : ''}</div>`;
+    return `<div class="zt-note ${z.done ? 'done' : ''}" style="background:${escapeHtml(z.color || ZCOL[0])};--r:${zRot(z.id)}deg;${zSz(z) >= 1.3 ? 'grid-column:span 2' : ''}"><div class="zt-to">${mine ? 'An' : 'Von ' + escapeHtml(z.name || zName(z.from)) + ' an'}: ${escapeHtml(zToText(z, me))}</div><div style="font-size:${16 * zSz(z)}px;text-align:${zAl(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? `<img data-zp="${z.id}" alt="Foto">` : ''}<div class="zt-m">${z.done ? '✓ erledigt' + (z.doneBy ? ' von ' + escapeHtml(zName(z.doneBy)) + ' · ' : ' · ') : ''}${escapeHtml(time)}</div>${btns.length ? `<div class="zt-b">${btns.join('')}</div>` : ''}</div>`;
   }
   function ztRender() {
     const el = document.getElementById('ztList'); if (!el) return;
@@ -8160,7 +8164,7 @@
     const z = padZ.find(x => x.id === id); if (!z) { padZNext(); return; }
     padWakeUntil = Date.now() + 60000; padNightCheck();
     const note = document.getElementById('padZNote'); note.style.background = z.color || '#FFE97A';
-    const pt = document.getElementById('padZText'); pt.textContent = z.text || ''; pt.style.setProperty('--zs', zSz(z)); pt.style.fontFamily = zFam(z).split(';')[0]; pt.style.fontWeight = /900/.test(zFam(z)) ? '900' : '';
+    const pt = document.getElementById('padZText'); pt.textContent = z.text || ''; pt.style.setProperty('--zs', zSz(z)); pt.style.textAlign = zAl(z); pt.style.fontFamily = zFam(z).split(';')[0]; pt.style.fontWeight = /900/.test(zFam(z)) ? '900' : '';
     document.getElementById('padZWho').textContent = '— ' + (z.name || zName(z.from)) + ' an ' + zToText(z, null) + ' · ' + new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
     const im = document.getElementById('padZImg'); im.classList.add('hidden'); im.removeAttribute('src');
     document.getElementById('padZNew').classList.remove('hidden');
@@ -8217,7 +8221,7 @@
     if (what.startsWith('t:')) h = padTodosHtml(true, what.slice(2)) || '<div class="pad-ok">Nichts offen</div>';
     else if (what.startsWith('z:')) {
       const z = padZ.find(x => x.id === what.slice(2)); if (!z) return;
-      h = `<div style="background:${escapeHtml(z.color || '#FFE97A')};padding:3vmin;border-radius:3px;box-shadow:3px 5px 14px rgba(0,0,0,.3);"><div class="pz-text" style="--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? '<img id="padPopZImg" style="display:block;max-width:100%;max-height:50vh;margin:2vmin auto 0;border-radius:8px;">' : ''}<div style="opacity:.65;margin-top:2vmin;font-size:clamp(14px,2.6vmin,28px);">— ${escapeHtml(z.name || zName(z.from))} an ${escapeHtml(zToText(z, null))} · ${new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div><button class="pp-x" style="margin:12px 0 0 auto;background:#fff;" onclick="zHidAdd('pad','${z.id}');padPopClose();padRenderTodos();padFitSoon()">🗑 Vom Pad entfernen</button>`;
+      h = `<div style="background:${escapeHtml(z.color || '#FFE97A')};padding:3vmin;border-radius:3px;box-shadow:3px 5px 14px rgba(0,0,0,.3);"><div class="pz-text" style="--zs:${zSz(z)};text-align:${zAl(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? '<img id="padPopZImg" style="display:block;max-width:100%;max-height:50vh;margin:2vmin auto 0;border-radius:8px;">' : ''}<div style="opacity:.65;margin-top:2vmin;font-size:clamp(14px,2.6vmin,28px);">— ${escapeHtml(z.name || zName(z.from))} an ${escapeHtml(zToText(z, null))} · ${new Date(z.at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</div></div><button class="pp-x" style="margin:12px 0 0 auto;background:#fff;" onclick="zHidAdd('pad','${z.id}');padPopClose();padRenderTodos();padFitSoon()">🗑 Vom Pad entfernen</button>`;
       if (z.photo) ztPhotoSrc(z.id).then(src => { const i = document.getElementById('padPopZImg'); if (i && src) i.src = src; });
     }
     else if (what === 'bday') h = '<div class="pad-h">🎂 Geburtstage</div>' + (padBdHtml(99) || '<div class="pad-ok">Keine erfasst</div>');
@@ -8342,7 +8346,7 @@
     const pool = padTodos.filter(t => t.assigneeKey === POOL && !t.done).sort(byDue);
     const poolHtml = pool.length && (!only || only === 'pool') ? `<div class="pad-person pad-pool" data-k="pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>${full ? 'wer zuerst kommt!' : pool.length + ' offen'}</span></div>${(full ? pool.slice(0, L) : []).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
     const zl = (!only && !full) ? padZ.filter(z => !z.done && !zHidGet('pad').has(z.id)).sort((x, y) => y.at - x.at).slice(0, 6) : [];
-    const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Post-its</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))} → ${escapeHtml(zToText(z, null))}</small></div>`).join('')}</div></div>` : '';
+    const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Post-its</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};text-align:${zAl(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))} → ${escapeHtml(zToText(z, null))}</small></div>`).join('')}</div></div>` : '';
     return cards + poolHtml + zHtml;
   }
 
@@ -8665,7 +8669,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.62';
+  const APP_VERSION = '2.63';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

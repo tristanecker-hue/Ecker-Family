@@ -142,7 +142,7 @@ service cloud.firestore {
       allow read: if (canChat() && (resource.data.from == uname() || uname() in resource.data.to))
         || (isPad() && 'pad' in resource.data.to);
       allow create: if canChat()
-        && request.resource.data.keys().hasOnly(['from', 'name', 'to', 'text', 'at', 'photo', 'color', 'size', 'font', 'done'])
+        && request.resource.data.keys().hasOnly(['from', 'name', 'to', 'text', 'at', 'photo', 'color', 'size', 'fs', 'al', 'font', 'done'])
         && request.resource.data.from == uname()
         && request.resource.data.to is list
         && request.resource.data.to.size() >= 1 && request.resource.data.to.size() <= 5
@@ -152,6 +152,8 @@ service cloud.firestore {
         && request.resource.data.at is number
         && request.resource.data.get('size', 'm') in ['s', 'm', 'l']
         && request.resource.data.get('font', 'n') in ['n', 'h', 'b', 't']
+        && request.resource.data.get('fs', 1) is number && request.resource.data.get('fs', 1) >= 0.5 && request.resource.data.get('fs', 1) <= 3
+        && request.resource.data.get('al', 'l') in ['l', 'c', 'r']
         && request.resource.data.done == false;
       allow update: if canChat()
         && (resource.data.from == uname() || uname() in resource.data.to || uname() in ['tristan', 'claudia'])
