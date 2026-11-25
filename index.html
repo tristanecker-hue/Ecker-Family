@@ -1564,7 +1564,7 @@
       </div>
       <div class="account-btn hidden" id="tileChat" role="button" tabindex="0" onclick="openZettel()" onkeydown="if(event.key==='Enter'||event.key===' '){openZettel()}">
         <div class="account-avatar" style="background:#F2C230;">📌</div>
-        <div class="account-name">Zettel</div>
+        <div class="account-name">Post-it</div>
         <div class="account-hint" id="chatBadge"></div>
       </div>
       <div class="account-btn hidden" id="tilePunkte" role="button" tabindex="0" onclick="openPunkte()" onkeydown="if(event.key==='Enter'||event.key===' '){openPunkte()}">
@@ -1837,7 +1837,7 @@
     <div class="summary-header">
       <button class="back-btn" onclick="goHome()">←</button>
       <div>
-        <h1>📌 Zettel</h1>
+        <h1>📌 Post-it</h1>
         <div class="sub">Post-its für die Familie und das Pad</div>
       </div>
     </div>
@@ -3194,7 +3194,7 @@
     { key: 'spiele', label: 'Kachel Spiele' },
     { key: 'punkte', label: 'Kachel Sterne & Belohnungen' },
     { key: 'essen', label: 'Kacheln Wochenplan & Rezepte' },
-    { key: 'chat', label: 'Kachel Zettel (Post-its)' }
+    { key: 'chat', label: 'Kachel Post-it' }
   ].filter(f => PUNKTE_AKTIV || f.key !== 'punkte');
   let settings = null;
 
@@ -4125,7 +4125,7 @@
     const me = userKey(currentUser), hid = zHidGet(me);
     const zl = (list || []).filter(z => !z.done && z.from !== me && !hid.has(z.id)).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 6);
     if (!zl.length) { el.classList.add('hidden'); el.innerHTML = ''; return; }
-    el.innerHTML = `<div class="hz-h">📌 Zettel für dich</div><div class="hz-row">${zl.map(z => `<div class="hz-n" onclick="openZettel()" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>von ${escapeHtml(z.name || zName(z.from))}</small></div>`).join('')}</div>`;
+    el.innerHTML = `<div class="hz-h">📌 Post-its für dich</div><div class="hz-row">${zl.map(z => `<div class="hz-n" onclick="openZettel()" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>von ${escapeHtml(z.name || zName(z.from))}</small></div>`).join('')}</div>`;
     el.classList.remove('hidden');
   }
   async function zettelCheck() {
@@ -4171,7 +4171,7 @@
     zNotes = new Map(); zTo = new Set(); ztComposeBuild(); ztRender();
     zettelStop();
     const me = userKey(currentUser);
-    try { zUnsubs.push(cloudApi.zettelListen(me, list => { zNotes = new Map(list.map(z => [z.id, z])); ztRender(); zettelBadgeClear(); }, () => { document.getElementById('ztList').innerHTML = '<div class="todo-empty">Zettel konnten nicht geladen werden – Verbindung prüfen.</div>'; })); } catch (e) {}
+    try { zUnsubs.push(cloudApi.zettelListen(me, list => { zNotes = new Map(list.map(z => [z.id, z])); ztRender(); zettelBadgeClear(); }, () => { document.getElementById('ztList').innerHTML = '<div class="todo-empty">Post-its konnten nicht geladen werden – Verbindung prüfen.</div>'; })); } catch (e) {}
   }
   function zettelBadgeClear() { const b = document.getElementById('chatBadge'); if (b) { const me = userKey(currentUser); const hid = zHidGet(me), n = [...zNotes.values()].filter(z => !z.done && z.from !== me && !hid.has(z.id)).length; b.textContent = n ? '📌 ' + n + ' offen' : ''; } homeZettelRender([...zNotes.values()]); }
   function ztComposeBuild() {
@@ -4188,7 +4188,7 @@
     const me = userKey(currentUser), others = Object.keys(ACCOUNTS).filter(k => k !== me);
     const all = others.every(k => zTo.has(k));
     const sum = document.getElementById('ztSum'), txt = zToText({ from: me, to: [...zTo] }, null);
-    sum.textContent = zTo.size ? '➡️ Geht an: ' + txt : '👆 Wähle oben, für wen der Zettel ist';
+    sum.textContent = zTo.size ? '➡️ Geht an: ' + txt : '👆 Wähle oben, für wen das Post-it ist';
     sum.classList.toggle('bad', !zTo.size);
     document.getElementById('ztTo').innerHTML = `<button class="${all ? 'on' : ''}" onclick="ztToggle('*')">👪 Alle</button>` + others.map(k => `<button class="${zTo.has(k) ? 'on' : ''}" onclick="ztToggle('${k}')">${escapeHtml(ACCOUNTS[k])}</button>`).join('') + `<button class="${zTo.has('pad') ? 'on' : ''}" onclick="ztToggle('pad')">📺 Pad</button>`;
   }
@@ -4208,7 +4208,7 @@
     if (zSending) return;
     const text = document.getElementById('ztText').value.trim();
     if (!text && !zPhoto) { showToast('Schreib etwas oder füge ein Foto hinzu'); return; }
-    if (!zTo.size) { showToast('Wähle, für wen der Zettel ist'); return; }
+    if (!zTo.size) { showToast('Wähle, für wen das Post-it ist'); return; }
     zSending = true; document.getElementById('ztSend').disabled = true;
     const me = userKey(currentUser), id = chatNewId();
     const m = { id, from: me, name: currentUser, to: [...zTo], text: text.slice(0, 300), at: Date.now(), color: ZCOL[zCol], size: zSize, font: zFont, done: false };
@@ -4216,8 +4216,8 @@
       if (zPhoto) { await withTimeout(cloudApi.zphotoPut(id, { from: me, data: zPhoto, at: m.at }), 30000); zPhotoCache[id] = zPhoto; m.photo = true; }
       try { await withTimeout(cloudApi.zettelAdd(m)); } catch (e) { if (m.photo) { try { await cloudApi.zphotoDelete(id); } catch (x) {} } throw e; }
       zNotes.set(id, m); ztRender();
-      pushSend([{ to: m.to.filter(k => k !== 'pad'), title: '📌 Zettel von ' + currentUser, body: (m.text || '📷 Foto').slice(0, 120), url: './#chat' }]);
-      document.getElementById('ztText').value = ''; ztPhotoClear(); zTo = new Set(); ztComposeBuild(); showToast('Zettel aufgeklebt 📌');
+      pushSend([{ to: m.to.filter(k => k !== 'pad'), title: '📌 Post-it von ' + currentUser, body: (m.text || '📷 Foto').slice(0, 120), url: './#chat' }]);
+      document.getElementById('ztText').value = ''; ztPhotoClear(); zTo = new Set(); ztComposeBuild(); showToast('Post-it aufgeklebt 📌');
     } catch (e) { showToast('Senden fehlgeschlagen – bitte Verbindung prüfen'); }
     zSending = false; document.getElementById('ztSend').disabled = false;
   }
@@ -4237,7 +4237,7 @@
     const sent = all.filter(z => !z.done && z.from === me).sort((a, b) => b.at - a.at);
     const done = all.filter(z => z.done && z.photo).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const sec = (t, l, k) => l.length ? `<div class="zt-h">${t}</div><div class="zt-grid">${l.map(z => ztNoteHtml(z, k)).join('')}</div>` : '';
-    el.innerHTML = (sec('📥 Für mich', forMe, 'in') + sec('📤 Von mir', sent, 'sent') + sec('📷 Erledigt – Fotos gespeichert', done, 'in')) || '<div class="todo-empty">Keine Zettel. Klebe den ersten auf! 📌</div>';
+    el.innerHTML = (sec('📥 Für mich', forMe, 'in') + sec('📤 Von mir', sent, 'sent') + sec('📷 Erledigt – Fotos gespeichert', done, 'in')) || '<div class="todo-empty">Keine Post-its. Klebe das erste auf! 📌</div>';
     el.querySelectorAll('img[data-zp]').forEach(img => {
       const id = img.dataset.zp;
       img.onclick = () => { if (zPhotoCache[id]) { document.getElementById('zBoxImg').src = zPhotoCache[id]; document.getElementById('zBox').classList.add('open'); } };
@@ -4261,7 +4261,7 @@
   function ztHide(id) { zHidAdd(userKey(currentUser), id); ztRender(); zettelBadgeClear(); showToast('Auf diesem Gerät entfernt'); }
   async function ztDel(id) {
     const z = zNotes.get(id); if (!z) return;
-    if (!window.confirm(z.photo ? 'Zettel und Foto endgültig löschen?' : 'Diesen Zettel löschen?')) return;
+    if (!window.confirm(z.photo ? 'Post-it und Foto endgültig löschen?' : 'Dieses Post-it löschen?')) return;
     try { await withTimeout(cloudApi.zettelDelete(id, !!z.photo)); zNotes.delete(id); ztRender(); zettelBadgeClear(); } catch (e) { showToast('Löschen fehlgeschlagen'); }
   }
 
@@ -8342,7 +8342,7 @@
     const pool = padTodos.filter(t => t.assigneeKey === POOL && !t.done).sort(byDue);
     const poolHtml = pool.length && (!only || only === 'pool') ? `<div class="pad-person pad-pool" data-k="pool"><div class="pad-pn">⭐ Zusatzaufgaben für alle<span>${full ? 'wer zuerst kommt!' : pool.length + ' offen'}</span></div>${(full ? pool.slice(0, L) : []).map(t => `<div class="pad-t">${escapeHtml(t.text)}${PUNKTE_AKTIV && t.points > 0 ? ' · ⭐ ' + t.points : ''}${t.dueAt ? `<small>bis ${t.dueAt.split('-').reverse().slice(0, 2).join('.')}.</small>` : ''}</div>`).join('')}</div>` : '';
     const zl = (!only && !full) ? padZ.filter(z => !z.done && !zHidGet('pad').has(z.id)).sort((x, y) => y.at - x.at).slice(0, 6) : [];
-    const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Zettel</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))} → ${escapeHtml(zToText(z, null))}</small></div>`).join('')}</div></div>` : '';
+    const zHtml = zl.length ? `<div class="pad-card pad-zbox"><div class="pad-h">📌 Post-its</div><div class="pz-row">${zl.map(z => `<div class="pz-n" onclick="event.stopPropagation();padPop('z:${z.id}')" style="background:${escapeHtml(z.color || '#FFE97A')};--r:${zRot(z.id)}deg;--zs:${zSz(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '📷 Foto')}${z.photo && z.text ? ' 📷' : ''}<small>${escapeHtml(z.name || zName(z.from))} → ${escapeHtml(zToText(z, null))}</small></div>`).join('')}</div></div>` : '';
     return cards + poolHtml + zHtml;
   }
 
@@ -8665,7 +8665,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.61';
+  const APP_VERSION = '2.62';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
