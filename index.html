@@ -155,6 +155,10 @@
   .bc-ring.rect { border-radius:12px; box-shadow:none; border:2px dashed #fff; }
   #bdCropZ { width:100%; }
   .zt-actions { display:flex; gap:8px; margin-top:12px; }
+  .zt-pad { position:relative; min-height:150px; box-sizing:border-box; background:#FFE97A; border:2px solid #262319; border-radius:6px; padding:10px; box-shadow:2px 3px 0 rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; text-align:center; font-size:17px; cursor:pointer; }
+  .zt-pad img { max-width:100%; max-height:300px; display:block; }
+  .zt-pad #ztPadX { position:absolute; top:6px; right:6px; width:32px; height:32px; border-radius:50%; border:2px solid #262319; background:#fff; font-weight:800; cursor:pointer; }
+  .zt-pad .hidden { display:none; }
   #ztDraw { position:fixed; inset:0; z-index:70; background:#2b2a26; display:flex; flex-direction:column; align-items:center; padding:max(env(safe-area-inset-top,0px),12px) 12px max(env(safe-area-inset-bottom,0px),12px); gap:10px; }
   #ztDraw.hidden { display:none; }
   #ztDraw .zd-bar { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; }
@@ -1851,13 +1855,14 @@
     </div>
     <div class="navbar" data-nav="chat"></div>
     <div class="card zt-compose">
-      <textarea id="ztText" rows="3" maxlength="300" placeholder="Was soll draufstehen? …"></textarea>
+      <div id="ztPad" class="zt-pad" onclick="ztDrawOpen()"><div id="ztPadHint">✏️ Hier tippen: schreiben, zeichnen, Sticker setzen …</div><img id="ztPadImg" class="hidden" alt=""><button id="ztPadX" class="hidden" onclick="event.stopPropagation();ztPhotoClear()" aria-label="Entfernen">✕</button></div>
+      <textarea id="ztText" style="display:none"></textarea>
       <div class="zt-lbl">Für wen?</div>
       <div id="ztTo" class="zt-chips"></div>
       <div class="zt-lbl">Farbe</div>
       <div id="ztCol" class="zt-cols"></div>
-      <div class="zt-lbl">Grösse &amp; Schrift</div>
-      <div id="ztSty" class="zt-chips"></div>
+      <div class="zt-lbl" style="display:none">Grösse &amp; Schrift</div>
+      <div id="ztSty" class="zt-chips" style="display:none"></div>
       <div id="ztSum" class="zt-sum"></div>
       <div id="ztPrev" class="zt-prev hidden"><img id="ztPrevImg" alt=""><button onclick="ztPhotoClear()" aria-label="Foto entfernen">✕</button></div>
       <div class="zt-actions">
@@ -4192,7 +4197,7 @@
     zTo.delete(me);
     ztChips();
     document.getElementById('ztCol').innerHTML = ZCOL.map((c, i) => `<button class="${i === zCol ? 'on' : ''}" style="background:${c}" onclick="zCol=${i};ztComposeBuild()" aria-label="Farbe ${i + 1}"></button>`).join('');
-    document.getElementById('ztText').style.background = ZCOL[zCol];
+    document.getElementById('ztText').style.background = ZCOL[zCol]; document.getElementById('ztPad').style.background = ZCOL[zCol];
     document.getElementById('ztSty').innerHTML = `<button onclick="zFsStep(-0.2)" aria-label="Text kleiner">A−</button><span style="align-self:center;font-weight:700;min-width:44px;text-align:center">${Math.round(zFs * 100)}%</span><button onclick="zFsStep(0.2)" aria-label="Text grösser">A+</button><span style="width:14px"></span>` + [['l', '⬅'], ['c', '↔'], ['r', '➡']].map(([k, ic]) => `<button class="${k === zAlign ? 'on' : ''}" onclick="zSetAlign('${k}')" aria-label="Ausrichtung">${ic}</button>`).join('') + '<span style="width:100%;height:0"></span>' + `<button class="${zBig ? 'on' : ''}" onclick="zBig=!zBig;ztComposeBuild()">📐 Post-it gross</button>` + Object.keys(ZFONTS).map(k => `<button class="${k === zFont ? 'on' : ''}" style="font-family:${ZFONTS[k][1].split(';')[0] || 'inherit'}" onclick="zFont='${k}';ztComposeBuild()">${ZFONTS[k][0]}</button>`).join('');
     const ta = document.getElementById('ztText'), zz = { fs: zFs, font: zFont };
     ta.style.textAlign = zAl({ al: zAlign }); ta.style.fontSize = (17 * zSz(zz)) + 'px'; ta.style.cssText += ';font-family:' + (zFam(zz) || 'inherit');
@@ -4213,11 +4218,11 @@
   }
   async function ztPhoto(inp) {
     const f = inp.files && inp.files[0]; inp.value = ''; if (!f) return;
-    try { zPhoto = await chatCompress(f); document.getElementById('ztPrevImg').src = zPhoto; document.getElementById('ztPrev').classList.remove('hidden'); }
+    try { zPhoto = await chatCompress(f); zdSaved = null; ztPadShow(); document.getElementById('ztPrevImg').src = zPhoto; document.getElementById('ztPrev').classList.remove('hidden'); }
     catch (e) { showToast('Foto konnte nicht geladen werden'); }
   }
   // ---- Handskizze: Striche auf einer Ebene, Text/Emoji/Yuna-Sticker als verschiebbare Objekte darüber
-  let zdMode = 'pen', zdEmo = '⭐', zdYuna = 'yuna', zdS = 72, zdCol = '#262319', zdW = 5, zdEr = false, zdHist = [], zdDraw = false, zdLast = null, zdObjs = [], zdSel = -1, zdPtrs = new Map(), zdDrag = null, zdPinch = null;
+  let zdSaved = null, zdMode = 'pen', zdEmo = '⭐', zdYuna = 'yuna', zdS = 72, zdCol = '#262319', zdW = 5, zdEr = false, zdHist = [], zdDraw = false, zdLast = null, zdObjs = [], zdSel = -1, zdPtrs = new Map(), zdDrag = null, zdPinch = null;
   const ZD_EMF = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif", ZD_TXF = "'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive";
   const zdImgs = {};
   function zdImg(src) { let im = zdImgs[src]; if (!im) { im = new Image(); im.onload = () => ztDrawRender(); im.src = src; zdImgs[src] = im; } return im.complete && im.naturalWidth ? im : null; }
@@ -4264,9 +4269,11 @@
   function ztDrawOpen() {
     const cv = document.getElementById('ztDrawCv'), big = zBig;
     cv.width = big ? 900 : 800; cv.height = big ? 1100 : 600;
-    const keep = zPhoto && zPhoto.startsWith('data:image/png');
+    const keep = false, sv = zdSaved && zPhoto ? zdSaved : null;
+    if (sv) { zBig = sv.big; cv.width = zBig ? 900 : 800; cv.height = zBig ? 1100 : 600; }
     const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, cv.width, cv.height);
-    document.getElementById('ztDrawStack').style.background = ZCOL[zCol]; zdHist = []; zdEr = false; zdMode = 'pen'; zdObjs = []; zdSel = -1; document.getElementById('ztDrawTxt').value = '';
+    document.getElementById('ztDrawStack').style.background = ZCOL[zCol]; zdHist = []; zdEr = false; zdMode = sv ? 'move' : 'text'; zdObjs = sv ? JSON.parse(sv.objs) : []; zdSel = -1; document.getElementById('ztDrawTxt').value = '';
+    if (sv) { const im = new Image(); im.onload = () => cv.getContext('2d').drawImage(im, 0, 0); im.src = sv.strokes; }
     if (keep) { const im = new Image(); im.onload = () => { ctx.drawImage(im, 0, 0, cv.width, cv.height); }; im.src = zPhoto; }
     document.getElementById('ztDraw').classList.remove('hidden'); ztDrawBar(); ztDrawFit(); setTimeout(ztDrawFit, 50);
     const ov = document.getElementById('ztDrawOv');
@@ -4287,7 +4294,7 @@
         }
         if (zdMode === 'move') { zdSel = -1; ztDrawRender(); ztDrawBar(); return; }
         let o;
-        if (zdMode === 'text') { const t = document.getElementById('ztDrawTxt').value; if (!t.trim()) { showToast('Zuerst Text eintippen'); return; } o = { k: 'text', t, c: zdCol, s: zdS }; }
+        if (zdMode === 'text') { const t = document.getElementById('ztDrawTxt').value; if (!t.trim()) { showToast('Erst oben den Text eintippen'); document.getElementById('ztDrawTxt').focus(); return; } o = { k: 'text', t, c: zdCol, s: zdS }; }
         else if (zdMode === 'emoji') o = { k: 'emoji', t: zdEmo, s: zdS };
         else o = { k: 'yuna', t: zdYuna, s: Math.round(zdS * 0.8) };
         zdSnap(false); o.x = p[0]; o.y = p[1]; zdObjs.push(o); zdSel = zdObjs.length - 1; zdDrag = { dx: 0, dy: 0 }; ztDrawRender(); ztDrawBar();
@@ -4357,13 +4364,19 @@
     let empty = true; for (let i = 3; i < d.length; i += 16) { if (d[i]) { empty = false; break; } }
     if (empty) { ztPhotoClear(); return; }
     zPhoto = out.toDataURL('image/png');
-    document.getElementById('ztPrevImg').style.background = ZCOL[zCol]; document.getElementById('ztPrevImg').src = zPhoto; document.getElementById('ztPrev').classList.remove('hidden');
+    zdSaved = { big: zBig, strokes: cv.toDataURL('image/png'), objs: JSON.stringify(zdObjs) };
+    document.getElementById('ztPrev').classList.add('hidden'); ztPadShow();
   }
-  function ztPhotoClear() { zPhoto = ''; document.getElementById('ztPrev').classList.add('hidden'); }
+  function ztPadShow() {
+    const im = document.getElementById('ztPadImg'), on = !!(zdSaved && zPhoto);
+    im.classList.toggle('hidden', !on); document.getElementById('ztPadX').classList.toggle('hidden', !on); document.getElementById('ztPadHint').classList.toggle('hidden', on);
+    if (on) im.src = zPhoto;
+  }
+  function ztPhotoClear() { zPhoto = ''; zdSaved = null; document.getElementById('ztPrev').classList.add('hidden'); ztPadShow(); }
   async function ztSend() {
     if (zSending) return;
     const text = document.getElementById('ztText').value.trim();
-    if (!text && !zPhoto) { showToast('Schreib etwas oder füge ein Foto hinzu'); return; }
+    if (!text && !zPhoto) { showToast('Tippe aufs Post-it und schreib oder zeichne etwas'); return; }
     if (!zTo.size) { showToast('Wähle, für wen das Post-it ist'); return; }
     zSending = true; document.getElementById('ztSend').disabled = true;
     const me = userKey(currentUser), id = chatNewId();
@@ -4372,7 +4385,7 @@
       if (zPhoto) { await withTimeout(cloudApi.zphotoPut(id, { from: me, data: zPhoto, at: m.at }), 30000); zPhotoCache[id] = zPhoto; m.photo = true; }
       try { await withTimeout(cloudApi.zettelAdd(m)); } catch (e) { if (m.photo) { try { await cloudApi.zphotoDelete(id); } catch (x) {} } throw e; }
       zNotes.set(id, m); ztRender();
-      pushSend([{ to: m.to.filter(k => k !== 'pad'), title: '📌 Post-it von ' + currentUser, body: (m.text || '📷 Foto').slice(0, 120), url: './#chat' }]);
+      pushSend([{ to: m.to.filter(k => k !== 'pad'), title: '📌 Post-it von ' + currentUser, body: (m.text || (zdSaved ? '✏️ Neues Post-it' : '📷 Foto')).slice(0, 120), url: './#chat' }]);
       document.getElementById('ztText').value = ''; ztPhotoClear(); zTo = new Set(); ztComposeBuild(); showToast('Post-it aufgeklebt 📌');
     } catch (e) { showToast('Senden fehlgeschlagen – bitte Verbindung prüfen'); }
     zSending = false; document.getElementById('ztSend').disabled = false;
@@ -8821,7 +8834,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.68';
+  const APP_VERSION = '2.69';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
