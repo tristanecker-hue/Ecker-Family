@@ -155,14 +155,7 @@
   .bc-ring.rect { border-radius:12px; box-shadow:none; border:2px dashed #fff; }
   #bdCropZ { width:100%; }
   .zt-actions { display:flex; gap:8px; margin-top:12px; }
-  #planWeb { position:fixed; inset:0; z-index:9500; background:#fff; display:flex; flex-direction:column; }
-  #planWeb.hidden { display:none; }
-  #planWeb .pw-bar { display:flex; align-items:center; gap:10px; padding:max(env(safe-area-inset-top,0px),8px) 12px 8px; background:#FFD84D; border-bottom:2px solid #262319; font-size:clamp(15px,2.4vmin,24px); }
-  #planWeb .pw-bar a, #planWeb .pw-bar button { border:2px solid #262319; background:#fff; border-radius:999px; padding:8px 16px; font:inherit; font-weight:700; color:#262319; text-decoration:none; cursor:pointer; }
-  #planWeb .pw-hint { font-size:12px; text-align:center; padding:2px; background:#fff8d6; }
-  #planWeb iframe { flex:1; border:0; width:100%; background:#fff; }
   .paper.plan-link { cursor:pointer; }
-  .plan-open-btn { display:block; width:100%; margin-top:10px; border:2px solid #262319; background:#FFD84D; border-radius:12px; padding:10px; font:inherit; font-weight:700; font-size:15px; cursor:pointer; }
   .zt-pad { position:relative; min-height:150px; box-sizing:border-box; background:#FFE97A; border:2px solid #262319; border-radius:6px; padding:10px; box-shadow:2px 3px 0 rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; text-align:center; font-size:17px; cursor:pointer; }
   .zt-pad img { max-width:100%; max-height:300px; display:block; }
   .zt-pad #ztPadX { position:absolute; top:6px; right:6px; width:32px; height:32px; border-radius:50%; border:2px solid #262319; background:#fff; font-weight:800; cursor:pointer; }
@@ -1809,7 +1802,6 @@
   <div id="bdCrop" class="hidden"><div class="bc-box"><div class="bc-h">Foto anpassen</div><div class="bc-sub">Mit dem Finger verschieben, mit dem Regler vergrössern.</div><div id="bdCropAsp" class="zt-chips hidden" style="justify-content:center;margin-bottom:8px;"></div><div class="bc-stage" id="bdCropStage"><canvas id="bdCropCv" width="280" height="280"></canvas><div class="bc-ring" id="bdCropRing"></div></div><input type="range" id="bdCropZ" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><div class="zt-actions"><button class="btn" onclick="bdCropClose()">Abbrechen</button><button class="btn hidden" id="bdCropSkip" onclick="bdCropSkip()">Original</button><button class="btn" onclick="bdCropApply()" style="flex:1;">✓ Übernehmen</button></div></div></div>
 
 <div id="ztDraw" class="hidden"><div class="zd-bar" id="ztDrawTop"></div><textarea id="ztDrawTxt" rows="2" maxlength="120" placeholder="Text eintippen, dann aufs Bild tippen …" style="display:none;width:100%;max-width:420px;box-sizing:border-box;border:2px solid #262319;border-radius:10px;padding:8px 10px;font:inherit;font-size:18px;resize:none"></textarea><div class="zd-bar" id="ztDrawEmo" style="display:none"></div><div class="zd-wrap"><div id="ztDrawStack" style="position:relative;border:3px solid #262319;border-radius:4px;box-shadow:4px 6px 18px rgba(0,0,0,.5);box-sizing:content-box"><canvas id="ztDrawCv" style="display:block"></canvas><canvas id="ztDrawOv" style="position:absolute;left:0;top:0;touch-action:none"></canvas></div></div><div class="zd-bar"><button onclick="ztDrawUndo()">↶ Zurück</button><button onclick="ztDrawClear()">🗑 Leeren</button><button onclick="ztDrawClose(false)">✕ Abbrechen</button><button onclick="ztDrawClose(true)" style="background:#7CD35C">✓ Fertig</button></div></div>
-<div id="planWeb" class="hidden"><div class="pw-bar"><b>📚 Stundenplan Florian (live)</b><span style="flex:1"></span><a id="planWebA" target="_blank" rel="noopener">↗ Extern öffnen</a><button onclick="planWebClose()">✕ Schliessen</button></div><div class="pw-hint">Bleibt die Seite leer, bitte «Extern öffnen» tippen.</div><iframe id="planWebF" title="Stundenplan Florian" referrerpolicy="no-referrer" allow="fullscreen"></iframe></div>
 <div id="zHomeNew" class="hidden"><div class="zh-note" id="zhNote" onclick="zHomeOpen()"><div class="zh-tape"></div><button class="zh-x" onclick="event.stopPropagation();zHomeClose()" aria-label="Schliessen">✕</button><div class="zh-text" id="zhText"></div><img id="zhImg" class="hidden" alt=""><div class="zh-who" id="zhWho"></div><div class="zh-hint" id="zhHint"></div></div></div>
   <div id="padScreen" class="hidden">
     <div class="pad-top">
@@ -7002,14 +6994,7 @@
         </div>`;
   }
   const PLAN_WEB_URL = 'https://web.schabi.ch/seite/x02wq8viuxk130fiwze2';
-  let planWebTimer = 0;
-  function planWebOpen() {
-    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch (e) {}  // im Vollbild erscheint die Tastatur oft nicht
-    const f = document.getElementById('planWebF'); if (!f.src || f.src === 'about:blank' || f.getAttribute('data-u') !== PLAN_WEB_URL) { f.src = PLAN_WEB_URL; f.setAttribute('data-u', PLAN_WEB_URL); }
-    document.getElementById('planWebA').href = PLAN_WEB_URL; document.getElementById('planWeb').classList.remove('hidden');
-    clearTimeout(planWebTimer); planWebTimer = setTimeout(planWebClose, 120000);
-  }
-  function planWebClose() { clearTimeout(planWebTimer); document.getElementById('planWeb').classList.add('hidden'); const f = document.getElementById('planWebF'); f.src = 'about:blank'; f.removeAttribute('data-u'); }
+  function planWebOpen() { window.open(PLAN_WEB_URL, '_blank', 'noopener'); }
   function renderPlans() {
     document.getElementById('planLists').innerHTML = visibleKids().map(planCardHtml).join('');
     applyAvatars();
@@ -7970,7 +7955,7 @@
   }
   // Nach 30 s ohne Berührung zurück zur Übersicht
   let padTabTimer = 0;
-  function padTabArm() { clearTimeout(padTabTimer); const sc = document.getElementById('padScreen'); if (sc && document.getElementById('planWeb').classList.contains('hidden') && (sc.classList.contains('tab-l') || sc.classList.contains('tab-p') || sc.classList.contains('tab-w'))) padTabTimer = setTimeout(() => padTab('o'), 30000); }
+  function padTabArm() { clearTimeout(padTabTimer); const sc = document.getElementById('padScreen'); if (sc && (sc.classList.contains('tab-l') || sc.classList.contains('tab-p') || sc.classList.contains('tab-w'))) padTabTimer = setTimeout(() => padTab('o'), 30000); }
   function padTab(t) { setTimeout(padFitSoon, 50);
     const sc = document.getElementById('padScreen');
     sc.classList.toggle('tab-l', t === 'l'); sc.classList.toggle('tab-p', t === 'p'); sc.classList.toggle('tab-w', t === 'w');
@@ -8862,7 +8847,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.74';
+  const APP_VERSION = '2.75';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
