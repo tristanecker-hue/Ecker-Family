@@ -4218,7 +4218,7 @@
     catch (e) { showToast('Foto konnte nicht geladen werden'); }
   }
   // ---- Handskizze: Zeichenfläche, wird wie ein Foto gespeichert (PNG, transparent)
-  let zdMode = 'pen', zdEmo = '⭐', zdS = 72, zdCol = '#262319', zdW = 5, zdEr = false, zdHist = [], zdDraw = false, zdLast = null;
+  let zdMode = 'pen', zdEmo = '⭐', zdYuna = 'yuna', zdS = 72, zdCol = '#262319', zdW = 5, zdEr = false, zdHist = [], zdDraw = false, zdLast = null;
   function ztDrawOpen() {
     const cv = document.getElementById('ztDrawCv'), big = zBig;
     cv.width = big ? 900 : 800; cv.height = big ? 1100 : 600;
@@ -4241,6 +4241,15 @@
   function ztDrawStamp(p) {
     const ctx = document.getElementById('ztDrawCv').getContext('2d');
     ctx.globalCompositeOperation = 'source-over'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (zdMode === 'yuna') {
+      const st = STICKERS[zdYuna], im = new Image(), W = zdS * 2.6, H = W * 267 / 352, L = p[0] - W / 2, T = p[1] - H / 2 + H * 0.12;
+      im.onload = () => {
+        ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(im, L, T, W, H);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        (st.o || []).forEach(o => { ctx.font = Math.round(W * o.z) + "px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"; ctx.fillText(o.e, L + o.x / 100 * W, T + o.y / 100 * H); });
+      };
+      im.src = st.img; return;
+    }
     if (zdMode === 'emoji') { ctx.font = zdS + "px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"; ctx.fillText(zdEmo, p[0], p[1]); return; }
     const t = document.getElementById('ztDrawTxt').value; if (!t.trim()) { showToast('Zuerst Text eintippen'); zdHist.pop(); return; }
     ctx.font = "700 " + zdS + "px 'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive"; ctx.fillStyle = zdCol;
@@ -4265,11 +4274,12 @@
   function ztDrawBar() {
     const cols = ['#262319', '#E5392B', '#1E6FD9', '#2E9E3F', '#8F6FE0'];
     document.getElementById('ztDrawTop').innerHTML = `<button class="${!zBig ? 'on' : ''}" onclick="ztDrawFormat(false)">📄 Normal</button><button class="${zBig ? 'on' : ''}" onclick="ztDrawFormat(true)">📐 Gross</button><span style="width:100%;height:0"></span>` + cols.map(c => `<button class="zd-c ${!zdEr && c === zdCol ? 'on' : ''}" style="background:${c}" onclick="zdCol='${c}';zdEr=false;if(zdMode==='emoji')zdMode='pen';ztDrawBar()" aria-label="Stiftfarbe"></button>`).join('')
-      + `<button class="${zdMode === 'pen' && !zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=false;ztDrawBar()">✏️ Stift</button><button class="${zdMode === 'text' ? 'on' : ''}" onclick="zdMode='text';zdEr=false;ztDrawBar();document.getElementById('ztDrawTxt').focus()">T Text</button><button class="${zdMode === 'emoji' ? 'on' : ''}" onclick="zdMode='emoji';zdEr=false;ztDrawBar()">😀 Emoji</button>`
+      + `<button class="${zdMode === 'pen' && !zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=false;ztDrawBar()">✏️ Stift</button><button class="${zdMode === 'text' ? 'on' : ''}" onclick="zdMode='text';zdEr=false;ztDrawBar();document.getElementById('ztDrawTxt').focus()">T Text</button><button class="${zdMode === 'emoji' ? 'on' : ''}" onclick="zdMode='emoji';zdEr=false;ztDrawBar()">😀 Emoji</button><button class="${zdMode === 'yuna' ? 'on' : ''}" onclick="zdMode='yuna';zdEr=false;ztDrawBar()">🐶 Yuna</button>`
       + `<button class="${zdMode === 'pen' && zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=true;ztDrawBar()">🧽 Radierer</button><button onclick="ztDrawSz(-1)">−</button><span style="color:#fff;min-width:28px;text-align:center">${zdMode === 'pen' ? zdW : Math.round(zdS / 8)}</span><button onclick="ztDrawSz(1)">+</button>`;
     document.getElementById('ztDrawTxt').style.display = zdMode === 'text' ? '' : 'none';
-    document.getElementById('ztDrawEmo').style.display = zdMode === 'emoji' ? '' : 'none';
-    document.getElementById('ztDrawEmo').innerHTML = ['❤️', '⭐', '👍', '😀', '🎉', '✅', '❗', '❓', '🛒', '🍕', '🐶', '🏠', '☀️', '🚗', '🎂', '📞'].map(e => `<button class="${e === zdEmo ? 'on' : ''}" onclick="zdEmo='${e}';ztDrawBar()">${e}</button>`).join('');
+    document.getElementById('ztDrawEmo').style.display = (zdMode === 'emoji' || zdMode === 'yuna') ? '' : 'none';
+    if (zdMode === 'yuna') { document.getElementById('ztDrawEmo').innerHTML = Object.keys(STICKERS).filter(k => STICKERS[k].img).map(k => `<button class="${k === zdYuna ? 'on' : ''}" style="height:auto;padding:0 8px;min-width:0" aria-label="${STICKERS[k].t}" onclick="zdYuna='${k}';ztDrawBar()">${stickerArt(STICKERS[k], 38)}</button>`).join(''); }
+    else document.getElementById('ztDrawEmo').innerHTML = ['❤️', '⭐', '👍', '😀', '🎉', '✅', '❗', '❓', '🛒', '🍕', '🐶', '🏠', '☀️', '🚗', '🎂', '📞'].map(e => `<button class="${e === zdEmo ? 'on' : ''}" onclick="zdEmo='${e}';ztDrawBar()">${e}</button>`).join('');
   }
   function ztDrawSz(d) { if (zdMode === 'pen') zdW = Math.min(24, Math.max(2, zdW + d * 2)); else zdS = Math.min(240, Math.max(24, zdS + d * 8)); ztDrawBar(); }
   function ztDrawUndo() { const cv = document.getElementById('ztDrawCv'), h = zdHist.pop(); if (h) cv.getContext('2d').putImageData(h, 0, 0); }
@@ -8745,7 +8755,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.66';
+  const APP_VERSION = '2.67';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
