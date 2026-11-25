@@ -4226,7 +4226,7 @@
     const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, cv.width, cv.height);
     cv.style.background = ZCOL[zCol]; zdHist = []; zdEr = false; zdMode = 'pen'; document.getElementById('ztDrawTxt').value = '';
     const open = () => { document.getElementById('ztDraw').classList.remove('hidden'); ztDrawBar(); sizeIt(); };
-    const sizeIt = () => { const w = document.querySelector('#ztDraw .zd-wrap'); const r = cv.width / cv.height, mw = w.clientWidth, mh = w.clientHeight; let cw = Math.min(mw, mh * r); cv.style.width = cw + 'px'; cv.style.height = (cw / r) + 'px'; };
+    const sizeIt = ztDrawFit;
     if (keep) { const im = new Image(); im.onload = () => { ctx.drawImage(im, 0, 0, cv.width, cv.height); }; im.src = zPhoto; }
     open(); setTimeout(sizeIt, 50);
     if (!cv._zd) {
@@ -4247,6 +4247,15 @@
     const lines = t.split('\n'), lh = zdS * 1.15, y0 = p[1] - (lines.length - 1) * lh / 2;
     lines.forEach((l, i) => ctx.fillText(l, p[0], y0 + i * lh, document.getElementById('ztDrawCv').width - 20));
   }
+  function ztDrawFit() { const cv = document.getElementById('ztDrawCv'), w = document.querySelector('#ztDraw .zd-wrap'); const r = cv.width / cv.height, mw = w.clientWidth, mh = w.clientHeight; const cw = Math.min(mw, mh * r); cv.style.width = cw + 'px'; cv.style.height = (cw / r) + 'px'; }
+  function ztDrawFormat(big) {
+    if (big === zBig) return;
+    const cv = document.getElementById('ztDrawCv'), tmp = document.createElement('canvas'); tmp.width = cv.width; tmp.height = cv.height; tmp.getContext('2d').drawImage(cv, 0, 0);
+    zBig = big; cv.width = big ? 900 : 800; cv.height = big ? 1100 : 600; zdHist = [];
+    const k = Math.min(cv.width / tmp.width, cv.height / tmp.height), w = tmp.width * k, h = tmp.height * k;
+    cv.getContext('2d').drawImage(tmp, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
+    ztDrawFit(); ztDrawBar(); ztComposeBuild();
+  }
   function ztDrawSeg(a, b) {
     const ctx = document.getElementById('ztDrawCv').getContext('2d');
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = zdEr ? zdW * 4 : zdW;
@@ -4255,7 +4264,7 @@
   }
   function ztDrawBar() {
     const cols = ['#262319', '#E5392B', '#1E6FD9', '#2E9E3F', '#8F6FE0'];
-    document.getElementById('ztDrawTop').innerHTML = cols.map(c => `<button class="zd-c ${!zdEr && c === zdCol ? 'on' : ''}" style="background:${c}" onclick="zdCol='${c}';zdEr=false;if(zdMode==='emoji')zdMode='pen';ztDrawBar()" aria-label="Stiftfarbe"></button>`).join('')
+    document.getElementById('ztDrawTop').innerHTML = `<button class="${!zBig ? 'on' : ''}" onclick="ztDrawFormat(false)">📄 Normal</button><button class="${zBig ? 'on' : ''}" onclick="ztDrawFormat(true)">📐 Gross</button><span style="width:100%;height:0"></span>` + cols.map(c => `<button class="zd-c ${!zdEr && c === zdCol ? 'on' : ''}" style="background:${c}" onclick="zdCol='${c}';zdEr=false;if(zdMode==='emoji')zdMode='pen';ztDrawBar()" aria-label="Stiftfarbe"></button>`).join('')
       + `<button class="${zdMode === 'pen' && !zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=false;ztDrawBar()">✏️ Stift</button><button class="${zdMode === 'text' ? 'on' : ''}" onclick="zdMode='text';zdEr=false;ztDrawBar();document.getElementById('ztDrawTxt').focus()">T Text</button><button class="${zdMode === 'emoji' ? 'on' : ''}" onclick="zdMode='emoji';zdEr=false;ztDrawBar()">😀 Emoji</button>`
       + `<button class="${zdMode === 'pen' && zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=true;ztDrawBar()">🧽 Radierer</button><button onclick="ztDrawSz(-1)">−</button><span style="color:#fff;min-width:28px;text-align:center">${zdMode === 'pen' ? zdW : Math.round(zdS / 8)}</span><button onclick="ztDrawSz(1)">+</button>`;
     document.getElementById('ztDrawTxt').style.display = zdMode === 'text' ? '' : 'none';
@@ -8736,7 +8745,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.65';
+  const APP_VERSION = '2.66';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
