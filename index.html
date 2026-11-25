@@ -1796,7 +1796,7 @@
 
   <div id="bdCrop" class="hidden"><div class="bc-box"><div class="bc-h">Foto anpassen</div><div class="bc-sub">Mit dem Finger verschieben, mit dem Regler vergrössern.</div><div id="bdCropAsp" class="zt-chips hidden" style="justify-content:center;margin-bottom:8px;"></div><div class="bc-stage" id="bdCropStage"><canvas id="bdCropCv" width="280" height="280"></canvas><div class="bc-ring" id="bdCropRing"></div></div><input type="range" id="bdCropZ" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><div class="zt-actions"><button class="btn" onclick="bdCropClose()">Abbrechen</button><button class="btn hidden" id="bdCropSkip" onclick="bdCropSkip()">Original</button><button class="btn" onclick="bdCropApply()" style="flex:1;">✓ Übernehmen</button></div></div></div>
 
-<div id="ztDraw" class="hidden"><div class="zd-bar" id="ztDrawTop"></div><div class="zd-wrap"><canvas id="ztDrawCv"></canvas></div><div class="zd-bar"><button onclick="ztDrawUndo()">↶ Zurück</button><button onclick="ztDrawClear()">🗑 Leeren</button><button onclick="ztDrawClose(false)">✕ Abbrechen</button><button onclick="ztDrawClose(true)" style="background:#7CD35C">✓ Fertig</button></div></div>
+<div id="ztDraw" class="hidden"><div class="zd-bar" id="ztDrawTop"></div><textarea id="ztDrawTxt" rows="2" maxlength="120" placeholder="Text eintippen, dann aufs Bild tippen …" style="display:none;width:100%;max-width:420px;box-sizing:border-box;border:2px solid #262319;border-radius:10px;padding:8px 10px;font:inherit;font-size:18px;resize:none"></textarea><div class="zd-bar" id="ztDrawEmo" style="display:none"></div><div class="zd-wrap"><canvas id="ztDrawCv"></canvas></div><div class="zd-bar"><button onclick="ztDrawUndo()">↶ Zurück</button><button onclick="ztDrawClear()">🗑 Leeren</button><button onclick="ztDrawClose(false)">✕ Abbrechen</button><button onclick="ztDrawClose(true)" style="background:#7CD35C">✓ Fertig</button></div></div>
 <div id="zHomeNew" class="hidden"><div class="zh-note" id="zhNote" onclick="zHomeOpen()"><div class="zh-tape"></div><button class="zh-x" onclick="event.stopPropagation();zHomeClose()" aria-label="Schliessen">✕</button><div class="zh-text" id="zhText"></div><img id="zhImg" class="hidden" alt=""><div class="zh-who" id="zhWho"></div><div class="zh-hint" id="zhHint"></div></div></div>
   <div id="padScreen" class="hidden">
     <div class="pad-top">
@@ -4218,13 +4218,13 @@
     catch (e) { showToast('Foto konnte nicht geladen werden'); }
   }
   // ---- Handskizze: Zeichenfläche, wird wie ein Foto gespeichert (PNG, transparent)
-  let zdCol = '#262319', zdW = 5, zdEr = false, zdHist = [], zdDraw = false, zdLast = null;
+  let zdMode = 'pen', zdEmo = '⭐', zdS = 72, zdCol = '#262319', zdW = 5, zdEr = false, zdHist = [], zdDraw = false, zdLast = null;
   function ztDrawOpen() {
     const cv = document.getElementById('ztDrawCv'), big = zBig;
     cv.width = big ? 900 : 800; cv.height = big ? 1100 : 600;
     const keep = zPhoto && zPhoto.startsWith('data:image/png');
     const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, cv.width, cv.height);
-    cv.style.background = ZCOL[zCol]; zdHist = []; zdEr = false;
+    cv.style.background = ZCOL[zCol]; zdHist = []; zdEr = false; zdMode = 'pen'; document.getElementById('ztDrawTxt').value = '';
     const open = () => { document.getElementById('ztDraw').classList.remove('hidden'); ztDrawBar(); sizeIt(); };
     const sizeIt = () => { const w = document.querySelector('#ztDraw .zd-wrap'); const r = cv.width / cv.height, mw = w.clientWidth, mh = w.clientHeight; let cw = Math.min(mw, mh * r); cv.style.width = cw + 'px'; cv.style.height = (cw / r) + 'px'; };
     if (keep) { const im = new Image(); im.onload = () => { ctx.drawImage(im, 0, 0, cv.width, cv.height); }; im.src = zPhoto; }
@@ -4232,11 +4232,20 @@
     if (!cv._zd) {
       cv._zd = true;
       const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
-      cv.addEventListener('pointerdown', e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); zdHist.push(cv.getContext('2d').getImageData(0, 0, cv.width, cv.height)); if (zdHist.length > 20) zdHist.shift(); zdDraw = true; zdLast = pos(e); ztDrawSeg(zdLast, zdLast); });
+      cv.addEventListener('pointerdown', e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); zdHist.push(cv.getContext('2d').getImageData(0, 0, cv.width, cv.height)); if (zdHist.length > 20) zdHist.shift(); if (zdMode !== 'pen') { ztDrawStamp(pos(e)); return; } zdDraw = true; zdLast = pos(e); ztDrawSeg(zdLast, zdLast); });
       cv.addEventListener('pointermove', e => { if (!zdDraw) return; e.preventDefault(); const p = pos(e); ztDrawSeg(zdLast, p); zdLast = p; });
       const end = () => { zdDraw = false; };
       cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
     }
+  }
+  function ztDrawStamp(p) {
+    const ctx = document.getElementById('ztDrawCv').getContext('2d');
+    ctx.globalCompositeOperation = 'source-over'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (zdMode === 'emoji') { ctx.font = zdS + "px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"; ctx.fillText(zdEmo, p[0], p[1]); return; }
+    const t = document.getElementById('ztDrawTxt').value; if (!t.trim()) { showToast('Zuerst Text eintippen'); zdHist.pop(); return; }
+    ctx.font = "700 " + zdS + "px 'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive"; ctx.fillStyle = zdCol;
+    const lines = t.split('\n'), lh = zdS * 1.15, y0 = p[1] - (lines.length - 1) * lh / 2;
+    lines.forEach((l, i) => ctx.fillText(l, p[0], y0 + i * lh, document.getElementById('ztDrawCv').width - 20));
   }
   function ztDrawSeg(a, b) {
     const ctx = document.getElementById('ztDrawCv').getContext('2d');
@@ -4246,9 +4255,14 @@
   }
   function ztDrawBar() {
     const cols = ['#262319', '#E5392B', '#1E6FD9', '#2E9E3F', '#8F6FE0'];
-    document.getElementById('ztDrawTop').innerHTML = cols.map(c => `<button class="zd-c ${!zdEr && c === zdCol ? 'on' : ''}" style="background:${c}" onclick="zdCol='${c}';zdEr=false;ztDrawBar()" aria-label="Stiftfarbe"></button>`).join('')
-      + `<button class="${zdEr ? 'on' : ''}" onclick="zdEr=!zdEr;ztDrawBar()">🧽 Radierer</button><button onclick="zdW=Math.max(2,zdW-2);ztDrawBar()">−</button><span style="color:#fff;min-width:28px;text-align:center">${zdW}</span><button onclick="zdW=Math.min(24,zdW+2);ztDrawBar()">+</button>`;
+    document.getElementById('ztDrawTop').innerHTML = cols.map(c => `<button class="zd-c ${!zdEr && c === zdCol ? 'on' : ''}" style="background:${c}" onclick="zdCol='${c}';zdEr=false;if(zdMode==='emoji')zdMode='pen';ztDrawBar()" aria-label="Stiftfarbe"></button>`).join('')
+      + `<button class="${zdMode === 'pen' && !zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=false;ztDrawBar()">✏️ Stift</button><button class="${zdMode === 'text' ? 'on' : ''}" onclick="zdMode='text';zdEr=false;ztDrawBar();document.getElementById('ztDrawTxt').focus()">T Text</button><button class="${zdMode === 'emoji' ? 'on' : ''}" onclick="zdMode='emoji';zdEr=false;ztDrawBar()">😀 Emoji</button>`
+      + `<button class="${zdMode === 'pen' && zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=true;ztDrawBar()">🧽 Radierer</button><button onclick="ztDrawSz(-1)">−</button><span style="color:#fff;min-width:28px;text-align:center">${zdMode === 'pen' ? zdW : Math.round(zdS / 8)}</span><button onclick="ztDrawSz(1)">+</button>`;
+    document.getElementById('ztDrawTxt').style.display = zdMode === 'text' ? '' : 'none';
+    document.getElementById('ztDrawEmo').style.display = zdMode === 'emoji' ? '' : 'none';
+    document.getElementById('ztDrawEmo').innerHTML = ['❤️', '⭐', '👍', '😀', '🎉', '✅', '❗', '❓', '🛒', '🍕', '🐶', '🏠', '☀️', '🚗', '🎂', '📞'].map(e => `<button class="${e === zdEmo ? 'on' : ''}" onclick="zdEmo='${e}';ztDrawBar()">${e}</button>`).join('');
   }
+  function ztDrawSz(d) { if (zdMode === 'pen') zdW = Math.min(24, Math.max(2, zdW + d * 2)); else zdS = Math.min(240, Math.max(24, zdS + d * 8)); ztDrawBar(); }
   function ztDrawUndo() { const cv = document.getElementById('ztDrawCv'), h = zdHist.pop(); if (h) cv.getContext('2d').putImageData(h, 0, 0); }
   function ztDrawClear() { const cv = document.getElementById('ztDrawCv'); zdHist.push(cv.getContext('2d').getImageData(0, 0, cv.width, cv.height)); cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); }
   function ztDrawClose(save) {
@@ -8722,7 +8736,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.64';
+  const APP_VERSION = '2.65';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
