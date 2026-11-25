@@ -162,7 +162,6 @@
   #ztDraw .zd-bar button.on { background:#FFD84D; outline:3px solid #fff; }
   #ztDraw .zd-bar .zd-c { width:44px; padding:0; border-radius:50%; }
   #ztDraw .zd-wrap { flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; }
-  #ztDrawCv { max-width:100%; max-height:100%; border:3px solid #262319; border-radius:4px; touch-action:none; box-shadow:4px 6px 18px rgba(0,0,0,.5); }
   .zt-h { font-weight:800; font-size:15px; margin:18px 2px 8px; }
   .zt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; padding:4px 2px 10px; }
   .zt-note { position:relative; padding:12px 12px 10px; border-radius:2px; box-shadow:2px 4px 8px rgba(0,0,0,.25); font-size:16px; line-height:1.25; word-break:break-word; white-space:pre-wrap; transform:rotate(var(--r,0deg)); }
@@ -1796,7 +1795,7 @@
 
   <div id="bdCrop" class="hidden"><div class="bc-box"><div class="bc-h">Foto anpassen</div><div class="bc-sub">Mit dem Finger verschieben, mit dem Regler vergrössern.</div><div id="bdCropAsp" class="zt-chips hidden" style="justify-content:center;margin-bottom:8px;"></div><div class="bc-stage" id="bdCropStage"><canvas id="bdCropCv" width="280" height="280"></canvas><div class="bc-ring" id="bdCropRing"></div></div><input type="range" id="bdCropZ" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><div class="zt-actions"><button class="btn" onclick="bdCropClose()">Abbrechen</button><button class="btn hidden" id="bdCropSkip" onclick="bdCropSkip()">Original</button><button class="btn" onclick="bdCropApply()" style="flex:1;">✓ Übernehmen</button></div></div></div>
 
-<div id="ztDraw" class="hidden"><div class="zd-bar" id="ztDrawTop"></div><textarea id="ztDrawTxt" rows="2" maxlength="120" placeholder="Text eintippen, dann aufs Bild tippen …" style="display:none;width:100%;max-width:420px;box-sizing:border-box;border:2px solid #262319;border-radius:10px;padding:8px 10px;font:inherit;font-size:18px;resize:none"></textarea><div class="zd-bar" id="ztDrawEmo" style="display:none"></div><div class="zd-wrap"><canvas id="ztDrawCv"></canvas></div><div class="zd-bar"><button onclick="ztDrawUndo()">↶ Zurück</button><button onclick="ztDrawClear()">🗑 Leeren</button><button onclick="ztDrawClose(false)">✕ Abbrechen</button><button onclick="ztDrawClose(true)" style="background:#7CD35C">✓ Fertig</button></div></div>
+<div id="ztDraw" class="hidden"><div class="zd-bar" id="ztDrawTop"></div><textarea id="ztDrawTxt" rows="2" maxlength="120" placeholder="Text eintippen, dann aufs Bild tippen …" style="display:none;width:100%;max-width:420px;box-sizing:border-box;border:2px solid #262319;border-radius:10px;padding:8px 10px;font:inherit;font-size:18px;resize:none"></textarea><div class="zd-bar" id="ztDrawEmo" style="display:none"></div><div class="zd-wrap"><div id="ztDrawStack" style="position:relative;border:3px solid #262319;border-radius:4px;box-shadow:4px 6px 18px rgba(0,0,0,.5);box-sizing:content-box"><canvas id="ztDrawCv" style="display:block"></canvas><canvas id="ztDrawOv" style="position:absolute;left:0;top:0;touch-action:none"></canvas></div></div><div class="zd-bar"><button onclick="ztDrawUndo()">↶ Zurück</button><button onclick="ztDrawClear()">🗑 Leeren</button><button onclick="ztDrawClose(false)">✕ Abbrechen</button><button onclick="ztDrawClose(true)" style="background:#7CD35C">✓ Fertig</button></div></div>
 <div id="zHomeNew" class="hidden"><div class="zh-note" id="zhNote" onclick="zHomeOpen()"><div class="zh-tape"></div><button class="zh-x" onclick="event.stopPropagation();zHomeClose()" aria-label="Schliessen">✕</button><div class="zh-text" id="zhText"></div><img id="zhImg" class="hidden" alt=""><div class="zh-who" id="zhWho"></div><div class="zh-hint" id="zhHint"></div></div></div>
   <div id="padScreen" class="hidden">
     <div class="pad-top">
@@ -4217,52 +4216,101 @@
     try { zPhoto = await chatCompress(f); document.getElementById('ztPrevImg').src = zPhoto; document.getElementById('ztPrev').classList.remove('hidden'); }
     catch (e) { showToast('Foto konnte nicht geladen werden'); }
   }
-  // ---- Handskizze: Zeichenfläche, wird wie ein Foto gespeichert (PNG, transparent)
-  let zdMode = 'pen', zdEmo = '⭐', zdYuna = 'yuna', zdS = 72, zdCol = '#262319', zdW = 5, zdEr = false, zdHist = [], zdDraw = false, zdLast = null;
+  // ---- Handskizze: Striche auf einer Ebene, Text/Emoji/Yuna-Sticker als verschiebbare Objekte darüber
+  let zdMode = 'pen', zdEmo = '⭐', zdYuna = 'yuna', zdS = 72, zdCol = '#262319', zdW = 5, zdEr = false, zdHist = [], zdDraw = false, zdLast = null, zdObjs = [], zdSel = -1, zdPtrs = new Map(), zdDrag = null, zdPinch = null;
+  const ZD_EMF = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif", ZD_TXF = "'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive";
+  const zdImgs = {};
+  function zdImg(src) { let im = zdImgs[src]; if (!im) { im = new Image(); im.onload = () => ztDrawRender(); im.src = src; zdImgs[src] = im; } return im.complete && im.naturalWidth ? im : null; }
+  function zdLines(o) { return String(o.t || '').split('\n'); }
+  function zdBox(ctx, o) {
+    if (o.k === 'emoji') return { w: o.s * 1.2, h: o.s * 1.2, cy: o.y };
+    if (o.k === 'yuna') { const W = o.s * 2.6, H = W * 267 / 352; return { w: W, h: H * 1.35, cy: o.y - H * 0.17 }; }
+    ctx.font = '700 ' + o.s + 'px ' + ZD_TXF; const ls = zdLines(o), w = Math.max(...ls.map(l => ctx.measureText(l).width), o.s);
+    return { w: w + 8, h: ls.length * o.s * 1.15 + 4, cy: o.y };
+  }
+  function zdDrawObj(ctx, o) {
+    ctx.globalCompositeOperation = 'source-over';
+    if (o.k === 'emoji') { ctx.font = o.s + 'px ' + ZD_EMF; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.t, o.x, o.y); return; }
+    if (o.k === 'yuna') {
+      const st = STICKERS[o.t]; if (!st) return; const im = zdImg(st.img), W = o.s * 2.6, H = W * 267 / 352, L = o.x - W / 2, T = o.y - H / 2;
+      if (im) ctx.drawImage(im, L, T, W, H);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      (st.o || []).forEach(q => { ctx.font = Math.round(W * q.z) + 'px ' + ZD_EMF; ctx.fillText(q.e, L + q.x / 100 * W, T + q.y / 100 * H); });
+      return;
+    }
+    ctx.font = '700 ' + o.s + 'px ' + ZD_TXF; ctx.fillStyle = o.c || '#262319'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const ls = zdLines(o), lh = o.s * 1.15, y0 = o.y - (ls.length - 1) * lh / 2; ls.forEach((l, i) => ctx.fillText(l, o.x, y0 + i * lh));
+  }
+  function ztDrawRender() {
+    const ov = document.getElementById('ztDrawOv'); if (!ov) return; const ctx = ov.getContext('2d'); ctx.clearRect(0, 0, ov.width, ov.height);
+    zdObjs.forEach(o => zdDrawObj(ctx, o));
+    if (zdSel >= 0 && zdObjs[zdSel] && zdMode !== 'pen') {
+      const o = zdObjs[zdSel], bx = zdBox(ctx, o); ctx.save(); ctx.setLineDash([14, 10]); ctx.lineWidth = 4; ctx.strokeStyle = '#1E6FD9'; ctx.strokeRect(o.x - bx.w / 2, bx.cy - bx.h / 2, bx.w, bx.h); ctx.restore();
+    }
+  }
+  function ztDrawHit(p) {
+    const ctx = document.getElementById('ztDrawOv').getContext('2d');
+    for (let i = zdObjs.length - 1; i >= 0; i--) { const o = zdObjs[i], bx = zdBox(ctx, o); if (Math.abs(p[0] - o.x) <= bx.w / 2 + 10 && Math.abs(p[1] - bx.cy) <= bx.h / 2 + 10) return i; }
+    return -1;
+  }
+  function zdSnap(withImg) { const cv = document.getElementById('ztDrawCv'); zdHist.push({ img: withImg ? cv.getContext('2d').getImageData(0, 0, cv.width, cv.height) : null, objs: JSON.stringify(zdObjs), sel: zdSel }); if (zdHist.length > 12) zdHist.shift(); }
+  function ztDrawFit() {
+    const cv = document.getElementById('ztDrawCv'), ov = document.getElementById('ztDrawOv'), st = document.getElementById('ztDrawStack'), w = document.querySelector('#ztDraw .zd-wrap');
+    ov.width = cv.width; ov.height = cv.height;
+    const r = cv.width / cv.height, cw = Math.min(w.clientWidth - 10, (w.clientHeight - 10) * r), ch = cw / r;
+    [cv, ov, st].forEach(e => { e.style.width = cw + 'px'; e.style.height = ch + 'px'; });
+    ztDrawRender();
+  }
   function ztDrawOpen() {
     const cv = document.getElementById('ztDrawCv'), big = zBig;
     cv.width = big ? 900 : 800; cv.height = big ? 1100 : 600;
     const keep = zPhoto && zPhoto.startsWith('data:image/png');
     const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, cv.width, cv.height);
-    cv.style.background = ZCOL[zCol]; zdHist = []; zdEr = false; zdMode = 'pen'; document.getElementById('ztDrawTxt').value = '';
-    const open = () => { document.getElementById('ztDraw').classList.remove('hidden'); ztDrawBar(); sizeIt(); };
-    const sizeIt = ztDrawFit;
+    document.getElementById('ztDrawStack').style.background = ZCOL[zCol]; zdHist = []; zdEr = false; zdMode = 'pen'; zdObjs = []; zdSel = -1; document.getElementById('ztDrawTxt').value = '';
     if (keep) { const im = new Image(); im.onload = () => { ctx.drawImage(im, 0, 0, cv.width, cv.height); }; im.src = zPhoto; }
-    open(); setTimeout(sizeIt, 50);
-    if (!cv._zd) {
-      cv._zd = true;
-      const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
-      cv.addEventListener('pointerdown', e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); zdHist.push(cv.getContext('2d').getImageData(0, 0, cv.width, cv.height)); if (zdHist.length > 20) zdHist.shift(); if (zdMode !== 'pen') { ztDrawStamp(pos(e)); return; } zdDraw = true; zdLast = pos(e); ztDrawSeg(zdLast, zdLast); });
-      cv.addEventListener('pointermove', e => { if (!zdDraw) return; e.preventDefault(); const p = pos(e); ztDrawSeg(zdLast, p); zdLast = p; });
-      const end = () => { zdDraw = false; };
-      cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    document.getElementById('ztDraw').classList.remove('hidden'); ztDrawBar(); ztDrawFit(); setTimeout(ztDrawFit, 50);
+    const ov = document.getElementById('ztDrawOv');
+    if (!ov._zd) {
+      ov._zd = true;
+      const pos = e => { const r = ov.getBoundingClientRect(); return [(e.clientX - r.left) * ov.width / r.width, (e.clientY - r.top) * ov.height / r.height]; };
+      const dist = () => { const a = [...zdPtrs.values()]; return Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]) || 1; };
+      ov.addEventListener('pointerdown', e => {
+        e.preventDefault(); ov.setPointerCapture(e.pointerId); zdPtrs.set(e.pointerId, [e.clientX, e.clientY]);
+        if (zdPtrs.size === 2) { if (zdSel >= 0 && zdObjs[zdSel]) { zdSnap(false); zdPinch = { d0: dist(), s0: zdObjs[zdSel].s }; } zdDraw = false; zdDrag = null; return; }
+        const p = pos(e);
+        if (zdMode === 'pen') { zdSnap(true); zdDraw = true; zdLast = p; ztDrawSeg(p, p); return; }
+        const hit = ztDrawHit(p);
+        if (hit >= 0) {
+          zdSel = hit; zdSnap(false); const o = zdObjs[hit]; zdDrag = { dx: o.x - p[0], dy: o.y - p[1] };
+          if (o.k === 'text') document.getElementById('ztDrawTxt').value = o.t;
+          ztDrawRender(); ztDrawBar(); return;
+        }
+        if (zdMode === 'move') { zdSel = -1; ztDrawRender(); ztDrawBar(); return; }
+        let o;
+        if (zdMode === 'text') { const t = document.getElementById('ztDrawTxt').value; if (!t.trim()) { showToast('Zuerst Text eintippen'); return; } o = { k: 'text', t, c: zdCol, s: zdS }; }
+        else if (zdMode === 'emoji') o = { k: 'emoji', t: zdEmo, s: zdS };
+        else o = { k: 'yuna', t: zdYuna, s: Math.round(zdS * 0.8) };
+        zdSnap(false); o.x = p[0]; o.y = p[1]; zdObjs.push(o); zdSel = zdObjs.length - 1; zdDrag = { dx: 0, dy: 0 }; ztDrawRender(); ztDrawBar();
+      });
+      ov.addEventListener('pointermove', e => {
+        if (!zdPtrs.has(e.pointerId)) return; zdPtrs.set(e.pointerId, [e.clientX, e.clientY]);
+        if (zdPtrs.size >= 2 && zdPinch && zdObjs[zdSel]) { zdObjs[zdSel].s = Math.min(600, Math.max(16, Math.round(zdPinch.s0 * dist() / zdPinch.d0))); ztDrawRender(); return; }
+        const p = pos(e);
+        if (zdDraw) { ztDrawSeg(zdLast, p); zdLast = p; }
+        else if (zdDrag && zdObjs[zdSel]) { zdObjs[zdSel].x = p[0] + zdDrag.dx; zdObjs[zdSel].y = p[1] + zdDrag.dy; ztDrawRender(); }
+      });
+      const end = e => { zdPtrs.delete(e.pointerId); if (zdPtrs.size < 2) zdPinch = null; if (!zdPtrs.size) { zdDraw = false; zdDrag = null; } };
+      ov.addEventListener('pointerup', end); ov.addEventListener('pointercancel', end);
+      document.getElementById('ztDrawTxt').addEventListener('input', e => { const o = zdObjs[zdSel]; if (zdMode !== 'pen' && o && o.k === 'text') { o.t = e.target.value; ztDrawRender(); } });
     }
   }
-  function ztDrawStamp(p) {
-    const ctx = document.getElementById('ztDrawCv').getContext('2d');
-    ctx.globalCompositeOperation = 'source-over'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if (zdMode === 'yuna') {
-      const st = STICKERS[zdYuna], im = new Image(), W = zdS * 2.6, H = W * 267 / 352, L = p[0] - W / 2, T = p[1] - H / 2 + H * 0.12;
-      im.onload = () => {
-        ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(im, L, T, W, H);
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        (st.o || []).forEach(o => { ctx.font = Math.round(W * o.z) + "px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"; ctx.fillText(o.e, L + o.x / 100 * W, T + o.y / 100 * H); });
-      };
-      im.src = st.img; return;
-    }
-    if (zdMode === 'emoji') { ctx.font = zdS + "px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"; ctx.fillText(zdEmo, p[0], p[1]); return; }
-    const t = document.getElementById('ztDrawTxt').value; if (!t.trim()) { showToast('Zuerst Text eintippen'); zdHist.pop(); return; }
-    ctx.font = "700 " + zdS + "px 'Patrick Hand','Comic Sans MS','Chalkboard SE',cursive"; ctx.fillStyle = zdCol;
-    const lines = t.split('\n'), lh = zdS * 1.15, y0 = p[1] - (lines.length - 1) * lh / 2;
-    lines.forEach((l, i) => ctx.fillText(l, p[0], y0 + i * lh, document.getElementById('ztDrawCv').width - 20));
-  }
-  function ztDrawFit() { const cv = document.getElementById('ztDrawCv'), w = document.querySelector('#ztDraw .zd-wrap'); const r = cv.width / cv.height, mw = w.clientWidth, mh = w.clientHeight; const cw = Math.min(mw, mh * r); cv.style.width = cw + 'px'; cv.style.height = (cw / r) + 'px'; }
   function ztDrawFormat(big) {
     if (big === zBig) return;
     const cv = document.getElementById('ztDrawCv'), tmp = document.createElement('canvas'); tmp.width = cv.width; tmp.height = cv.height; tmp.getContext('2d').drawImage(cv, 0, 0);
     zBig = big; cv.width = big ? 900 : 800; cv.height = big ? 1100 : 600; zdHist = [];
-    const k = Math.min(cv.width / tmp.width, cv.height / tmp.height), w = tmp.width * k, h = tmp.height * k;
-    cv.getContext('2d').drawImage(tmp, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
+    const k = Math.min(cv.width / tmp.width, cv.height / tmp.height), w = tmp.width * k, h = tmp.height * k, ox = (cv.width - w) / 2, oy = (cv.height - h) / 2;
+    cv.getContext('2d').drawImage(tmp, ox, oy, w, h);
+    zdObjs.forEach(o => { o.x = ox + o.x * k; o.y = oy + o.y * k; o.s = Math.max(16, Math.round(o.s * k)); });
     ztDrawFit(); ztDrawBar(); ztComposeBuild();
   }
   function ztDrawSeg(a, b) {
@@ -4271,26 +4319,44 @@
     ctx.globalCompositeOperation = zdEr ? 'destination-out' : 'source-over'; ctx.strokeStyle = zdCol;
     ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0] + 0.01, b[1]); ctx.stroke();
   }
+  function ztDrawMode(m) { zdMode = m; zdEr = false; if (m === 'pen') zdSel = -1; ztDrawBar(); ztDrawRender(); if (m === 'text') document.getElementById('ztDrawTxt').focus(); }
   function ztDrawBar() {
-    const cols = ['#262319', '#E5392B', '#1E6FD9', '#2E9E3F', '#8F6FE0'];
-    document.getElementById('ztDrawTop').innerHTML = `<button class="${!zBig ? 'on' : ''}" onclick="ztDrawFormat(false)">📄 Normal</button><button class="${zBig ? 'on' : ''}" onclick="ztDrawFormat(true)">📐 Gross</button><span style="width:100%;height:0"></span>` + cols.map(c => `<button class="zd-c ${!zdEr && c === zdCol ? 'on' : ''}" style="background:${c}" onclick="zdCol='${c}';zdEr=false;if(zdMode==='emoji')zdMode='pen';ztDrawBar()" aria-label="Stiftfarbe"></button>`).join('')
-      + `<button class="${zdMode === 'pen' && !zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=false;ztDrawBar()">✏️ Stift</button><button class="${zdMode === 'text' ? 'on' : ''}" onclick="zdMode='text';zdEr=false;ztDrawBar();document.getElementById('ztDrawTxt').focus()">T Text</button><button class="${zdMode === 'emoji' ? 'on' : ''}" onclick="zdMode='emoji';zdEr=false;ztDrawBar()">😀 Emoji</button><button class="${zdMode === 'yuna' ? 'on' : ''}" onclick="zdMode='yuna';zdEr=false;ztDrawBar()">🐶 Yuna</button>`
-      + `<button class="${zdMode === 'pen' && zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=true;ztDrawBar()">🧽 Radierer</button><button onclick="ztDrawSz(-1)">−</button><span style="color:#fff;min-width:28px;text-align:center">${zdMode === 'pen' ? zdW : Math.round(zdS / 8)}</span><button onclick="ztDrawSz(1)">+</button>`;
+    const cols = ['#262319', '#E5392B', '#1E6FD9', '#2E9E3F', '#8F6FE0'], ob = zdMode !== 'pen' && zdSel >= 0 && zdObjs[zdSel];
+    const mb = (m, lbl) => `<button class="${zdMode === m && !zdEr ? 'on' : ''}" onclick="ztDrawMode('${m}')">${lbl}</button>`;
+    document.getElementById('ztDrawTop').innerHTML = `<button class="${!zBig ? 'on' : ''}" onclick="ztDrawFormat(false)">📄 Normal</button><button class="${zBig ? 'on' : ''}" onclick="ztDrawFormat(true)">📐 Gross</button><span style="width:100%;height:0"></span>` + cols.map(c => `<button class="zd-c ${!zdEr && c === zdCol ? 'on' : ''}" style="background:${c}" onclick="ztDrawCol('${c}')" aria-label="Farbe"></button>`).join('')
+      + `<span style="width:100%;height:0"></span>` + mb('pen', '✏️ Stift') + mb('text', 'T Text') + mb('emoji', '😀 Emoji') + mb('yuna', '🐶 Yuna') + mb('move', '✋ Bewegen')
+      + `<span style="width:100%;height:0"></span><button class="${zdMode === 'pen' && zdEr ? 'on' : ''}" onclick="zdMode='pen';zdEr=true;zdSel=-1;ztDrawBar();ztDrawRender()">🧽 Radierer</button><button onclick="ztDrawSz(-1)">−</button><span style="color:#fff;min-width:28px;text-align:center">${zdMode === 'pen' ? zdW : Math.round((ob ? zdObjs[zdSel].s : zdS) / 8)}</span><button onclick="ztDrawSz(1)">+</button>`
+      + (ob ? `<button onclick="ztDrawDel()" style="background:#FFB3A8">🗑 Weg</button>` : '')
+      + (zdMode !== 'pen' ? `<span style="width:100%;color:#ddd;font-size:13px;text-align:center">${ob ? 'Ziehen = verschieben, zwei Finger oder − / + = Grösse' : zdMode === 'move' ? 'Tippe auf etwas, um es zu verschieben' : 'Tippe aufs Bild, um es zu platzieren'}</span>` : '');
     document.getElementById('ztDrawTxt').style.display = zdMode === 'text' ? '' : 'none';
-    document.getElementById('ztDrawEmo').style.display = (zdMode === 'emoji' || zdMode === 'yuna') ? '' : 'none';
-    if (zdMode === 'yuna') { document.getElementById('ztDrawEmo').innerHTML = Object.keys(STICKERS).filter(k => STICKERS[k].img).map(k => `<button class="${k === zdYuna ? 'on' : ''}" style="height:auto;padding:0 8px;min-width:0" aria-label="${STICKERS[k].t}" onclick="zdYuna='${k}';ztDrawBar()">${stickerArt(STICKERS[k], 38)}</button>`).join(''); }
-    else document.getElementById('ztDrawEmo').innerHTML = ['❤️', '⭐', '👍', '😀', '🎉', '✅', '❗', '❓', '🛒', '🍕', '🐶', '🏠', '☀️', '🚗', '🎂', '📞'].map(e => `<button class="${e === zdEmo ? 'on' : ''}" onclick="zdEmo='${e}';ztDrawBar()">${e}</button>`).join('');
+    const em = document.getElementById('ztDrawEmo'); em.style.display = (zdMode === 'emoji' || zdMode === 'yuna') ? '' : 'none';
+    if (zdMode === 'yuna') em.innerHTML = Object.keys(STICKERS).filter(k => STICKERS[k].img).map(k => `<button class="${k === zdYuna ? 'on' : ''}" style="height:auto;padding:0 8px;min-width:0" aria-label="${STICKERS[k].t}" onclick="zdYuna='${k}';ztDrawBar()">${stickerArt(STICKERS[k], 38)}</button>`).join('');
+    else em.innerHTML = ['❤️', '⭐', '👍', '😀', '🎉', '✅', '❗', '❓', '🛒', '🍕', '🐶', '🏠', '☀️', '🚗', '🎂', '📞'].map(e => `<button class="${e === zdEmo ? 'on' : ''}" onclick="zdEmo='${e}';ztDrawBar()">${e}</button>`).join('');
   }
-  function ztDrawSz(d) { if (zdMode === 'pen') zdW = Math.min(24, Math.max(2, zdW + d * 2)); else zdS = Math.min(240, Math.max(24, zdS + d * 8)); ztDrawBar(); }
-  function ztDrawUndo() { const cv = document.getElementById('ztDrawCv'), h = zdHist.pop(); if (h) cv.getContext('2d').putImageData(h, 0, 0); }
-  function ztDrawClear() { const cv = document.getElementById('ztDrawCv'); zdHist.push(cv.getContext('2d').getImageData(0, 0, cv.width, cv.height)); cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); }
+  function ztDrawCol(c) { zdCol = c; zdEr = false; const o = zdObjs[zdSel]; if (zdMode !== 'pen' && o && o.k === 'text') { zdSnap(false); o.c = c; ztDrawRender(); } ztDrawBar(); }
+  function ztDrawSz(d) {
+    const o = zdMode !== 'pen' && zdObjs[zdSel];
+    if (o) { zdSnap(false); o.s = Math.min(600, Math.max(16, Math.round(o.s * (d > 0 ? 1.15 : 1 / 1.15)))); ztDrawRender(); }
+    else if (zdMode === 'pen') zdW = Math.min(24, Math.max(2, zdW + d * 2));
+    else zdS = Math.min(240, Math.max(24, zdS + d * 8));
+    ztDrawBar();
+  }
+  function ztDrawDel() { if (zdSel < 0) return; zdSnap(false); zdObjs.splice(zdSel, 1); zdSel = -1; ztDrawRender(); ztDrawBar(); }
+  function ztDrawUndo() {
+    const h = zdHist.pop(); if (!h) return;
+    if (h.img) document.getElementById('ztDrawCv').getContext('2d').putImageData(h.img, 0, 0);
+    zdObjs = JSON.parse(h.objs); zdSel = Math.min(h.sel, zdObjs.length - 1); ztDrawRender(); ztDrawBar();
+  }
+  function ztDrawClear() { zdSnap(true); document.getElementById('ztDrawCv').getContext('2d').clearRect(0, 0, 4000, 4000); zdObjs = []; zdSel = -1; ztDrawRender(); ztDrawBar(); }
   function ztDrawClose(save) {
     document.getElementById('ztDraw').classList.add('hidden');
     if (!save) return;
-    const cv = document.getElementById('ztDrawCv'), d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    const cv = document.getElementById('ztDrawCv'), out = document.createElement('canvas'); out.width = cv.width; out.height = cv.height;
+    const ctx = out.getContext('2d'); ctx.drawImage(cv, 0, 0); zdObjs.forEach(o => zdDrawObj(ctx, o));
+    const d = ctx.getImageData(0, 0, out.width, out.height).data;
     let empty = true; for (let i = 3; i < d.length; i += 16) { if (d[i]) { empty = false; break; } }
     if (empty) { ztPhotoClear(); return; }
-    zPhoto = cv.toDataURL('image/png');
+    zPhoto = out.toDataURL('image/png');
     document.getElementById('ztPrevImg').style.background = ZCOL[zCol]; document.getElementById('ztPrevImg').src = zPhoto; document.getElementById('ztPrev').classList.remove('hidden');
   }
   function ztPhotoClear() { zPhoto = ''; document.getElementById('ztPrev').classList.add('hidden'); }
@@ -8755,7 +8821,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.67';
+  const APP_VERSION = '2.68';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
