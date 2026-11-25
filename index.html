@@ -155,6 +155,14 @@
   .bc-ring.rect { border-radius:12px; box-shadow:none; border:2px dashed #fff; }
   #bdCropZ { width:100%; }
   .zt-actions { display:flex; gap:8px; margin-top:12px; }
+  #ztDraw { position:fixed; inset:0; z-index:70; background:#2b2a26; display:flex; flex-direction:column; align-items:center; padding:max(env(safe-area-inset-top,0px),12px) 12px max(env(safe-area-inset-bottom,0px),12px); gap:10px; }
+  #ztDraw.hidden { display:none; }
+  #ztDraw .zd-bar { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; }
+  #ztDraw .zd-bar button { border:2px solid #262319; background:#fff; border-radius:999px; min-width:44px; height:44px; padding:0 12px; font:inherit; font-weight:700; font-size:16px; cursor:pointer; }
+  #ztDraw .zd-bar button.on { background:#FFD84D; outline:3px solid #fff; }
+  #ztDraw .zd-bar .zd-c { width:44px; padding:0; border-radius:50%; }
+  #ztDraw .zd-wrap { flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; }
+  #ztDrawCv { max-width:100%; max-height:100%; border:3px solid #262319; border-radius:4px; touch-action:none; box-shadow:4px 6px 18px rgba(0,0,0,.5); }
   .zt-h { font-weight:800; font-size:15px; margin:18px 2px 8px; }
   .zt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; padding:4px 2px 10px; }
   .zt-note { position:relative; padding:12px 12px 10px; border-radius:2px; box-shadow:2px 4px 8px rgba(0,0,0,.25); font-size:16px; line-height:1.25; word-break:break-word; white-space:pre-wrap; transform:rotate(var(--r,0deg)); }
@@ -1788,6 +1796,7 @@
 
   <div id="bdCrop" class="hidden"><div class="bc-box"><div class="bc-h">Foto anpassen</div><div class="bc-sub">Mit dem Finger verschieben, mit dem Regler vergrössern.</div><div id="bdCropAsp" class="zt-chips hidden" style="justify-content:center;margin-bottom:8px;"></div><div class="bc-stage" id="bdCropStage"><canvas id="bdCropCv" width="280" height="280"></canvas><div class="bc-ring" id="bdCropRing"></div></div><input type="range" id="bdCropZ" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><div class="zt-actions"><button class="btn" onclick="bdCropClose()">Abbrechen</button><button class="btn hidden" id="bdCropSkip" onclick="bdCropSkip()">Original</button><button class="btn" onclick="bdCropApply()" style="flex:1;">✓ Übernehmen</button></div></div></div>
 
+<div id="ztDraw" class="hidden"><div class="zd-bar" id="ztDrawTop"></div><div class="zd-wrap"><canvas id="ztDrawCv"></canvas></div><div class="zd-bar"><button onclick="ztDrawUndo()">↶ Zurück</button><button onclick="ztDrawClear()">🗑 Leeren</button><button onclick="ztDrawClose(false)">✕ Abbrechen</button><button onclick="ztDrawClose(true)" style="background:#7CD35C">✓ Fertig</button></div></div>
 <div id="zHomeNew" class="hidden"><div class="zh-note" id="zhNote" onclick="zHomeOpen()"><div class="zh-tape"></div><button class="zh-x" onclick="event.stopPropagation();zHomeClose()" aria-label="Schliessen">✕</button><div class="zh-text" id="zhText"></div><img id="zhImg" class="hidden" alt=""><div class="zh-who" id="zhWho"></div><div class="zh-hint" id="zhHint"></div></div></div>
   <div id="padScreen" class="hidden">
     <div class="pad-top">
@@ -1854,6 +1863,7 @@
       <div id="ztPrev" class="zt-prev hidden"><img id="ztPrevImg" alt=""><button onclick="ztPhotoClear()" aria-label="Foto entfernen">✕</button></div>
       <div class="zt-actions">
         <button class="btn" onclick="document.getElementById('ztFile').click()">📷 Foto</button>
+        <button class="btn" onclick="ztDrawOpen()">✏️ Skizze</button>
         <button class="btn" id="ztSend" onclick="ztSend()" style="flex:1;">📌 Aufkleben</button>
       </div>
       <input type="file" id="ztFile" accept="image/*" class="hidden" onchange="ztPhoto(this)">
@@ -4105,7 +4115,7 @@
   let zSize = 'm', zFont = 'n';
   const zSz = z => (z.fs >= 0.5 && z.fs <= 3) ? z.fs : (ZSIZES[z.size] || ZSIZES.m)[1];
   const zAl = z => z.al === 'c' ? 'center' : z.al === 'r' ? 'right' : 'left';
-  let zFs = 1, zAlign = 'l';
+  let zFs = 1, zAlign = 'l', zBig = false;
   function zSetAlign(k) { zAlign = k; ztComposeBuild(); }
   function zFsStep(d) { zFs = Math.min(2.4, Math.max(0.6, Math.round((zFs + d) * 10) / 10)); ztComposeBuild(); }
   const zFam = z => (ZFONTS[z.font] || ZFONTS.n)[1];
@@ -4184,7 +4194,7 @@
     ztChips();
     document.getElementById('ztCol').innerHTML = ZCOL.map((c, i) => `<button class="${i === zCol ? 'on' : ''}" style="background:${c}" onclick="zCol=${i};ztComposeBuild()" aria-label="Farbe ${i + 1}"></button>`).join('');
     document.getElementById('ztText').style.background = ZCOL[zCol];
-    document.getElementById('ztSty').innerHTML = `<button onclick="zFsStep(-0.2)" aria-label="Text kleiner">A−</button><span style="align-self:center;font-weight:700;min-width:44px;text-align:center">${Math.round(zFs * 100)}%</span><button onclick="zFsStep(0.2)" aria-label="Text grösser">A+</button><span style="width:14px"></span>` + [['l', '⬅'], ['c', '↔'], ['r', '➡']].map(([k, ic]) => `<button class="${k === zAlign ? 'on' : ''}" onclick="zSetAlign('${k}')" aria-label="Ausrichtung">${ic}</button>`).join('') + '<span style="width:100%;height:0"></span>' + Object.keys(ZFONTS).map(k => `<button class="${k === zFont ? 'on' : ''}" style="font-family:${ZFONTS[k][1].split(';')[0] || 'inherit'}" onclick="zFont='${k}';ztComposeBuild()">${ZFONTS[k][0]}</button>`).join('');
+    document.getElementById('ztSty').innerHTML = `<button onclick="zFsStep(-0.2)" aria-label="Text kleiner">A−</button><span style="align-self:center;font-weight:700;min-width:44px;text-align:center">${Math.round(zFs * 100)}%</span><button onclick="zFsStep(0.2)" aria-label="Text grösser">A+</button><span style="width:14px"></span>` + [['l', '⬅'], ['c', '↔'], ['r', '➡']].map(([k, ic]) => `<button class="${k === zAlign ? 'on' : ''}" onclick="zSetAlign('${k}')" aria-label="Ausrichtung">${ic}</button>`).join('') + '<span style="width:100%;height:0"></span>' + `<button class="${zBig ? 'on' : ''}" onclick="zBig=!zBig;ztComposeBuild()">📐 Post-it gross</button>` + Object.keys(ZFONTS).map(k => `<button class="${k === zFont ? 'on' : ''}" style="font-family:${ZFONTS[k][1].split(';')[0] || 'inherit'}" onclick="zFont='${k}';ztComposeBuild()">${ZFONTS[k][0]}</button>`).join('');
     const ta = document.getElementById('ztText'), zz = { fs: zFs, font: zFont };
     ta.style.textAlign = zAl({ al: zAlign }); ta.style.fontSize = (17 * zSz(zz)) + 'px'; ta.style.cssText += ';font-family:' + (zFam(zz) || 'inherit');
   }
@@ -4207,6 +4217,49 @@
     try { zPhoto = await chatCompress(f); document.getElementById('ztPrevImg').src = zPhoto; document.getElementById('ztPrev').classList.remove('hidden'); }
     catch (e) { showToast('Foto konnte nicht geladen werden'); }
   }
+  // ---- Handskizze: Zeichenfläche, wird wie ein Foto gespeichert (PNG, transparent)
+  let zdCol = '#262319', zdW = 5, zdEr = false, zdHist = [], zdDraw = false, zdLast = null;
+  function ztDrawOpen() {
+    const cv = document.getElementById('ztDrawCv'), big = zBig;
+    cv.width = big ? 900 : 800; cv.height = big ? 1100 : 600;
+    const keep = zPhoto && zPhoto.startsWith('data:image/png');
+    const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, cv.width, cv.height);
+    cv.style.background = ZCOL[zCol]; zdHist = []; zdEr = false;
+    const open = () => { document.getElementById('ztDraw').classList.remove('hidden'); ztDrawBar(); sizeIt(); };
+    const sizeIt = () => { const w = document.querySelector('#ztDraw .zd-wrap'); const r = cv.width / cv.height, mw = w.clientWidth, mh = w.clientHeight; let cw = Math.min(mw, mh * r); cv.style.width = cw + 'px'; cv.style.height = (cw / r) + 'px'; };
+    if (keep) { const im = new Image(); im.onload = () => { ctx.drawImage(im, 0, 0, cv.width, cv.height); }; im.src = zPhoto; }
+    open(); setTimeout(sizeIt, 50);
+    if (!cv._zd) {
+      cv._zd = true;
+      const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
+      cv.addEventListener('pointerdown', e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); zdHist.push(cv.getContext('2d').getImageData(0, 0, cv.width, cv.height)); if (zdHist.length > 20) zdHist.shift(); zdDraw = true; zdLast = pos(e); ztDrawSeg(zdLast, zdLast); });
+      cv.addEventListener('pointermove', e => { if (!zdDraw) return; e.preventDefault(); const p = pos(e); ztDrawSeg(zdLast, p); zdLast = p; });
+      const end = () => { zdDraw = false; };
+      cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    }
+  }
+  function ztDrawSeg(a, b) {
+    const ctx = document.getElementById('ztDrawCv').getContext('2d');
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = zdEr ? zdW * 4 : zdW;
+    ctx.globalCompositeOperation = zdEr ? 'destination-out' : 'source-over'; ctx.strokeStyle = zdCol;
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0] + 0.01, b[1]); ctx.stroke();
+  }
+  function ztDrawBar() {
+    const cols = ['#262319', '#E5392B', '#1E6FD9', '#2E9E3F', '#8F6FE0'];
+    document.getElementById('ztDrawTop').innerHTML = cols.map(c => `<button class="zd-c ${!zdEr && c === zdCol ? 'on' : ''}" style="background:${c}" onclick="zdCol='${c}';zdEr=false;ztDrawBar()" aria-label="Stiftfarbe"></button>`).join('')
+      + `<button class="${zdEr ? 'on' : ''}" onclick="zdEr=!zdEr;ztDrawBar()">🧽 Radierer</button><button onclick="zdW=Math.max(2,zdW-2);ztDrawBar()">−</button><span style="color:#fff;min-width:28px;text-align:center">${zdW}</span><button onclick="zdW=Math.min(24,zdW+2);ztDrawBar()">+</button>`;
+  }
+  function ztDrawUndo() { const cv = document.getElementById('ztDrawCv'), h = zdHist.pop(); if (h) cv.getContext('2d').putImageData(h, 0, 0); }
+  function ztDrawClear() { const cv = document.getElementById('ztDrawCv'); zdHist.push(cv.getContext('2d').getImageData(0, 0, cv.width, cv.height)); cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); }
+  function ztDrawClose(save) {
+    document.getElementById('ztDraw').classList.add('hidden');
+    if (!save) return;
+    const cv = document.getElementById('ztDrawCv'), d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let empty = true; for (let i = 3; i < d.length; i += 16) { if (d[i]) { empty = false; break; } }
+    if (empty) { ztPhotoClear(); return; }
+    zPhoto = cv.toDataURL('image/png');
+    document.getElementById('ztPrevImg').style.background = ZCOL[zCol]; document.getElementById('ztPrevImg').src = zPhoto; document.getElementById('ztPrev').classList.remove('hidden');
+  }
   function ztPhotoClear() { zPhoto = ''; document.getElementById('ztPrev').classList.add('hidden'); }
   async function ztSend() {
     if (zSending) return;
@@ -4215,7 +4268,7 @@
     if (!zTo.size) { showToast('Wähle, für wen das Post-it ist'); return; }
     zSending = true; document.getElementById('ztSend').disabled = true;
     const me = userKey(currentUser), id = chatNewId();
-    const m = { id, from: me, name: currentUser, to: [...zTo], text: text.slice(0, 300), at: Date.now(), color: ZCOL[zCol], size: zFs >= 1.3 ? 'l' : zFs < 0.9 ? 's' : 'm', fs: zFs, al: zAlign, font: zFont, done: false };
+    const m = { id, from: me, name: currentUser, to: [...zTo], text: text.slice(0, 300), at: Date.now(), color: ZCOL[zCol], size: zBig ? 'l' : 'm', fs: zFs, al: zAlign, font: zFont, done: false };
     try {
       if (zPhoto) { await withTimeout(cloudApi.zphotoPut(id, { from: me, data: zPhoto, at: m.at }), 30000); zPhotoCache[id] = zPhoto; m.photo = true; }
       try { await withTimeout(cloudApi.zettelAdd(m)); } catch (e) { if (m.photo) { try { await cloudApi.zphotoDelete(id); } catch (x) {} } throw e; }
@@ -4232,7 +4285,7 @@
     btns.push(`<button onclick="ztHide('${z.id}')" title="Auf diesem Gerät entfernen">🗑 Entfernen</button>`);
     if (mine || parent) btns.push(`<button onclick="ztDel('${z.id}')" title="Für alle löschen">✕ Für alle</button>`);
     const time = new Date(z.at).toLocaleString('de-CH', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-    return `<div class="zt-note ${z.done ? 'done' : ''}" style="background:${escapeHtml(z.color || ZCOL[0])};--r:${zRot(z.id)}deg;${zSz(z) >= 1.3 ? 'grid-column:span 2' : ''}"><div class="zt-to">${mine ? 'An' : 'Von ' + escapeHtml(z.name || zName(z.from)) + ' an'}: ${escapeHtml(zToText(z, me))}</div><div style="font-size:${16 * zSz(z)}px;text-align:${zAl(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? `<img data-zp="${z.id}" alt="Foto">` : ''}<div class="zt-m">${z.done ? '✓ erledigt' + (z.doneBy ? ' von ' + escapeHtml(zName(z.doneBy)) + ' · ' : ' · ') : ''}${escapeHtml(time)}</div>${btns.length ? `<div class="zt-b">${btns.join('')}</div>` : ''}</div>`;
+    return `<div class="zt-note ${z.done ? 'done' : ''}" style="background:${escapeHtml(z.color || ZCOL[0])};--r:${zRot(z.id)}deg;${z.size === 'l' ? 'grid-column:span 2' : ''}"><div class="zt-to">${mine ? 'An' : 'Von ' + escapeHtml(z.name || zName(z.from)) + ' an'}: ${escapeHtml(zToText(z, me))}</div><div style="font-size:${16 * zSz(z)}px;text-align:${zAl(z)};${zFam(z) ? 'font-family:' + zFam(z) : ''}">${escapeHtml(z.text || '')}</div>${z.photo ? `<img data-zp="${z.id}" alt="Foto">` : ''}<div class="zt-m">${z.done ? '✓ erledigt' + (z.doneBy ? ' von ' + escapeHtml(zName(z.doneBy)) + ' · ' : ' · ') : ''}${escapeHtml(time)}</div>${btns.length ? `<div class="zt-b">${btns.join('')}</div>` : ''}</div>`;
   }
   function ztRender() {
     const el = document.getElementById('ztList'); if (!el) return;
@@ -8669,7 +8722,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.63';
+  const APP_VERSION = '2.64';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
