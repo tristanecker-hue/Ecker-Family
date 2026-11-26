@@ -1107,6 +1107,8 @@
   }
   .entry-badge.allgemein { background: var(--allgemein); }
   .entry-badge.garten { background: var(--garten); }
+  .fw-billed { margin:0; border:2px solid var(--feuerwehr); background:#fff; color:var(--feuerwehr); border-radius:999px; padding:5px 12px; font:inherit; font-weight:700; font-size:13px; cursor:pointer; }
+  .fw-billed.on { background:var(--feuerwehr); color:#fff; }
   .entry-badge.feuerwehr { background: var(--feuerwehr); }
 
   .entry-date { font-weight: 600; font-size: 14.5px; }
@@ -3095,7 +3097,7 @@
     }
 
     list.innerHTML = feuerwehrEntries.map(e => `
-      <div class="entry">
+      <div class="entry" ${e.billed ? 'style="opacity:.6"' : ''}>
         <div class="entry-left">
           <div class="entry-badge feuerwehr"></div>
           <div>
@@ -3106,9 +3108,18 @@
         </div>
         <div class="entry-right">
           <span class="entry-hours">${formatHours(e.minutes)}</span>
+          <button class="fw-billed ${e.billed ? 'on' : ''}" onclick="toggleFwBilled('${e.id}')" aria-pressed="${e.billed ? 'true' : 'false'}">${e.billed ? '✅ abgerechnet' : '☐ abgerechnet'}</button>
         </div>
       </div>
     `).join('');
+  }
+  async function toggleFwBilled(id) {
+    const e = entries.find(x => x.id === id); if (!e) return;
+    const was = !!e.billed; e.billed = !was;
+    try {
+      if (cloudEnabled) await withTimeout(cloudApi.addEntry(e)); else await persistEntries();
+    } catch (err) { e.billed = was; showToast('Speichern fehlgeschlagen – bitte Verbindung prüfen'); }
+    renderFeuerwehrSummary(summaryYearMonth, personTotals(FEUERWEHR_USER, summaryYearMonth).feuerwehr);
   }
 
   function barHtml(totals) {
@@ -8926,7 +8937,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.76';
+  const APP_VERSION = '2.77';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
