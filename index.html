@@ -155,6 +155,22 @@
   .bc-ring.rect { border-radius:12px; box-shadow:none; border:2px dashed #fff; }
   #bdCropZ { width:100%; }
   .zt-actions { display:flex; gap:8px; margin-top:12px; }
+  #bdParty { position:fixed; inset:0; z-index:9400; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 40%, #5b2d9e 0%, #2a1260 55%, #12082e 100%); overflow:hidden; }
+  #bdParty.hidden { display:none; }
+  #bdPartyCv { position:absolute; inset:0; width:100%; height:100%; }
+  #bdParty .bp-card { position:relative; text-align:center; color:#fff; font-family:'Patrick Hand','Comic Sans MS',cursive; animation:bpPop .9s cubic-bezier(.2,1.4,.4,1) both; max-width:94vw; }
+  #bdParty .bp-ring { width:min(52vmin,520px); height:min(52vmin,520px); margin:0 auto; border-radius:50%; padding:1.6vmin; position:relative; box-sizing:border-box; animation:bpGlow 2s ease-in-out infinite alternate; box-shadow:0 0 6vmin rgba(255,210,63,.7); }
+  #bdParty .bp-ring::before { content:''; position:absolute; inset:0; border-radius:50%; background:conic-gradient(#ff4d6d,#ffd23f,#4dd0ff,#7cf28a,#c77dff,#ff4d6d); animation:bpSpin 6s linear infinite; }
+  #bdParty .bp-av { width:100%; height:100%; border-radius:50%; background-size:cover; background-position:center; border:1vmin solid #fff; box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-size:22vmin; font-weight:800; color:#fff; position:relative; animation:bpBounce 1.6s ease-in-out infinite; }
+  #bdParty .bp-h { margin-top:3vmin; font-size:clamp(28px,7.5vmin,96px); font-weight:800; background:linear-gradient(90deg,#ffd23f,#ff7eb6,#7cf2ff,#ffd23f); background-size:300% 100%; -webkit-background-clip:text; background-clip:text; color:transparent; animation:bpShine 4s linear infinite; text-shadow:none; }
+  #bdParty .bp-n { font-size:clamp(34px,10vmin,130px); font-weight:800; line-height:1.05; text-shadow:0 .6vmin 0 rgba(0,0,0,.35); }
+  #bdParty .bp-a { font-size:clamp(24px,6vmin,80px); opacity:.95; margin-top:1vmin; }
+  @keyframes bpPop { from { transform:scale(.2) rotate(-12deg); opacity:0; } to { transform:none; opacity:1; } }
+  @keyframes bpSpin { to { transform:rotate(360deg); } }
+  @keyframes bpUnspin { to { transform:rotate(-360deg); } }
+  @keyframes bpGlow { from { box-shadow:0 0 4vmin rgba(255,210,63,.5); } to { box-shadow:0 0 9vmin rgba(255,126,182,.9); } }
+  @keyframes bpBounce { 0%,100% { transform:rotate(0) scale(1); } 50% { transform:rotate(0) scale(1.03); } }
+  @keyframes bpShine { to { background-position:300% 0; } }
   .paper.plan-link { cursor:pointer; }
   .zt-pad { position:relative; min-height:150px; box-sizing:border-box; background:#FFE97A; border:2px solid #262319; border-radius:6px; padding:10px; box-shadow:2px 3px 0 rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; text-align:center; font-size:17px; cursor:pointer; }
   .zt-pad img { max-width:100%; max-height:300px; display:block; }
@@ -1804,6 +1820,7 @@
   <div id="bdCrop" class="hidden"><div class="bc-box"><div class="bc-h">Foto anpassen</div><div class="bc-sub">Mit dem Finger verschieben, mit dem Regler vergrössern.</div><div id="bdCropAsp" class="zt-chips hidden" style="justify-content:center;margin-bottom:8px;"></div><div class="bc-stage" id="bdCropStage"><canvas id="bdCropCv" width="280" height="280"></canvas><div class="bc-ring" id="bdCropRing"></div></div><input type="range" id="bdCropZ" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><div class="zt-actions"><button class="btn" onclick="bdCropClose()">Abbrechen</button><button class="btn hidden" id="bdCropSkip" onclick="bdCropSkip()">Original</button><button class="btn" onclick="bdCropApply()" style="flex:1;">✓ Übernehmen</button></div></div></div>
 
 <div id="ztDraw" class="hidden"><div class="zd-bar" id="ztDrawTop"></div><textarea id="ztDrawTxt" rows="2" maxlength="120" placeholder="Text eintippen, dann aufs Bild tippen …" style="display:none;width:100%;max-width:420px;box-sizing:border-box;border:2px solid #262319;border-radius:10px;padding:8px 10px;font:inherit;font-size:18px;resize:none"></textarea><div class="zd-bar" id="ztDrawEmo" style="display:none"></div><div class="zd-wrap"><div id="ztDrawStack" style="position:relative;border:3px solid #262319;border-radius:4px;box-shadow:4px 6px 18px rgba(0,0,0,.5);box-sizing:content-box"><canvas id="ztDrawCv" style="display:block"></canvas><canvas id="ztDrawOv" style="position:absolute;left:0;top:0;touch-action:none"></canvas></div></div><div class="zd-bar"><button onclick="ztDrawUndo()">↶ Zurück</button><button onclick="ztDrawClear()">🗑 Leeren</button><button onclick="ztDrawClose(false)">✕ Abbrechen</button><button onclick="ztDrawClose(true)" style="background:#7CD35C">✓ Fertig</button></div></div>
+<div id="bdParty" class="hidden" onclick="bdPartyClose()"><canvas id="bdPartyCv"></canvas><div class="bp-card"><div class="bp-ring"><div class="bp-av" id="bpAv"></div></div><div class="bp-h">Alles Gute zum Geburtstag!</div><div class="bp-n" id="bpName"></div><div class="bp-a" id="bpAge"></div></div></div>
 <div id="zHomeNew" class="hidden"><div class="zh-note" id="zhNote" onclick="zHomeOpen()"><div class="zh-tape"></div><button class="zh-x" onclick="event.stopPropagation();zHomeClose()" aria-label="Schliessen">✕</button><div class="zh-text" id="zhText"></div><img id="zhImg" class="hidden" alt=""><div class="zh-who" id="zhWho"></div><div class="zh-hint" id="zhHint"></div></div></div>
   <div id="padScreen" class="hidden">
     <div class="pad-top">
@@ -7742,7 +7759,7 @@
   }
   function bdRenderList() {
     const l = bdCfg.bdays.map((b, i) => ({ b, i })).sort((x, y) => x.b.m - y.b.m || x.b.d - y.b.d);
-    document.getElementById('bdList').innerHTML = l.length ? l.map(({ b, i }) => `<div class="set-row"><span style="display:flex;align-items:center;gap:10px;">${bdAvatar(b, 36)}<span>${escapeHtml(b.n)} · ${b.d}.${b.m}.${b.y && b.age ? b.y : ''}</span></span><span style="display:flex;gap:6px;"><button class="btn" style="padding:4px 10px;" onclick="bdEditStart(${i})" aria-label="Bearbeiten">✏️</button><button class="btn" style="padding:4px 10px;" onclick="bdDel(${i})" aria-label="Löschen">✕</button></span></div>`).join('') : '<div class="set-note">Noch keine Geburtstage erfasst.</div>';
+    document.getElementById('bdList').innerHTML = l.length ? l.map(({ b, i }) => `<div class="set-row"><span style="display:flex;align-items:center;gap:10px;">${bdAvatar(b, 36)}<span>${escapeHtml(b.n)} · ${b.d}.${b.m}.${b.y && b.age ? b.y : ''}</span></span><span style="display:flex;gap:6px;"><button class="btn" style="padding:4px 10px;" onclick="bdPartyPreview(${i})" aria-label="Vorschau">🎉</button><button class="btn" style="padding:4px 10px;" onclick="bdEditStart(${i})" aria-label="Bearbeiten">✏️</button><button class="btn" style="padding:4px 10px;" onclick="bdDel(${i})" aria-label="Löschen">✕</button></span></div>`).join('') : '<div class="set-note">Noch keine Geburtstage erfasst.</div>';
   }
   async function bdSave() {
     try { await cloudApi.padcfgSet({ bdays: bdCfg.bdays }); showToast('Gespeichert'); } catch (e) { showToast('Speichern fehlgeschlagen (Foto zu gross?)'); }
@@ -8445,11 +8462,69 @@
     try { const c = (await cloudApi.padcfgGet()) || {}; padBd = Array.isArray(c.bdays) ? c.bdays : []; padNightCfg = c.night || {}; wasteList = Array.isArray(c.waste) ? c.waste : []; padFxCfg = c.wxfx !== false; padFxUpdate(); } catch (e) {}
     padRenderBday(); padNightCheck(); try { padRenderInfo(); if (!document.getElementById('padWeek').classList.contains('hidden')) padWeekRender(); } catch (e) {}
   }
+  // ---------- Geburtstags-Party (Pad + Vorschau) ----------
+  let bdPartyRaf = 0, bdPartyTimer = 0, bdPartyQ = [];
+  function bdPartyShow(b, preview) {
+    const el = document.getElementById('bdParty'); if (!el) return;
+    const t = new Date(), age = b.y && b.age ? t.getFullYear() - b.y : null, img = bdImgOf(b), u = bdUser(b.n);
+    const av = document.getElementById('bpAv');
+    if (img) { av.style.backgroundImage = "url('" + String(img).replace(/['"\\]/g, '') + "')"; av.textContent = ''; av.style.background = ''; av.style.backgroundImage = "url('" + String(img).replace(/['"\\]/g, '') + "')"; av.style.backgroundSize = 'cover'; }
+    else { av.style.backgroundImage = 'none'; av.style.background = u ? userColor(u) : '#E08A12'; av.textContent = (b.n || '?').trim().charAt(0).toUpperCase(); }
+    document.getElementById('bpName').textContent = b.n || '';
+    document.getElementById('bpAge').textContent = age ? '🎂 wird heute ' + age + ' 🎂' : '🎂🎈🎉';
+    el.classList.remove('hidden'); cancelAnimationFrame(bdPartyRaf); bdPartyStart();
+    clearTimeout(bdPartyTimer); bdPartyTimer = setTimeout(bdPartyClose, 60000);
+  }
+  function bdPartyClose() {
+    clearTimeout(bdPartyTimer); cancelAnimationFrame(bdPartyRaf);
+    const el = document.getElementById('bdParty'); if (el) el.classList.add('hidden');
+    if (bdPartyQ.length) setTimeout(() => bdPartyShow(bdPartyQ.shift()), 500);
+  }
+  function bdPartyStart() {
+    const cv = document.getElementById('bdPartyCv'), ctx = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; const W = cv.width, H = cv.height, u = Math.min(W, H) / 100;
+    const COL = ['#ff4d6d', '#ffd23f', '#4dd0ff', '#7cf28a', '#c77dff', '#ff9f43', '#ffffff'];
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const conf = Array.from({ length: 140 }, () => ({ x: rnd(0, W), y: rnd(-H, 0), w: rnd(1, 2.2) * u, h: rnd(.6, 1.4) * u, c: COL[(Math.random() * COL.length) | 0], vy: rnd(.25, .7) * u, vx: rnd(-.15, .15) * u, r: rnd(0, 6.28), vr: rnd(-.1, .1) }));
+    const balls = Array.from({ length: 16 }, () => ({ x: rnd(0, W), y: rnd(H, H * 1.8), r: rnd(3.5, 6) * u, c: COL[(Math.random() * 6) | 0], vy: rnd(.12, .32) * u, ph: rnd(0, 6.28) }));
+    let fw = [], parts = [], last = 0, tFw = 0;
+    const burst = () => { const x = rnd(.1, .9) * W, y = rnd(.08, .5) * H, c = COL[(Math.random() * 6) | 0], n = 46; for (let i = 0; i < n; i++) { const a = i / n * 6.283, sp = rnd(.4, 1.1) * u; parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, l: 1, c }); } };
+    const frame = ts => {
+      const dt = Math.min(2.5, (ts - last) / 16.7 || 1); last = ts; tFw -= dt;
+      ctx.clearRect(0, 0, W, H);
+      if (tFw <= 0) { burst(); tFw = rnd(35, 75); }
+      parts = parts.filter(p => p.l > 0); parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += .018 * u * dt; p.vx *= .985; p.l -= .014 * dt; ctx.globalAlpha = Math.max(0, p.l); ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, .55 * u, 0, 6.283); ctx.fill(); });
+      ctx.globalAlpha = 1;
+      balls.forEach(b => { b.y -= b.vy * dt; if (b.y < -b.r * 3) { b.y = H + b.r * 2; b.x = rnd(0, W); } const x = b.x + Math.sin(ts / 700 + b.ph) * 1.5 * u;
+        ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = .25 * u; ctx.beginPath(); ctx.moveTo(x, b.y + b.r * 1.25); ctx.quadraticCurveTo(x - u, b.y + b.r * 2.4, x, b.y + b.r * 3.4); ctx.stroke();
+        ctx.fillStyle = b.c; ctx.beginPath(); ctx.ellipse(x, b.y, b.r * .82, b.r, 0, 0, 6.283); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(x - b.r * .3, b.y - b.r * .35, b.r * .2, b.r * .32, .5, 0, 6.283); ctx.fill(); });
+      conf.forEach(c => { c.y += c.vy * dt; c.x += c.vx * dt + Math.sin(c.y / (8 * u)) * .1 * u; c.r += c.vr * dt; if (c.y > H + 5 * u) { c.y = -5 * u; c.x = rnd(0, W); }
+        ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.r); ctx.fillStyle = c.c; ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h); ctx.restore(); });
+      bdPartyRaf = requestAnimationFrame(frame);
+    };
+    bdPartyRaf = requestAnimationFrame(frame);
+  }
+  // Pad: heute Geburtstag? Beim ersten Laden des Tages und danach alle 2 Stunden gross zeigen
+  function bdPartyCheck() {
+    try {
+      const t = new Date(), today = padBd.filter(b => b.d === t.getDate() && b.m === t.getMonth() + 1); if (!today.length) return;
+      const night = document.getElementById('padNight'); if (night && parseFloat(night.style.opacity || 0) > 0.05) return;
+      if (!document.getElementById('bdParty').classList.contains('hidden')) return;
+      const key = 'ef-bdparty-' + isoDate(t); let lastT = 0; try { lastT = +localStorage.getItem(key) || 0; } catch (e) {}
+      if (Date.now() - lastT < 2 * 3600 * 1000) return;
+      try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+      bdPartyQ = today.slice(1); bdPartyShow(today[0]);
+    } catch (e) {}
+  }
+  function bdPartyPreview(i) { const b = bdCfg.bdays[i]; if (b) bdPartyShow(b, true); }
+
   function padRenderBday() {
     const card = document.getElementById('padBdayCard'); if (!card) return;
     const list = padBdHtml(3);
     card.classList.toggle('hidden', !padBd.length);
     document.getElementById('padBday').innerHTML = list;
+    bdPartyCheck();
   }
   function padBdHtml(max) {
     const t = new Date(); t.setHours(0, 0, 0, 0);
@@ -8937,7 +9012,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.77';
+  const APP_VERSION = '2.78';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
