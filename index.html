@@ -242,6 +242,9 @@
   #padScreen { --pp: clamp(10px, 2vmin, 28px); padding: max(var(--pp), env(safe-area-inset-top)) max(var(--pp), env(safe-area-inset-right)) max(var(--pp), env(safe-area-inset-bottom)) max(var(--pp), env(safe-area-inset-left)); box-sizing: border-box; min-height: 100vh; }
   #padScreen .pad-top { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom: clamp(8px, 1.6vmin, 20px); }
   #padClock { font-size: clamp(54px, 11vmin, 150px); line-height: .95; font-weight: 800; cursor: default; user-select: none; -webkit-user-select: none; }
+  #padBat { font-size:clamp(16px,2.8vmin,36px); font-weight:800; margin-top:.3vmin; opacity:.9; }
+  #padBat.low { color:#ff5a4d; opacity:1; animation:padBatBlink 1.2s ease-in-out infinite; }
+  @keyframes padBatBlink { 50% { opacity:.45; } }
   #padDate { font-size: clamp(20px, 3.4vmin, 44px); text-align: right; font-weight: 700; }
   #padScreen .pad-main { display:grid; grid-template-columns: minmax(260px, 1fr) 2fr; gap: clamp(10px, 2vmin, 24px); align-items:start; }
   #padScreen .pad-col { display:flex; flex-direction:column; gap: clamp(10px, 2vmin, 24px); }
@@ -1826,7 +1829,7 @@
     <div class="pad-top">
       <div id="padClock" title="1× antippen: App aktualisieren · 4× antippen: Pad-Modus beenden">--:--</div>
       <div id="padTabs"><button id="padTabO" class="on" onclick="padTab('o')">🏠 Übersicht</button><button id="padTabP" onclick="padTab('p')">📚 Stundenplan</button><button id="padTabL" class="hidden" onclick="padTab('l')">💡 Licht</button><button id="padTabW" onclick="padTab('w')">☀️ Wetter</button></div>
-      <div id="padDate"></div>
+      <div style="text-align:right"><div id="padDate"></div><div id="padBat" class="hidden"></div></div>
     </div>
     <div class="pad-main">
       <div class="pad-col">
@@ -8364,6 +8367,7 @@
     }
     padClock(true);
     padTick = setInterval(padClock, 10000);
+    padBatInit();
     padUnsub = cloudApi.todosListen(list => { padTodos = list; padRenderTodos(); }, () => {});
     padSlowLoad();
     padSlow = setInterval(padSlowLoad, 60000);
@@ -8426,6 +8430,19 @@
   }
   async function padWakeLock() {
     try { if (navigator.wakeLock && document.visibilityState === 'visible') padWake = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  let padBatObj = null;
+  function padBatShow() {
+    const el = document.getElementById('padBat'); if (!el || !padBatObj) return;
+    const pc = Math.round(padBatObj.level * 100), ch = padBatObj.charging;
+    el.textContent = (ch ? '⚡' : pc <= 20 ? '🪫' : '🔋') + ' ' + pc + ' %';
+    el.classList.toggle('low', !ch && pc <= 20); el.classList.remove('hidden');
+  }
+  function padBatInit() {
+    try {
+      if (!navigator.getBattery) return;
+      navigator.getBattery().then(b => { padBatObj = b; ['levelchange', 'chargingchange'].forEach(e => b.addEventListener(e, padBatShow)); padBatShow(); }).catch(() => {});
+    } catch (e) {}
   }
   function padClock(force) {
     const n = new Date(), pad2 = x => String(x).padStart(2, '0');
@@ -9012,7 +9029,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.78';
+  const APP_VERSION = '2.79';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)
