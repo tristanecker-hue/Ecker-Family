@@ -286,7 +286,12 @@
   .hue-chev { border:2.5px solid #262319; background:#fff; border-radius:14px; min-height:48px; min-width:48px; font-size:18px; cursor:pointer; font-family:inherit; }
   .hue-sub { flex:1 1 100%; display:flex; flex-wrap:wrap; gap:6px; }
   .hue-room, .hue-pin, .hue-tog { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
-  .hue-stopwrap { display:flex; flex-direction:row; align-items:center; gap:12px; padding:6px 10px 10px 6px; }
+  .hue-zones { flex:1 1 100%; display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .hue-zones:empty { display:none; }
+  .hue-zones .hue-row { flex-wrap:nowrap; }
+  .hue-zones .hue-sub { margin-top:4px; }
+  #padScreen.tab-l #padHue .hue-stopwrap { width:min(26vw,300px); }
+  .hue-stopwrap { display:flex; flex-wrap:wrap; flex-direction:row; align-items:center; gap:12px; padding:6px 10px 10px 6px; }
   .hue-stop { width:46px; height:46px; border-radius:50%; border:3px solid #262319; cursor:pointer; padding:0; font-family:inherit; font-weight:800; font-size:12px; letter-spacing:.5px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.5);
     background: radial-gradient(circle at 35% 28%, #ff7a6b 0%, #e0221a 45%, #9a0d06 100%);
     box-shadow: 0 0 0 5px #FFD84D, 0 0 0 8px #262319, 0 6px 0 8px #262319, inset 0 -4px 6px rgba(0,0,0,.35), inset 0 3px 4px rgba(255,255,255,.35);
@@ -8020,7 +8025,7 @@
   function hueFill(box, st) {
     hueSt = st;
     if (box.contains(document.activeElement) && document.activeElement.type === 'range') return;
-    if (!box.querySelector('.hue-list')) box.innerHTML = '<div class="hue-stopwrap"><button class="hue-stop" data-stop="1" aria-label="Alle Lichter aus"><span>AUS</span></button><div class="hue-stoplbl">NOT-AUS</div></div><div class="hue-planwrap"></div><div class="hue-list"></div>';
+    if (!box.querySelector('.hue-list')) box.innerHTML = '<div class="hue-stopwrap"><button class="hue-stop" data-stop="1" aria-label="Alle Lichter aus"><span>AUS</span></button><div class="hue-stoplbl">NOT-AUS</div><div class="hue-zones"></div></div><div class="hue-planwrap"></div><div class="hue-list"></div>';
     const pw = box.querySelector('.hue-planwrap');
     if (huePlan && huePlan.img && huePlan.pins && huePlan.pins.length) {
       if (!pw.querySelector('img')) pw.innerHTML = '<div class="hue-plan"><img alt="Plan"><div class="hue-pins"></div></div>';
@@ -8036,7 +8041,14 @@
     };
     const list = box.querySelector('.hue-list');
     box.classList.toggle('hue-lcl', hueListClosed);
-    list.innerHTML = hueLhead() + st.rooms.map(r => {
+    const zb = box.querySelector('.hue-zones');
+    if (zb) zb.innerHTML = st.rooms.filter(r => r.zone).map(r => {
+      const sc = st.scenes.filter(x => x.room === r.id).slice(0, 8);
+      const inner = sc.length ? '<div class="hue-sc">' + sc.map(x => '<button data-sc="' + x.id + '">' + escapeHtml(x.name) + '</button>').join('') + '</div>' : '';
+      return '<div class="hue-zone"><div class="hue-row"><button class="hue-tog' + (r.on ? ' on' : '') + '" data-gl="' + r.gl + '" data-on="' + (r.on ? 1 : 0) + '">' + (r.on ? '💡 ' : '⚫ ') + escapeHtml(r.name.replace(/ \(Zone\)$/, '')) + '</button>' + sub(r.id, inner) + '</div>' +
+        (inner ? '<div class="hue-sub" data-sub="' + r.id + '" style="display:' + (hueOpen.has(r.id) ? 'flex' : 'none') + '">' + inner + '</div>' : '') + '</div>';
+    }).join('');
+    list.innerHTML = hueLhead() + st.rooms.filter(r => !r.zone).map(r => {
       const sc = st.scenes.filter(x => x.room === r.id).slice(0, 5);
       const ls = st.lights.filter(l => l.room === r.id);
       const inner = (sc.length ? '<div class="hue-sc">' + sc.map(x => '<button data-sc="' + x.id + '">' + escapeHtml(x.name) + '</button>').join('') + '</div>' : '') + (ls.length ? '<div class="hue-sc">' + ls.map(chip).join('') + '</div>' : '');
@@ -9029,7 +9041,7 @@
 <div id="printArea"></div>
 <div class="app-version" id="appVersion"></div>
 <script>
-  const APP_VERSION = '2.80';
+  const APP_VERSION = '2.81';
   document.getElementById('appVersion').textContent = "Ecker's Family · Version " + APP_VERSION;
   document.getElementById('chatVer').textContent = "Ecker's Family · Version " + APP_VERSION;
   // Tipp auf den Titel: App neu laden (holt immer die neueste Version)

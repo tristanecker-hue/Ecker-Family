@@ -199,7 +199,7 @@ async function hueState(env, all) {
   const gm = {}; (gls || []).forEach(g => gm[g.id] = g);
   const out = (rooms || []).concat((zones || []).map(z => Object.assign({}, z, { _zone: true }))).map(r => {
     const sv = (r.services || []).find(x => x.rtype === 'grouped_light'); const g = sv && gm[sv.rid];
-    return g ? { id: r.id, name: ((r.metadata && r.metadata.name) || '?') + (r._zone ? ' (Zone)' : ''), gl: g.id, on: !!(g.on && g.on.on), bri: g.dimming ? Math.round(g.dimming.brightness) : null } : null;
+    return g ? { id: r.id, name: ((r.metadata && r.metadata.name) || '?') + (r._zone ? ' (Zone)' : ''), gl: g.id, zone: !!r._zone, on: !!(g.on && g.on.on), bri: g.dimming ? Math.round(g.dimming.brightness) : null } : null;
   }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'de'));
   const cfg = await env.KV.get('huecfg', 'json');
   const okIds = cfg && Array.isArray(cfg.rooms) ? cfg.rooms : null;
