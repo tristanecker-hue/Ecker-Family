@@ -194,12 +194,12 @@ async function hueCallback(env, url) {
   } catch (e) { return page('Verbindung mit Hue fehlgeschlagen.', false); }
 }
 async function hueState(env, all) {
-  const [rooms, gls, scenes, lts] = await Promise.all([hueCall(env, 'GET', 'room'), hueCall(env, 'GET', 'grouped_light'), hueCall(env, 'GET', 'scene'), hueCall(env, 'GET', 'light')]);
+  const [rooms, gls, scenes, lts, zones] = await Promise.all([hueCall(env, 'GET', 'room'), hueCall(env, 'GET', 'grouped_light'), hueCall(env, 'GET', 'scene'), hueCall(env, 'GET', 'light'), hueCall(env, 'GET', 'zone').catch(() => [])]);
   if (!rooms) return { connected: false };
   const gm = {}; (gls || []).forEach(g => gm[g.id] = g);
-  const out = (rooms || []).map(r => {
+  const out = (rooms || []).concat((zones || []).map(z => Object.assign({}, z, { _zone: true }))).map(r => {
     const sv = (r.services || []).find(x => x.rtype === 'grouped_light'); const g = sv && gm[sv.rid];
-    return g ? { id: r.id, name: (r.metadata && r.metadata.name) || '?', gl: g.id, on: !!(g.on && g.on.on), bri: g.dimming ? Math.round(g.dimming.brightness) : null } : null;
+    return g ? { id: r.id, name: ((r.metadata && r.metadata.name) || '?') + (r._zone ? ' (Zone)' : ''), gl: g.id, on: !!(g.on && g.on.on), bri: g.dimming ? Math.round(g.dimming.brightness) : null } : null;
   }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'de'));
   const cfg = await env.KV.get('huecfg', 'json');
   const okIds = cfg && Array.isArray(cfg.rooms) ? cfg.rooms : null;
